@@ -9,7 +9,7 @@
         android:allowBackup="true"
         android:label="Muslim Time"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        android:theme="@style/Theme.MuslimTime"
 
         <activity
             android:name=".MainActivity"
