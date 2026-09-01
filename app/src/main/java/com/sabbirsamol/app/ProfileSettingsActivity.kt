@@ -81,7 +81,7 @@ class ProfileSettingsActivity : ComponentActivity() {
             text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow)
             layoutParams = LinearLayout.LayoutParams(-1, dp(40))
             setOnClickListener {
-                Toast.makeText(this@ProfileSettingsActivity, "কলাউডের সাথে সফলভাবে সিঙ্ক হয়েছে!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@ProfileSettingsActivity, "ক্লাউডের সাথে সফলভাবে সিঙ্ক হয়েছে!", Toast.LENGTH_LONG).show()
                 sharedPrefs.edit().putString("user_email", "sabbir.ahmad@gmail.com").apply()
                 showSettingsPage()
             }
