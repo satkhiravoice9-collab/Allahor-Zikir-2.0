@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- ইন্টারনেট পারমিশন (পিডিএফ ডাউনলোডের জন্য) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- আপনার আগের পারমিশনগুলো -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:name=".HomeBottomMenuFix"
@@ -14,20 +17,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MuslimTime">
 
+        <!-- নতুন যোগ করা অ্যাক্টিভিটিগুলো -->
         <activity android:name=".LibraryActivity" android:exported="false" />
         <activity android:name=".PdfReaderActivity" android:exported="false" />
+        <activity android:name=".NotepadActivity" android:exported="false" />
 
-        <activity 
-            android:name=".TasbihActivity" 
-            android:exported="false" />
-            
-        <activity 
-            android:name=".ZikirManagerActivity" 
-            android:exported="false" />
+        <activity android:name=".TasbihActivity" android:exported="false" />
+        <activity android:name=".ZikirManagerActivity" android:exported="false" />
 
-        <activity 
-            android:name=".MainActivity" 
-            android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
