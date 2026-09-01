@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
+        android:name=".HomeBottomMenuFix"
         android:allowBackup="true"
         android:label="Muslim Time"
         android:supportsRtl="true"
