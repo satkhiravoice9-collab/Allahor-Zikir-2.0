@@ -40,4 +40,10 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.3")
 
     implementation("androidx.core:core-ktx:1.13.1")
+
+    // PDF Viewer (অফলাইন পড়া, জুম এবং পেজ রিজিউম করার জন্য)
+    implementation("com.github.barteksc:android-pdf-viewer:2.8.2")
+
+    // Coroutines (ব্যাকগ্রাউন্ডে ফাইল ডাউনলোডের জন্য)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
 }
