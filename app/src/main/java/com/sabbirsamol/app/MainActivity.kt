@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity(), LocationListener {
 
     private fun showTasbih(){
         var count=prefs.getInt("tasbih_count",0)
-        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;padding(20)}
+        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(20,20,20,20)}
         val number=TextView(this).apply{text=count.toString();textSize=52f;gravity=Gravity.CENTER;setTextColor(Color.rgb(20,83,45))}
         val add=Button(this).apply{text="📿 গুনুন"}
         val reset=Button(this).apply{text="↩️ রিসেট"}
@@ -83,9 +83,8 @@ class MainActivity : ComponentActivity(), LocationListener {
     }
 
     private fun showBookInfo(title:String,index:Int){
-        val extra=if(index==0) "\n\n🕋 কুরআন: সূরা ও ৩০ পারার কাঠামো পরবর্তী ধাপে যুক্ত করা যাবে।" else ""
-        AlertDialog.Builder(this).setTitle(title).setMessage("এই বইটি লাইব্রেরিতে নির্বাচিত হয়েছে।$extra\n\n⬇️ PDF Download\n💾 Offline Reading\n🔖 Bookmark\n📌 Last Page\n🔍 Search / Zoom\n\nGoogle Drive PDF-এর আসল লিংক এখনো এই রিপোজিটরিতে দেওয়া হয়নি; লিংক ছাড়া ভুয়া ডাউনলোড চালু করা হবে না।")
-            .setPositiveButton("ঠিক আছে",null).show()
+        val extra=if(index==0) "\n\n🕋 কুরআন: সূরা ও ৩০ পারার কাঠামো পরবর্তী ধাপে যুক্ত করা যাবে." else ""
+        AlertDialog.Builder(this).setTitle(title).setMessage("এই বইটি লাইব্রেরিতে নির্বাচিত হয়েছে।$extra\n\n⬇️ PDF Download\n💾 Offline Reading\n🔖 Bookmark\n📌 Last Page\n🔍 Search / Zoom\n\nGoogle Drive PDF-এর আসল লিংক এখনো এই রিপোজিটরিতে দেওয়া হয়নি; লিংক ছাড়া ভুয়া ডাউনলোড চালু করা হবে না।").setPositiveButton("ঠিক আছে",null).show()
     }
 
     private fun showMasnunAmal(){
@@ -124,6 +123,8 @@ class MainActivity : ComponentActivity(), LocationListener {
     private fun solarTime(noon:Double,lat:Double,dec:Double,angle:Double,evening:Boolean=false):Double{val lr=Math.toRadians(lat);val dr=Math.toRadians(dec);val h=Math.toDegrees(acos(((sin(Math.toRadians(angle))-sin(lr)*sin(dr))/(cos(lr)*cos(dr))).coerceIn(-1.0,1.0)))/15.0;return if(evening)noon+h else noon-h}
     private fun solarAsr(noon:Double,lat:Double,dec:Double):Double{val lr=Math.toRadians(lat);val dr=Math.toRadians(dec);val angle=Math.toDegrees(atan(1.0/(2.0+tan(abs(lr-dr)))));return solarTime(noon,lat,dec,angle,true)}
     private fun formatTime(x:Double):String{var h=floor(x).toInt();var m=((x-h)*60).roundToInt();if(m>=60){h++;m-=60};h=((h%24)+24)%24;return "%02d:%02d".format(h,m)}
-    override fun onProviderEnabled(p:String){};override fun onProviderDisabled(p:String){};override fun onStatusChanged(p:String?,s:Int,e:Bundle?){}
+    override fun onProviderEnabled(p:String){}
+    override fun onProviderDisabled(p:String){}
+    override fun onStatusChanged(p:String?,s:Int,e:Bundle?){}
     override fun onDestroy(){handler.removeCallbacksAndMessages(null);try{locationManager.removeUpdates(this)}catch(_:Exception){};super.onDestroy()}
 }
