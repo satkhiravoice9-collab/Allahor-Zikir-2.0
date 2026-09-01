@@ -45,22 +45,25 @@ class ProfileSettingsActivity : ComponentActivity() {
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(80)) }
 
-        // --- উদ্যোক্তা কার্ড ---
+        // ================= ১. অ্যাপ উদ্যোক্তা ও পরিচালক =================
         val devCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
         devCard.addView(TextView(this).apply { text = "⭐ অ্যাপ উদ্যোক্তা ও পরিচালক"; setTextColor(textYellow); textSize = 16f; setTypeface(null, Typeface.BOLD) })
-        devCard.addView(TextView(this).apply { text = "নাম: সাব্বির আহমাদ\nমোবাইল: ০১৭২৫-২২৮৬২২"; setTextColor(Color.WHITE); textSize = 15f; setPadding(0, dp(8), 0, dp(12)) })
+        devCard.addView(TextView(this).apply { text = "নাম: সাব্বির আহমাদ\nমোবাইল: ০১৭২৫-২২৮৬২২"; setTextColor(Color.WHITE); textSize = 15f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(4).toFloat(), 1f) })
         
+        // কল বাটন
         devCard.addView(Button(this).apply {
             text = "📞 সরাসরি কল করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow)
-            layoutParams = LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }
             setOnClickListener {
                 val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:01725228622"))
                 startActivity(intent)
             }
         })
+        
+        // ফেসবুক পেজ বাটন
         devCard.addView(Button(this).apply {
             text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8"))
-            layoutParams = LinearLayout.LayoutParams(-1, dp(40))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
             setOnClickListener {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))
                 startActivity(intent)
@@ -68,37 +71,60 @@ class ProfileSettingsActivity : ComponentActivity() {
         })
         content.addView(devCard)
 
-        // --- ক্লাউড সাইন ইন কার্ড ---
+        // ================= ২. গুগল ক্লাউড সাইন ইন ও সিঙ্ক =================
         val cloudCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
         cloudCard.addView(TextView(this).apply { text = "☁️ গুগল ক্লাউড সাইন ইন ও সিঙ্ক"; setTextColor(textYellow); textSize = 16f; setTypeface(null, Typeface.BOLD) })
         
         val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
         val savedEmail = sharedPrefs.getString("user_email", "sabbirnumber@gmail.com")
         
-        cloudCard.addView(TextView(this).apply { text = "সংযুক্ত ক্লাউড জিমেইল:\n$savedEmail\n(১০০% গুগল ক্লাউডে ডাটা সংরক্ষণ হবে)"; setTextColor(Color.WHITE); textSize = 14f; setPadding(0, dp(6), 0, dp(12)) })
+        cloudCard.addView(TextView(this).apply { text = "সংযুক্ত ক্লাউড জিমেইল:\n$savedEmail\n(১০০% গুগল ক্লাউডে ডাটা সংরক্ষণ হবে)"; setTextColor(Color.WHITE); textSize = 14f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(2).toFloat(), 1f) })
         
         cloudCard.addView(Button(this).apply {
-            text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow)
-            layoutParams = LinearLayout.LayoutParams(-1, dp(40))
+            text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA"))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
             setOnClickListener {
                 Toast.makeText(this@ProfileSettingsActivity, "ক্লাউডের সাথে সফলভাবে সিঙ্ক হয়েছে!", Toast.LENGTH_LONG).show()
                 sharedPrefs.edit().putString("user_email", "sabbir.ahmad@gmail.com").apply()
-                showSettingsPage()
+                showSettingsPage() // রিফ্রেশ পেজ
             }
         })
         content.addView(cloudCard)
 
-        // --- থিম সিলেকশন কার্ড ---
+        // ================= ৩. অ্যাপ থিম নির্বাচন =================
         val themeCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)) }
-        themeCard.addView(TextView(this).apply { text = "🎨 অ্যাপ থিম নির্বাচন করুন:"; setTextColor(textYellow); textSize = 16f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(10)) })
+        themeCard.addView(TextView(this).apply { text = "🎨 অ্যাপ থিম নির্বাচন করুন:"; setTextColor(textYellow); textSize = 16f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
 
-        val themes = listOf("⚪ সাদা থিম (লাইট)", "⬛ কাবা থিম (ডার্ক গোল্ড)", "🟩 মদিনা থিম (এমরেল্ড গ্রিন)", "🟡 সুবহে-সাদিক থিম (রয়্যাল গোল্ড)")
-        themes.forEach { tName ->
+        val savedTheme = sharedPrefs.getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)")
+
+        val themes = listOf(
+            Pair("⚪ সাদা থিম (লাইট)", "#F3F4F6"), 
+            Pair("⬛ কাবা থিম (ডার্ক গোল্ড)", "#1F2937"), 
+            Pair("🟩 মদিনা থিম (এমরেল্ড গ্রিন)", "#064E3B"), 
+            Pair("🟡 সুবহে-সাদিক থিম (রয়্যাল গোল্ড)", "#B45309")
+        )
+
+        themes.forEach { (tName, tColor) ->
+            val isSelected = savedTheme == tName
+            
             val tBtn = Button(this).apply {
-                text = tName; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#064E3B"))
-                layoutParams = LinearLayout.LayoutParams(-1, dp(40)).apply { bottomMargin = dp(8) }
+                // যে থিমটি সিলেক্ট করা আছে, সেটির পাশে টিক চিহ্ন (✅) দেখাবে
+                text = if (isSelected) "✅ $tName" else tName
+                isAllCaps = false; setTextColor(if(tName.contains("সাদা")) Color.BLACK else Color.WHITE)
+                
+                // বাটন ডিজাইন
+                background = GradientDrawable().apply {
+                    setColor(Color.parseColor(tColor))
+                    cornerRadius = dp(8).toFloat()
+                    if (isSelected) setStroke(dp(2), btnYellow) else setStroke(dp(1), Color.GRAY)
+                }
+                
+                layoutParams = LinearLayout.LayoutParams(-1, dp(45)).apply { bottomMargin = dp(10) }
+                
                 setOnClickListener {
-                    Toast.makeText(this@ProfileSettingsActivity, "থিম পরিবর্তন করা হয়েছে: $tName", Toast.LENGTH_SHORT).show()
+                    sharedPrefs.edit().putString("app_theme", tName).apply()
+                    Toast.makeText(this@ProfileSettingsActivity, "থিম আপডেট করা হয়েছে: $tName", Toast.LENGTH_SHORT).show()
+                    showSettingsPage() // সাথে সাথে পেজ রিফ্রেশ করে টিক চিহ্ন আপডেট করবে
                 }
             }
             themeCard.addView(tBtn)
