@@ -26,7 +26,9 @@ class LibraryActivity : ComponentActivity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    // কালার প্যালেট
+    // ব্যাক বাটনের জন্য স্টেট ট্র্যাকার
+    private var isInsideVolume = false
+
     private val bgMain = Color.parseColor("#091C14")
     private val cardBg = Color.parseColor("#114D3C")
     private val cardStroke = Color.parseColor("#1B785B")
@@ -50,7 +52,6 @@ class LibraryActivity : ComponentActivity() {
         Toast.makeText(this, "ফাইলটি ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
     }
 
-    // --- বইয়ের ডাটাবেস (সম্পূর্ণ) ---
     private val quran = PdfBookItem("quran_full.pdf", "পবিত্র কুরআন শরীফ (সম্পূর্ণ ৩০ পারা ও ১১৪ সুরা)", "1FChVXAx1JKFs_0AFL9TYxqgO1Yc34Z7Q")
 
     private val bukhariVolList = listOf(
@@ -115,18 +116,17 @@ class LibraryActivity : ComponentActivity() {
         "সুনান ইবনে মাজাহ" to ibnMajahVolList
     )
 
-    // ================= সম্পূর্ণ ৩০ পারার লিস্ট (সঠিক পৃষ্ঠা নম্বরসহ) =================
     private val paraList = listOf(
         Pair("পারা ১: আলিফ লাম মীম (الم) (পৃষ্ঠা ৩)", 3), Pair("পারা ২: সায়াকুল (سَيَقُولُ) (পৃষ্ঠা ২৪)", 24),
-        Pair("পারা ৩: তিলকার রুসুল (تِلْكَ الرُّسُلُ) (পৃষ্ঠা ৪৪)", 44), Pair("পারা ৪: লান তানালু (لَنْ تَنَالُوا) (পৃষ্ঠা ৬৪)", 64),
+        Pair("পারা ৩: তিলকার রুসুল (تِلْكَ الرُّسُلُ) (পৃষ্ঠা ۴۴)", 44), Pair("পারা ৪: লান তানালু (لَنْ تَنَالُوا) (পৃষ্ঠা ৬৪)", 64),
         Pair("পারা ৫: ওয়াল মুহসানাতু (وَالْمُحْصَنَاتُ) (পৃষ্ঠা ৮৪)", 84), Pair("পারা ৬: লা ইয়ুহিব্বুল্লাহ (لَا يُحِبُّ اللَّهُ) (পৃষ্ঠা ১০৪)", 104),
-        Pair("পারা ৭: ওয়া ইযা সামিউ (وَإِذَا سَمِعُوا) (পৃষ্ঠা ১২৪)", 124), Pair("পারা ৮: ওয়া লাউ আন্নানা (وَلَوْ أَنَّنَا) (পৃষ্ঠা ১৪৪)", 144),
+        Pair("পারা ৭: ওয়া ইযা সামিউ (وَإِذَا سَمِعُوا) (পৃষ্ঠা ১২৪)", 124), Pair("পারা ۸: ওয়া লাউ আন্নানা (وَلَوْ أَنَّنَا) (পৃষ্ঠা ১৪৪)", 144),
         Pair("পারা ৯: ক্বালাল মালাউ (قَالَ الْمَلَأُ) (পৃষ্ঠা ১৬৪)", 164), Pair("পারা ১০: ওয়া'লামু (وَاعْلَمُوا) (পৃষ্ঠা ১৮৪)", 184),
         Pair("পারা ১১: ইয়া'তাযিরুন (يَعْتَذِرُونَ) (পৃষ্ঠা ২০৪)", 204), Pair("পারা ১২: ওয়া মা মিন দা-ব্বাহ (وَمَا مِنْ دَابَّةٍ) (পৃষ্ঠা ২২৪)", 224),
         Pair("পারা ১৩: ওয়া মা উবাররিউ (وَمَا أُبَرِّئُ) (পৃষ্ঠা ২৪৪)", 244), Pair("পারা ১৪: রুবামা (رُبَمَا) (পৃষ্ঠা ২৬৪)", 264),
         Pair("পারা ১৫: সুবহানাল্লাযী (سُبْحَانَ الَّذِي) (পৃষ্ঠা ২৮৪)", 284), Pair("পারা ১৬: ক্বালা আলাম (قَالَ أَلَمْ) (পৃষ্ঠা ৩০৪)", 304),
         Pair("পারা ১৭: ইক্বতারা বা লিন্নাস (اقْتَرَبَ لِلنَّاسِ) (পৃষ্ঠা ৩২৪)", 324), Pair("পারা ১৮: ক্বাদ আফলাহা (قَدْ أَفْلَحَ) (পৃষ্ঠা ৩৪৪)", 344),
-        Pair("পারা ১৯: ওয়া ক্বাল্লাযীনা (وَقَالَ الَّذِينَ) (পৃষ্ঠা ৩৬৪)", 364), Pair("পারা ২০: আম্মান খালাক্বা (أَمَّنْ خَلَقَ) (পৃষ্ঠা ৩৮৪)", 384),
+        Pair("পারা ۱۹: ওয়া ক্বাল্লাযীনা (وَقَالَ الَّذِينَ) (পৃষ্ঠা ৩৬৪)", 364), Pair("পারা ২০: আম্মান খালাক্বা (أَمَّنْ خَلَقَ) (পৃষ্ঠা ৩৮৪)", 384),
         Pair("পারা ২১: উতলু মা উহিয়া (اتْلُ مَا أُوحِيَ) (পৃষ্ঠা ৪০৪)", 404), Pair("পারা ২২: ওয়া মাই-য়াক্বনুত (وَمَنْ يَقْنُتْ) (পৃষ্ঠা ৪২৪)", 424),
         Pair("পারা ২৩: ওয়া মালি-য়া (وَمَا لِيَ) (পৃষ্ঠা ৪৪৪)", 444), Pair("পারা ২৪: ফামান আজলামু (فَمَنْ أَظْلَمُ) (পৃষ্ঠা ৪৬৪)", 464),
         Pair("পারা ২৫: ইলাইহি ইউরাদ্দু (إِلَيْهِ يُرَدُّ) (পৃষ্ঠা ৪৮৪)", 484), Pair("পারা ২৬: হা-মীম (حم) (পৃষ্ঠা ৫০৪)", 504),
@@ -134,7 +134,6 @@ class LibraryActivity : ComponentActivity() {
         Pair("পারা ২৯: তাবারাকাল্লাযী (تَبَارَكَ الَّذِي) (পৃষ্ঠা ৫৬৪)", 564), Pair("পারা ৩০: আম্মা ইয়াতাসায়ালুন (عَمَّ يَتَسَاءَلُونَ) (পৃষ্ঠা ৫৮৪)", 584)
     )
 
-    // ================= সম্পূর্ণ ১১৪টি সূরার লিস্ট =================
     private val surahList = listOf(
         Pair("১. সূরা আল-ফাতিহা (পৃষ্ঠা ৩)", 3), Pair("২. সূরা আল-বাকারাহ (পৃষ্ঠা ৪)", 4),
         Pair("৩. সূরা আলে-ইমরান (পৃষ্ঠা ৫২)", 52), Pair("৪. সূরা আন-নিসা (পৃষ্ঠা ৭৯)", 79),
@@ -153,14 +152,14 @@ class LibraryActivity : ComponentActivity() {
         Pair("২৯. সূরা আল-আনকাবুত (পৃষ্ঠা ৩৯৮)", 398), Pair("৩০. সূরা আর-রূম (পৃষ্ঠা ৪০৬)", 406),
         Pair("৩১. সূরা লুকমান (পৃষ্ঠা ৪১৩)", 413), Pair("৩২. সূরা আস-সাজদাহ (পৃষ্ঠা ৪১৭)", 417),
         Pair("৩৩. সূরা আল-আহযাব (পৃষ্ঠা ৪২০)", 420), Pair("৩৪. সূরা সাবা (পৃষ্ঠা ৪৩০)", 430),
-        Pair("৩৫. সূরা ফাতির (পৃষ্ঠা ৪৩৬)", 436), Pair("৩৬. সূরা ইয়াসীন (পৃষ্ঠা ৪৪২)", 442),
-        Pair("৩৭. সূরা আস-সাফফাত (পৃষ্ঠা ৪৪৭)", 447), Pair("৩৮. সূরা সোয়াদ (পৃষ্ঠা ৪৫৪)", 454),
+        Pair("৩৫. সূরা ফাতির (পৃষ্ঠা ৪৩৬)", 436), Pair("৩৬. সূরা ইয়াসীন (পৃষ্ঠা ۴۴২)", 442),
+        Pair("৩৭. সূরা আস-সাফফাত (পৃষ্ঠা ۴۴৭)", 447), Pair("৩৮. সূরা সোয়াদ (পৃষ্ঠা ۴۵৪)", 454),
         Pair("৩৯. সূরা আজ-জুমার (পৃষ্ঠা ৪৬০)", 460), Pair("৪০. সূরা আল-মু'মিন (গাফির) (পৃষ্ঠা ৪৬৯)", 469),
         Pair("৪১. সূরা হা-মীম সাজদাহ (পৃষ্ঠা ৪৭৯)", 479), Pair("৪২. সূরা আশ-শূরা (পৃষ্ঠা ৪৮৫)", 485),
         Pair("৪৩. সূরা আজ-জুখরুফ (পৃষ্ঠা ৪৯১)", 491), Pair("৪৪. সূরা আদ-দুখান (পৃষ্ঠা ৪৯৭)", 497),
-        Pair("৪৫. সূরা আল-জাসিয়াহ (পৃষ্ঠা ৫০০)", 500), Pair("৪৬. সূরা আল-আহকাফ (পৃষ্ঠা ৫০৪)", 504),
-        Pair("৪৭. সূরা মুহাম্মদ (পৃষ্ঠা ৫০৮)", 508), Pair("৪৮. সূরা আল-ফাতহ (পৃষ্ঠা ৫১৩)", 513),
-        Pair("৪৯. সূরা আল-হুজুরাত (পৃষ্ঠা ৫১৭)", 517), Pair("৫০. সূরা কাফ (পৃষ্ঠা ৫২০)", 520),
+        Pair("৪৫. সূরা আল-জাসিয়াহ (পৃষ্ঠা ৫০০)", 500), Pair("৪৬. সূরা আল-আহকাফ (পৃষ্ঠা ৫০۴)", 504),
+        Pair("৪৭. সূরা মুহাম্মদ (পৃষ্ঠা ৫০৮)", 508), Pair("৪৮. সূরা আল-ফাতহ (পৃষ্ঠা ۵۱۳)", 513),
+        Pair("৪৯. সূরা আল-হুজুরাত (পৃষ্ঠা ۵۱۷)", 517), Pair("৫০. সূরা কাফ (পৃষ্ঠা ৫২০)", 520),
         Pair("৫১. সূরা আজ-যারিয়াত (পৃষ্ঠা ৫২২)", 522), Pair("৫২. সূরা আত্ব-তূর (পৃষ্ঠা ৫২৫)", 525),
         Pair("৫৩. সূরা আন-নাজম (পৃষ্ঠা ৫২৮)", 528), Pair("৫৪. সূরা আল-কামার (পৃষ্ঠা ৫৩০)", 530),
         Pair("৫৫. সূরা আর-রহমান (পৃষ্ঠা ৫৩৩)", 533), Pair("৫৬. সূরা আল-ওয়াকিয়াহ (পৃষ্ঠা ৫৩৬)", 536),
@@ -170,7 +169,7 @@ class LibraryActivity : ComponentActivity() {
         Pair("৬৩. সূরা আল-মুনাফিকুন (পৃষ্ঠা ৫৫৬)", 556), Pair("৬৪. সূরা আত-তাগাবুন (পৃষ্ঠা ৫৫৮)", 558),
         Pair("৬৫. সূরা আত-ত্বালাক (পৃষ্ঠা ৫৬০)", 560), Pair("৬৬. সূরা আত-তাহরীম (পৃষ্ঠা ৫৬২)", 562),
         Pair("৬৭. সূরা আল-মুলক (পৃষ্ঠা ৫৬৬)", 566), Pair("৬৮. সূরা আল-কলম (পৃষ্ঠা ৫৬৬)", 566),
-        Pair("৬৯. সূরা আল-হাক্কাহ (পৃষ্ঠা ৫৬৮)", 568), Pair("৭০. সূরা আল-মাআরিজ (পৃষ্ঠা ৫৭১)", 571),
+        Pair("৬৯. সূরা আল-হাক্কাহ (পৃষ্ঠা ৫৬৮)", 568), Pair("৭০. সূরা আল-মাআরিজ (পৃষ্ঠা ۵৭১)", 571),
         Pair("৭১. সূরা নূহ (পৃষ্ঠা ৫৭৩)", 573), Pair("৭২. সূরা আল-জ্বিন (পৃষ্ঠা ৫৭৫)", 575),
         Pair("৭৩. সূরা আল-মুযযাম্মিল (পৃষ্ঠা ৫৭৭)", 577), Pair("৭৪. সূরা আল-মুদ্দাসসির (পৃষ্ঠা ৫৭৯)", 579),
         Pair("৭৫. সূরা আল-কিয়ামাহ (পৃষ্ঠা ৫৮১)", 581), Pair("৭৬. সূরা আদ-দাহর (পৃষ্ঠা ৫৮৩)", 583),
@@ -191,21 +190,30 @@ class LibraryActivity : ComponentActivity() {
         Pair("১০৫. সূরা আল-ফীল (পৃষ্ঠা ৬১০)", 610), Pair("১০৬. সূরা কুরাইশ (পৃষ্ঠা ৬১০)", 610),
         Pair("১০৭. সূরা আল-মাউন (পৃষ্ঠা ৬১০)", 610), Pair("১০৮. সূরা আল-কাউসার (পৃষ্ঠা ৬১১)", 611),
         Pair("১০৯. সূরা আল-কাফিরুন (পৃষ্ঠা ৬১১)", 611), Pair("১১০. সূরা আন-নাসর (পৃষ্ঠা ৬১১)", 611),
-        Pair("১১১. সূরা আল-লাহাব (পৃষ্ঠা ৬১১)", 611), Pair("১১২. সূরা আল-ইখলাস (পৃষ্ঠা ৬১২)", 612),
+        Pair("১১۱. সূরা আল-লাহাব (পৃষ্ঠা ৬১১)", 611), Pair("১১২. সূরা আল-ইখলাস (পৃষ্ঠা ৬১২)", 612),
         Pair("১১৩. সূরা আল-ফালাক (পৃষ্ঠা ৬১২)", 612), Pair("১১৪. সূরা আন-নাস (পৃষ্ঠা ৬১২)", 612)
     )
 
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); showLibrary() }
-    override fun onResume() { super.onResume(); showLibrary() }
+    
+    // ব্যাক বাটনে চাপলে যেন ভলিউম লিস্ট থেকে মেইন লাইব্রেরিতে ফেরে
+    override fun onBackPressed() {
+        if (isInsideVolume) {
+            showLibrary()
+        } else {
+            super.onBackPressed()
+        }
+    }
 
     private fun showLibrary() {
+        isInsideVolume = false // মেইন লিস্টে স্টেট আপডেট
+
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(16), dp(14), dp(80)) }
 
         content.addView(TextView(this).apply { text = "📚 ইসলামিক লাইব্রেরী ও কিতাব ভাণ্ডার"; setTextColor(textYellow); textSize = 20f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
         
-        // কোরআন কার্ড
         val qCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(12), dp(12), dp(12), dp(12)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) } }
         qCard.addView(TextView(this).apply { text = "📖 পবিত্র কুরআন শরীফ (সম্পূর্ণ)"; setTextColor(Color.WHITE); textSize = 16f; setTypeface(null, Typeface.BOLD) })
         
@@ -227,7 +235,6 @@ class LibraryActivity : ComponentActivity() {
         }
         content.addView(qCard)
 
-        // হাদিস লিস্ট
         content.addView(TextView(this).apply { text = "📂 সিহাহ সিত্তাহ হাদিস কিতাবসমূহ:"; setTextColor(textYellow); textSize = 18f; setTypeface(null, Typeface.BOLD); setPadding(0, dp(6), 0, dp(12)) })
 
         groups.forEachIndexed { index, (title, books) ->
@@ -241,6 +248,8 @@ class LibraryActivity : ComponentActivity() {
     }
 
     private fun showVolumes(title: String, books: List<PdfBookItem>, idxGroup: Int) {
+        isInsideVolume = true // ভলিউমের ভেতরে প্রবেশ করলে স্টেট আপডেট
+
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(8), dp(12), dp(8), dp(12)); background = GradientDrawable().apply { setColor(cardBg) } }
         top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(Color.WHITE); setPadding(dp(10),0,dp(10),0); setOnClickListener { showLibrary() } })
