@@ -21,9 +21,8 @@
         <activity android:name=".LibraryActivity" android:exported="false" />
         <activity android:name=".PdfReaderActivity" android:exported="false" />
         <activity android:name=".NotepadActivity" android:exported="false" />
-        
-        <!-- মাসনূন আমলের নতুন অ্যাক্টিভিটি -->
         <activity android:name=".MasnunAmolActivity" android:exported="false" />
+        <activity android:name=".ProfileSettingsActivity" android:exported="false" />
 
         <activity android:name=".TasbihActivity" android:exported="false" />
         <activity android:name=".ZikirManagerActivity" android:exported="false" />
