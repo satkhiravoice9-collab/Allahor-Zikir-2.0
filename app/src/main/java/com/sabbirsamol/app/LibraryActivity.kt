@@ -65,16 +65,11 @@ class LibraryActivity : ComponentActivity() {
     private fun addQuranSection(parent: LinearLayout) {
         addBookCard(parent, LibraryBooks.quran, true)
         addSectionTitle(parent, "কুরআন শরীফ — সূরা ও পারা")
-
         addNavigationGroup(parent, "সূরা তালিকা", QuranNavigation.surahs)
         addNavigationGroup(parent, "পারা তালিকা", QuranNavigation.paras)
     }
 
-    private fun addNavigationGroup(
-        parent: LinearLayout,
-        title: String,
-        items: List<QuranNavigationItem>
-    ) {
+    private fun addNavigationGroup(parent: LinearLayout, title: String, items: List<QuranNavigationItem>) {
         parent.addView(TextView(this).apply {
             text = title
             textSize = 16f
@@ -114,7 +109,7 @@ class LibraryActivity : ComponentActivity() {
             setPadding(18, 14, 12, 14)
             setBackgroundColor(Color.WHITE)
         }
-        val text = TextView(this).apply {
+        val labelView = TextView(this).apply {
             text = if (quran) "📖 ${book.title}" else "📕 ${book.title}\n${book.volume.orEmpty()}"
             textSize = if (quran) 19f else 17f
             setTextColor(Color.rgb(30, 30, 30))
@@ -126,7 +121,7 @@ class LibraryActivity : ComponentActivity() {
                     .putExtra(PdfReaderActivity.EXTRA_BOOK_ID, book.id))
             }
         }
-        card.addView(text, LinearLayout.LayoutParams(0, -2, 1f))
+        card.addView(labelView, LinearLayout.LayoutParams(0, -2, 1f))
         card.addView(button, LinearLayout.LayoutParams(-2, -2))
         parent.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 8 })
     }
