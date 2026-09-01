@@ -40,6 +40,7 @@ class HomeBottomMenuFix : Application() {
                 child.setPadding(0,2,0,2); child.minHeight=0; child.minimumHeight=0
                 child.layoutParams=LinearLayout.LayoutParams(0,-1,1f).apply{setMargins(1,0,1,0)}
                 if (i == 2) child.setOnClickListener { activity.startActivity(Intent(activity, LibraryActivity::class.java)) }
+                if (i == 4) child.setOnClickListener { activity.startActivity(Intent(activity, NotepadActivity::class.java)) }
             }
         }
         menu.layoutParams = menu.layoutParams.apply { width=ViewGroup.LayoutParams.MATCH_PARENT; height=dp(activity,72) }
