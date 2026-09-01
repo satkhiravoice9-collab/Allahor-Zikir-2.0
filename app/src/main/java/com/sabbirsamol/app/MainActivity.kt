@@ -41,14 +41,12 @@ class MainActivity : ComponentActivity(), LocationListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-        showHomeScreen()
-        updatePrayerTimes()
-        startCountdown()
+        showHomeScreen(); updatePrayerTimes(); startCountdown()
     }
 
     private fun showHomeScreen() {
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.rgb(245,250,247)) }
-        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(20,25,20,15) }
+        val root = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(Color.rgb(245,250,247)) }
+        val content = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(20,25,20,15) }
         fun tv(text:String,size:Float)=TextView(this).apply{this.text=text;textSize=size;setTextColor(Color.rgb(20,83,45));gravity=Gravity.CENTER;setPadding(0,8,0,8)}
         content.addView(tv("🕌 Muslim Time",25f))
         locationText=tv("📍 $selectedThana, $selectedDistrict, $selectedDivision",14f); content.addView(locationText)
@@ -56,17 +54,16 @@ class MainActivity : ComponentActivity(), LocationListener {
         countdownText=tv("পরবর্তী ওয়াক্ত হিসাব হচ্ছে...",18f);content.addView(countdownText)
         prayerText=tv("",17f).apply{setTextColor(Color.DKGRAY);gravity=Gravity.START};content.addView(prayerText)
         root.addView(ScrollView(this).apply{addView(content)},LinearLayout.LayoutParams(-1,0,1f))
-
-        val horizontalScroll=HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;isFillViewport=false}
-        val bottomMenu=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;setPadding(6,4,6,6);setBackgroundColor(Color.WHITE)}
-        addBottomMenuButton(bottomMenu,"🏠\nহোম"){Toast.makeText(this,"আপনি হোম স্ক্রিনে আছেন",Toast.LENGTH_SHORT).show()}
-        addBottomMenuButton(bottomMenu,"📿\nতাসবিহ"){showTasbih()}
-        addBottomMenuButton(bottomMenu,"📚\nলাইব্রেরি"){showLibrary()}
-        addBottomMenuButton(bottomMenu,"🤲\nমাসনুন আমল"){showMasnunAmal()}
-        addBottomMenuButton(bottomMenu,"📝\nনোটপ্যাড"){showNotepad()}
-        addBottomMenuButton(bottomMenu,"🔄\nরিফ্রেশ"){updatePrayerTimes();Toast.makeText(this,"نامাজের সময় আপডেট হয়েছে",Toast.LENGTH_SHORT).show()}
-        addBottomMenuButton(bottomMenu,"ℹ️\nএবাউট"){showAboutDialog()}
-        horizontalScroll.addView(bottomMenu);root.addView(horizontalScroll,LinearLayout.LayoutParams(-1,64));setContentView(root)
+        val hs=HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;isFillViewport=false}
+        val menu=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;setPadding(4,4,4,6);setBackgroundColor(Color.WHITE)}
+        addBottomMenuButton(menu,"🏠\nহোম"){Toast.makeText(this,"আপনি হোম স্ক্রিনে আছেন",Toast.LENGTH_SHORT).show()}
+        addBottomMenuButton(menu,"📿\nতাসবিহ"){showTasbih()}
+        addBottomMenuButton(menu,"📚\nলাইব্রেরি"){showLibrary()}
+        addBottomMenuButton(menu,"🤲\nমাসনুন আমল"){showMasnunAmal()}
+        addBottomMenuButton(menu,"📝\nনোটপ্যাড"){showNotepad()}
+        addBottomMenuButton(menu,"🔄\nরিফ্রেশ"){updatePrayerTimes();Toast.makeText(this,"নামাজের সময় আপডেট হয়েছে",Toast.LENGTH_SHORT).show()}
+        addBottomMenuButton(menu,"ℹ️\nএবাউট"){showAboutDialog()}
+        hs.addView(menu); root.addView(hs,LinearLayout.LayoutParams(-1,64)); setContentView(root)
     }
 
     private fun addBottomMenuButton(parent:LinearLayout,label:String,action:()->Unit){parent.addView(Button(this).apply{text=label;textSize=12f;setTextColor(Color.rgb(20,83,45));setOnClickListener{action()};isAllCaps=false;minHeight=0;minWidth=0;setPadding(4,0,4,0);gravity=Gravity.CENTER},LinearLayout.LayoutParams(112,54).apply{setMargins(2,0,2,0)})}
@@ -75,7 +72,7 @@ class MainActivity : ComponentActivity(), LocationListener {
     private fun showLibrary(){val books=arrayOf("🕋 কুরআন শরীফ","📚 সহিহ বুখারী","📚 সহিহ মুসলিম","📚 সুনানে আবু দাউদ","📚 জামে তিরমিজি","📚 সুনানে নাসাঈ","📚 সুনানে ইবনে মাজাহ");AlertDialog.Builder(this).setTitle("📚 ইসলামিক লাইব্রেরি").setItems(books){_,which->showBookInfo(books[which],which)}.setNegativeButton("বন্ধ",null).show()}
     private fun showBookInfo(title:String,index:Int){val extra=if(index==0)"\n\n🕋 কুরআন: সূরা ও ৩০ পারার কাঠামো পরবর্তী ধাপে যুক্ত করা যাবে." else "";AlertDialog.Builder(this).setTitle(title).setMessage("এই বইটি লাইব্রেরিতে নির্বাচিত হয়েছে।$extra\n\n⬇️ PDF Download\n💾 Offline Reading\n🔖 Bookmark\n📌 Last Page\n🔍 Search / Zoom\n\nGoogle Drive PDF-এর আসল লিংক এখনো এই রিপোজিটরিতে দেওয়া হয়নি; লিংক ছাড়া ভুয়া ডাউনলোড চালু করা হবে না।").setPositiveButton("ঠিক আছে",null).show()}
     private fun showMasnunAmal(){val amals=arrayOf("আয়াতুল কুরসি","সকাল-সন্ধ্যার যিকির","ঘুমের আগে আমল","ঘর থেকে বের হওয়ার দোয়া","খাবারের দোয়া","সফরের দোয়া","ইস্তিগফার","দরুদ শরীফ");AlertDialog.Builder(this).setTitle("🤲 মাসনুন আমল").setItems(amals){_,i->AlertDialog.Builder(this).setTitle(amals[i]).setMessage(masnunText(amals[i])).setPositiveButton("ঠিক আছে",null).show()}.setNegativeButton("বন্ধ",null).show()}
-    private fun masnunText(name:String)=when(name){"আয়াতুল কুরসি"->"اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ";"ইস্তিগফার"->"أَسْتَغْفِرُ اللَّهَ";"দরুদ শরীফ"->"اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ";else->"মাসনুন আমলের পূর্ণ আরবি পাঠ পরবর্তী কনটেন্ট ডাটায় যুক্ত করা হবে।"}
+    private fun masnunText(name:String)=when(name){"আয়াতুল কুরসি"->"اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ";"ইস্তিগফার"->"أَسْتَغْفِرُ اللَّهَ";"দরুদ শরীف"->"اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ";else->"মাসনুন আমলের পূর্ণ আরবি পাঠ পরবর্তী কনটেন্ট ডাটায় যুক্ত করা হবে।"}
     private fun showNotepad(){val edit=EditText(this).apply{setText(prefs.getString("note",""));hint="আপনার নোট লিখুন...";minLines=8;gravity=Gravity.TOP};AlertDialog.Builder(this).setTitle("📝 নোটপ্যাড").setView(edit).setPositiveButton("💾 সেভ"){_,_->prefs.edit().putString("note",edit.text.toString()).apply();Toast.makeText(this,"নোট সেভ হয়েছে",Toast.LENGTH_SHORT).show()}.setNegativeButton("বন্ধ",null).show()}
     private fun showAboutDialog(){AlertDialog.Builder(this).setTitle("ℹ️ অ্যাপ সম্পর্কে").setMessage("উদ্যোক্তা ও পরিচালক\nসাব্বির আহমাদ\n\n📞 ০১৭২৫-২২৮৬২২\n\nবিভিন্ন মাসআলা-মাসায়েল জানতে\nFacebook Page: Satkhira Voice").setPositiveButton("ঠিক আছে",null).show()}
     private fun showLocationDialog(){AlertDialog.Builder(this).setTitle("লোকেশন নির্বাচন করুন").setItems(arrayOf("🛰️ GPS Auto Location","🇧🇩 বাংলাদেশ ম্যানুয়াল নির্বাচন")){_,w->if(w==0)enableGps()else showDivisionDialog()}.setNegativeButton("বাতিল",null).show()}
