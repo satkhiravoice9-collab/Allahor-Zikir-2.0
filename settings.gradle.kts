@@ -11,8 +11,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // নিচের লাইনটি নতুন যোগ করা হয়েছে PDF লাইব্রেরি ডাউনলোড করার জন্য
-        maven { url = uri("https://jitpack.io") } 
+        maven { url = uri("https://jitpack.io") }
+        // নিচের লাইনটি যুক্ত করুন (পুরনো পিডিএফ লাইব্রেরিটি পাওয়ার জন্য)
+        maven { url = uri("https://jcenter.bintray.com") } 
     }
 }
 
