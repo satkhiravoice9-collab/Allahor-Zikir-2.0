@@ -17,7 +17,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.*
@@ -99,26 +98,80 @@ class MainActivity : ComponentActivity(), LocationListener {
             setPadding(15, 15, 15, 15)
         }
 
-        val refresh = Button(this).apply {
-            text = "🔄 রিফ্রেশ"
-            setOnClickListener {
-                updatePrayerTimes()
-                Toast.makeText(
-                    this@MainActivity,
-                    "নামাজের সময় আপডেট হয়েছে",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-
         root.addView(title)
         root.addView(locationText)
         root.addView(changeLocation)
         root.addView(countdownText)
         root.addView(prayerText)
-        root.addView(refresh)
+
+        // ===== Home Screen-এর একেবারে নিচের ৭টি মেনু =====
+        addBottomMenuButton("🏠  হোম") {
+            Toast.makeText(this, "আপনি হোম স্ক্রিনে আছেন", Toast.LENGTH_SHORT).show()
+        }
+
+        addBottomMenuButton("📿  তাসবিহ") {
+            Toast.makeText(this, "তাসবিহ বিভাগ প্রস্তুত করা হবে", Toast.LENGTH_SHORT).show()
+        }
+
+        addBottomMenuButton("📚  ইসলামিক লাইব্রেরি") {
+            Toast.makeText(this, "ইসলামিক লাইব্রেরি খুলবে", Toast.LENGTH_SHORT).show()
+        }
+
+        addBottomMenuButton("🤲  মাসনুন আমল") {
+            Toast.makeText(this, "মাসনুন আমল বিভাগ খুলবে", Toast.LENGTH_SHORT).show()
+        }
+
+        addBottomMenuButton("📝  নোটপ্যাড") {
+            Toast.makeText(this, "নোটপ্যাড খুলবে", Toast.LENGTH_SHORT).show()
+        }
+
+        addBottomMenuButton("🔄  রিফ্রেশ") {
+            updatePrayerTimes()
+            Toast.makeText(
+                this,
+                "নামাজের সময় আপডেট হয়েছে",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        addBottomMenuButton("ℹ️  এবাউট") {
+            showAboutDialog()
+        }
 
         setContentView(root)
+    }
+
+    private fun addBottomMenuButton(label: String, action: () -> Unit) {
+        val button = Button(this).apply {
+            text = label
+            textSize = 16f
+            setTextColor(Color.rgb(20, 83, 45))
+            setOnClickListener { action() }
+        }
+
+        root.addView(
+            button,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 4, 0, 4)
+            }
+        )
+    }
+
+    private fun showAboutDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("ℹ️ অ্যাপ সম্পর্কে")
+            .setMessage(
+                "উদ্যোক্তা ও পরিচালক\n" +
+                        "সাব্বির আহমাদ\n\n" +
+                        "📞 ০১৭২৫-২২৮৬২২\n\n" +
+                        "বিভিন্ন মাসআলা-মাসায়েল জানতে\n" +
+                        "Facebook Page: Satkhira Voice"
+            )
+            .setPositiveButton("ঠিক আছে", null)
+            .show()
     }
 
     private fun showLocationDialog() {
@@ -357,22 +410,20 @@ class MainActivity : ComponentActivity(), LocationListener {
         )
 
         prayerText.text = """
-            
             🕌 আজকের নামাজের সময়
-            
+
             🌙 ফজর        ${times.fajr}
             🌅 সূর্যোদয়    ${times.sunrise}
             ☀️ যোহর       ${times.dhuhr}
             🌤️ আসর        ${times.asr}
             🌇 মাগরিব     ${times.maghrib}
             🌙 এশা        ${times.isha}
-            
+
             🚫 নিষিদ্ধ সময়
-            
+
             🌅 সূর্যোদয়: ${times.sunriseForbidden}
             ☀️ মধ্যাহ্ন: ${times.zenithForbidden}
             🌇 সূর্যাস্ত: ${times.sunsetForbidden}
-            
         """.trimIndent()
     }
 
@@ -381,13 +432,8 @@ class MainActivity : ComponentActivity(), LocationListener {
         handler.post(object : Runnable {
 
             override fun run() {
-
                 updateCountdown()
-
-                handler.postDelayed(
-                    this,
-                    1000L
-                )
+                handler.postDelayed(this, 1000L)
             }
         })
     }
@@ -413,11 +459,8 @@ class MainActivity : ComponentActivity(), LocationListener {
         var nextTime = 0L
 
         for ((name, time) in prayerList) {
-
             val millis = timeToMillis(time)
-
             if (millis > now.timeInMillis) {
-
                 nextName = name
                 nextTime = millis
                 break
@@ -425,14 +468,12 @@ class MainActivity : ComponentActivity(), LocationListener {
         }
 
         if (nextName.isEmpty()) {
-
             nextName = "ফজর"
             nextTime = timeToMillis(times.fajr) +
                     24 * 60 * 60 * 1000
         }
 
         val diff = nextTime - now.timeInMillis
-
         val hours = diff / (1000 * 60 * 60)
         val minutes = (diff / (1000 * 60)) % 60
         val seconds = (diff / 1000) % 60
@@ -449,28 +490,12 @@ class MainActivity : ComponentActivity(), LocationListener {
     private fun timeToMillis(time: String): Long {
 
         val parts = time.split(":")
-
         val cal = Calendar.getInstance()
 
-        cal.set(
-            Calendar.HOUR_OF_DAY,
-            parts[0].toInt()
-        )
-
-        cal.set(
-            Calendar.MINUTE,
-            parts[1].toInt()
-        )
-
-        cal.set(
-            Calendar.SECOND,
-            0
-        )
-
-        cal.set(
-            Calendar.MILLISECOND,
-            0
-        )
+        cal.set(Calendar.HOUR_OF_DAY, parts[0].toInt())
+        cal.set(Calendar.MINUTE, parts[1].toInt())
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
 
         return cal.timeInMillis
     }
@@ -493,7 +518,6 @@ class MainActivity : ComponentActivity(), LocationListener {
     ): PrayerTimes {
 
         val calendar = Calendar.getInstance()
-
         val day = calendar.get(Calendar.DAY_OF_YEAR)
 
         val declination =
@@ -503,18 +527,16 @@ class MainActivity : ComponentActivity(), LocationListener {
                 )
             )
 
-        val b =
-            Math.toRadians(
-                (360.0 / 365.0) * (day - 81)
-            )
+        val b = Math.toRadians(
+            (360.0 / 365.0) * (day - 81)
+        )
 
         val equation =
             9.87 * sin(2 * b) -
                     7.53 * cos(b) -
                     1.5 * sin(b)
 
-        val timezone =
-            TimeZoneOffset()
+        val timezone = TimeZoneOffset()
 
         val solarNoon =
             12.0 +
@@ -522,49 +544,43 @@ class MainActivity : ComponentActivity(), LocationListener {
                     lon / 15.0 -
                     equation / 60.0
 
-        val sunrise =
-            solarTime(
-                solarNoon,
-                lat,
-                declination,
-                -0.833
-            )
+        val sunrise = solarTime(
+            solarNoon,
+            lat,
+            declination,
+            -0.833
+        )
 
-        val sunset =
-            solarTime(
-                solarNoon,
-                lat,
-                declination,
-                -0.833,
-                true
-            )
+        val sunset = solarTime(
+            solarNoon,
+            lat,
+            declination,
+            -0.833,
+            true
+        )
 
-        val fajr =
-            solarTime(
-                solarNoon,
-                lat,
-                declination,
-                -18.0
-            )
+        val fajr = solarTime(
+            solarNoon,
+            lat,
+            declination,
+            -18.0
+        )
 
-        val isha =
-            solarTime(
-                solarNoon,
-                lat,
-                declination,
-                -18.0,
-                true
-            )
+        val isha = solarTime(
+            solarNoon,
+            lat,
+            declination,
+            -18.0,
+            true
+        )
 
-        val dhuhr =
-            solarNoon + 0.05
+        val dhuhr = solarNoon + 0.05
 
-        val asr =
-            solarAsr(
-                solarNoon,
-                lat,
-                declination
-            )
+        val asr = solarAsr(
+            solarNoon,
+            lat,
+            declination
+        )
 
         val fajrText = formatTime(fajr)
         val sunriseText = formatTime(sunrise)
@@ -573,11 +589,8 @@ class MainActivity : ComponentActivity(), LocationListener {
         val sunsetText = formatTime(sunset)
         val ishaText = formatTime(isha)
 
-        val zenithStart =
-            formatTime(dhuhr - 0.05)
-
-        val zenithEnd =
-            formatTime(dhuhr + 0.05)
+        val zenithStart = formatTime(dhuhr - 0.05)
+        val zenithEnd = formatTime(dhuhr + 0.05)
 
         return PrayerTimes(
             fajrText,
@@ -600,27 +613,19 @@ class MainActivity : ComponentActivity(), LocationListener {
         evening: Boolean = false
     ): Double {
 
-        val latRad =
-            Math.toRadians(latitude)
+        val latRad = Math.toRadians(latitude)
+        val decRad = Math.toRadians(declination)
 
-        val decRad =
-            Math.toRadians(declination)
-
-        val cosH =
-            (
-                    sin(Math.toRadians(angle)) -
-                            sin(latRad) * sin(decRad)
-                    ) /
-                    (
-                            cos(latRad) * cos(decRad)
-                            )
-
-        val hourAngle =
-            Math.toDegrees(
-                acos(
-                    cosH.coerceIn(-1.0, 1.0)
+        val cosH = (
+                sin(Math.toRadians(angle)) -
+                        sin(latRad) * sin(decRad)
+                ) / (
+                cos(latRad) * cos(decRad)
                 )
-            ) / 15.0
+
+        val hourAngle = Math.toDegrees(
+            acos(cosH.coerceIn(-1.0, 1.0))
+        ) / 15.0
 
         return if (evening) {
             noon + hourAngle
@@ -635,29 +640,18 @@ class MainActivity : ComponentActivity(), LocationListener {
         declination: Double
     ): Double {
 
-        val latRad =
-            Math.toRadians(latitude)
+        val latRad = Math.toRadians(latitude)
+        val decRad = Math.toRadians(declination)
+        val shadow = 2.0
 
-        val decRad =
-            Math.toRadians(declination)
-
-        val shadow =
-            2.0
-
-        val angle =
-            Math.toDegrees(
-                atan(
-                    1.0 /
-                            (
-                                    shadow +
-                                            tan(
-                                                abs(
-                                                    latRad - decRad
-                                                )
-                                            )
-                                    )
-                )
+        val angle = Math.toDegrees(
+            atan(
+                1.0 / (
+                        shadow +
+                                tan(abs(latRad - decRad))
+                        )
             )
+        )
 
         return solarTime(
             noon,
@@ -670,25 +664,17 @@ class MainActivity : ComponentActivity(), LocationListener {
 
     private fun formatTime(decimalHour: Double): String {
 
-        var hour =
-            floor(decimalHour).toInt()
-
-        var minute =
-            ((decimalHour - hour) * 60)
-                .roundToInt()
+        var hour = floor(decimalHour).toInt()
+        var minute = ((decimalHour - hour) * 60).roundToInt()
 
         if (minute >= 60) {
             hour++
             minute -= 60
         }
 
-        hour =
-            ((hour % 24) + 24) % 24
+        hour = ((hour % 24) + 24) % 24
 
-        return "%02d:%02d".format(
-            hour,
-            minute
-        )
+        return "%02d:%02d".format(hour, minute)
     }
 
     private fun TimeZoneOffset(): Double {
@@ -708,11 +694,9 @@ class MainActivity : ComponentActivity(), LocationListener {
     override fun onDestroy() {
 
         super.onDestroy()
-
         handler.removeCallbacksAndMessages(null)
 
         if (::locationManager.isInitialized) {
-
             try {
                 locationManager.removeUpdates(this)
             } catch (_: Exception) {
