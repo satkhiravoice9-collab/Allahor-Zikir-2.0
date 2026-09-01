@@ -1,5 +1,6 @@
 package com.sabbirsamol.app
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.content.Context
 import android.graphics.Color
@@ -91,7 +92,7 @@ class TasbihActivity : ComponentActivity() {
             }
             setOnClickListener { }
             addView(TextView(this@TasbihActivity).apply {
-                text = "تাসবিহ পড়তে স্ক্রিনে ট্যাপ করুন\n\nযেকোনো জায়গায় ট্যাপ করলেই ১ গণনা"
+                text = "তাসবিহ পড়তে স্ক্রিনে ট্যাপ করুন\n\nযেকোনো জায়গায় ট্যাপ করলেই ১ গণনা"
                 textSize = 18f
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
@@ -121,16 +122,24 @@ class TasbihActivity : ComponentActivity() {
 
     private fun chooseTarget() {
         val values = arrayOf("33", "99", "100", "313", "1000")
-        AlertDialog.Builder(this).setTitle("তাসবিহের লক্ষ্য").setItems(values) { _, which ->
-            target = values[which].toInt()
-            saveAndRefresh()
-        }.show()
+        AlertDialog.Builder(this)
+            .setTitle("তাসবিহের লক্ষ্য")
+            .setItems(values) { _, which ->
+                target = values[which].toInt()
+                saveAndRefresh()
+            }
+            .show()
     }
 
     private fun confirmReset() {
-        AlertDialog.Builder(this).setTitle("কাউন্ট রিসেট করবেন?").setMessage("বর্তমান তাসবিহ গণনা শূন্য হয়ে যাবে।").setNegativeButton("না", null).setPositiveButton("হ্যাঁ") { _, _ ->
-            count = 0
-            saveAndRefresh()
-        }.show()
+        AlertDialog.Builder(this)
+            .setTitle("কাউন্ট রিসেট করবেন?")
+            .setMessage("বর্তমান তাসবিহ গণনা শূন্য হয়ে যাবে।")
+            .setNegativeButton("না", null)
+            .setPositiveButton("হ্যাঁ") { _, _ ->
+                count = 0
+                saveAndRefresh()
+            }
+            .show()
     }
 }
