@@ -7,19 +7,17 @@
     <application
         android:name=".HomeBottomMenuFix"
         android:allowBackup="true"
-        android:label="Muslim Time"
+        android:label="Allahor Zikir"
         android:supportsRtl="true"
         android:theme="@style/Theme.MuslimTime">
 
         <activity
             android:name=".MainActivity"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
 
     </application>
