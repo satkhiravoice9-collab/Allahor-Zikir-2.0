@@ -52,6 +52,15 @@ class ZikirManagerActivity : ComponentActivity() {
         val n=EditText(this).apply{setText(old);selectAll()};val t=EditText(this).apply{hint="Target (0 = Unlimited)";inputType=InputType.TYPE_CLASS_NUMBER;setText(if(target(old)>0)target(old).toString() else "")};box.addView(n);box.addView(t)
         AlertDialog.Builder(this).setTitle("জিকির ও Target Edit").setView(box).setNegativeButton("বাতিল",null).setPositiveButton("Save"){_,_->val s=n.text.toString().trim();if(s.isNotEmpty()){val a=items();val i=a.indexOf(old);if(i>=0)a[i]=s;saveItems(a);prefs.edit().remove("target_$old").putInt("target_$s",t.text.toString().toIntOrNull()?:0).apply();if(getSharedPreferences("tasbih_only",0).getString("selected","")==old)getSharedPreferences("tasbih_only",0).edit().putString("selected",s).apply();showList()}}.show()
     }
-    private fun delete(s:String){AlertDialog.Builder(this).setTitle("জিকির মুছবেন?").setMessage(s).setNegativeButton("না",null).setPositiveButton("হ্যাঁ"){_,_->val a=items();a.remove(s);if(a.isEmpty())a.add("সুবহানাল্লাহ");saveItems(a);prefs.edit().remove("target_$s").apply();if(getSharedPreferences("tasbih_only",0).getString("selected","")==s)getSharedPreferences("tasbih_only",0).edit().putString("selected",a.first()).putInt("count",0).apply();showList()}}.show()}
-    private fun setTarget(s:String){val e=EditText(this).apply{hint="0 = Unlimited";inputType=InputType.TYPE_CLASS_NUMBER;setText(if(target(s)>0)target(s).toString() else "")};AlertDialog.Builder(this).setTitle("🎯 $s এর Target").setView(e).setNegativeButton("বাতিল",null).setPositiveButton("Save"){_,_->prefs.edit().putInt("target_$s",e.text.toString().toIntOrNull()?:0).apply();showList()}.show()}
+    private fun delete(s:String){
+        AlertDialog.Builder(this).setTitle("জিকির মুছবেন?").setMessage(s).setNegativeButton("না",null).setPositiveButton("হ্যাঁ"){_,_->
+            val a=items();a.remove(s);if(a.isEmpty())a.add("সুবহানাল্লাহ");saveItems(a);prefs.edit().remove("target_$s").apply()
+            if(getSharedPreferences("tasbih_only",0).getString("selected","")==s)getSharedPreferences("tasbih_only",0).edit().putString("selected",a.first()).putInt("count",0).apply()
+            showList()
+        }.show()
+    }
+    private fun setTarget(s:String){
+        val e=EditText(this).apply{hint="0 = Unlimited";inputType=InputType.TYPE_CLASS_NUMBER;setText(if(target(s)>0)target(s).toString() else "")}
+        AlertDialog.Builder(this).setTitle("🎯 $s এর Target").setView(e).setNegativeButton("বাতিল",null).setPositiveButton("Save"){_,_->prefs.edit().putInt("target_$s",e.text.toString().toIntOrNull()?:0).apply();showList()}.show()
+    }
 }
