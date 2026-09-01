@@ -10,15 +10,27 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 
 class ZikirManagerActivity : ComponentActivity() {
+    
     private val colors = intArrayOf(
-        Color.parseColor("#7F1D1D"), Color.parseColor("#065F46"), Color.parseColor("#92400E"), Color.parseColor("#1E3A8A"),
-        Color.parseColor("#581C87"), Color.parseColor("#9A3412"), Color.parseColor("#155E75"), Color.parseColor("#713F12")
+        Color.parseColor("#7F1D1D"), Color.parseColor("#065F46"), 
+        Color.parseColor("#92400E"), Color.parseColor("#1E3A8A"),
+        Color.parseColor("#581C87"), Color.parseColor("#9A3412"), 
+        Color.parseColor("#155E75"), Color.parseColor("#713F12")
     )
+    
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private fun card(c: Int) = GradientDrawable().apply { setColor(c); cornerRadius = dp(18).toFloat() }
+    
+    private fun card(c: Int) = GradientDrawable().apply { 
+        setColor(c)
+        cornerRadius = dp(18).toFloat() 
+    }
+    
     private fun bn(n: Int) = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); showList() }
+    override fun onCreate(savedInstanceState: Bundle?) { 
+        super.onCreate(savedInstanceState)
+        showList() 
+    }
 
     private fun showList() {
         val root = LinearLayout(this).apply {
@@ -26,13 +38,18 @@ class ZikirManagerActivity : ComponentActivity() {
             setPadding(dp(12), dp(12), dp(12), dp(12))
             setBackgroundColor(Color.parseColor("#1B2A22"))
         }
-        val head = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        
+        val head = LinearLayout(this).apply { 
+            gravity = Gravity.CENTER_VERTICAL 
+        }
+        
         val title = TextView(this).apply {
             text = "📁  জিকির লিস্ট"
             textSize = 23f
             setTextColor(Color.WHITE)
             setTypeface(null, 1)
         }
+        
         val main = Button(this).apply {
             text = "মূল তাসবিহ"
             textSize = 12f
@@ -42,12 +59,16 @@ class ZikirManagerActivity : ComponentActivity() {
                 finish()
             }
         }
+        
         head.addView(title, LinearLayout.LayoutParams(0, dp(56), 1f))
         head.addView(main, LinearLayout.LayoutParams(dp(105), dp(50)))
         root.addView(head)
 
         val scroll = ScrollView(this)
-        val listBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val listBox = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL 
+        }
+        
         LegacyTasbihStore.items(this).forEachIndexed { index, z ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -56,27 +77,45 @@ class ZikirManagerActivity : ComponentActivity() {
                 setPadding(dp(10), dp(5), dp(6), dp(5))
                 setOnClickListener { select(z) }
             }
+            
             val info = TextView(this).apply {
                 val left = (z.target - z.count).coerceAtLeast(0)
-                text = "${z.name}\n🎯 ${if (z.target > 0) "${bn(z.count)}/${bn(z.target)}  |  বাকি ${bn(left)}" else "Unlimited"}"
+                val targetInfo = if (z.target > 0) "${bn(z.count)}/${bn(z.target)}  |  বাকি ${bn(left)}" else "Unlimited"
+                text = "${z.name}\n🎯 $targetInfo"
                 textSize = 15f
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER_VERTICAL
             }
-            val editButton = Button(this).apply { text = "✏️"; setOnClickListener { edit(z) } }
-            val deleteButton = Button(this).apply { text = "🗑"; setOnClickListener { delete(z) } }
+            
+            val editButton = Button(this).apply { 
+                text = "✏️"
+                setOnClickListener { edit(z) } 
+            }
+            
+            val deleteButton = Button(this).apply { 
+                text = "🗑"
+                setOnClickListener { delete(z) } 
+            }
+            
             row.addView(info, LinearLayout.LayoutParams(0, dp(70), 1f))
             row.addView(editButton, LinearLayout.LayoutParams(dp(56), dp(54)))
             row.addView(deleteButton, LinearLayout.LayoutParams(dp(56), dp(54)))
-            listBox.addView(row, LinearLayout.LayoutParams(-1, dp(80)).apply { bottomMargin = dp(8) })
+            
+            listBox.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(80)).apply { 
+                bottomMargin = dp(8) 
+            })
         }
+        
         scroll.addView(listBox)
-        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(Button(this).apply {
+        root.addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        
+        val addButton = Button(this).apply {
             text = "➕  নতুন জিকির যোগ করুন"
             textSize = 16f
             setOnClickListener { add() }
-        }, LinearLayout.LayoutParams(-1, dp(58)))
+        }
+        root.addView(addButton, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(58)))
+        
         setContentView(root)
     }
 
@@ -87,16 +126,29 @@ class ZikirManagerActivity : ComponentActivity() {
     }
 
     private fun add() {
-        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, dp(12), 0) }
+        val box = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, dp(12), 0) 
+        }
         val nameInput = EditText(this).apply { hint = "জিকিরের নাম" }
-        val targetInput = EditText(this).apply { hint = "Target (0 = Unlimited)"; inputType = InputType.TYPE_CLASS_NUMBER }
-        box.addView(nameInput); box.addView(targetInput)
-        AlertDialog.Builder(this).setTitle("নতুন জিকির").setView(box).setNegativeButton("বাতিল", null)
+        val targetInput = EditText(this).apply { 
+            hint = "Target (0 = Unlimited)"
+            inputType = InputType.TYPE_CLASS_NUMBER 
+        }
+        
+        box.addView(nameInput)
+        box.addView(targetInput)
+        
+        AlertDialog.Builder(this)
+            .setTitle("নতুন জিকির")
+            .setView(box)
+            .setNegativeButton("বাতিল", null)
             .setPositiveButton("যোগ") { _, _ ->
                 val n = nameInput.text.toString().trim()
                 if (n.isNotEmpty()) {
                     val list = LegacyTasbihStore.items(this)
-                    list.add(LegacyZikrItem(LegacyTasbihStore.newId(), n, 0, targetInput.text.toString().toIntOrNull() ?: 0))
+                    val target = targetInput.text.toString().toIntOrNull() ?: 0
+                    list.add(LegacyZikrItem(LegacyTasbihStore.newId(), n, 0, target))
                     LegacyTasbihStore.saveItems(this, list)
                     showList()
                 }
@@ -104,14 +156,23 @@ class ZikirManagerActivity : ComponentActivity() {
     }
 
     private fun edit(z: LegacyZikrItem) {
-        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, dp(12), 0) }
+        val box = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, dp(12), 0) 
+        }
         val nameInput = EditText(this).apply { setText(z.name) }
         val targetInput = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
             setText(if (z.target > 0) z.target.toString() else "")
         }
-        box.addView(nameInput); box.addView(targetInput)
-        AlertDialog.Builder(this).setTitle("জিকির ও Target Edit").setView(box).setNegativeButton("বাতিল", null)
+        
+        box.addView(nameInput)
+        box.addView(targetInput)
+        
+        AlertDialog.Builder(this)
+            .setTitle("জিকির ও Target Edit")
+            .setView(box)
+            .setNegativeButton("বাতিল", null)
             .setPositiveButton("Save") { _, _ ->
                 val n = nameInput.text.toString().trim()
                 if (n.isNotEmpty()) {
@@ -128,7 +189,10 @@ class ZikirManagerActivity : ComponentActivity() {
     }
 
     private fun delete(z: LegacyZikrItem) {
-        AlertDialog.Builder(this).setTitle("জিকির মুছবেন?").setMessage(z.name).setNegativeButton("না", null)
+        AlertDialog.Builder(this)
+            .setTitle("জিকির মুছবেন?")
+            .setMessage(z.name)
+            .setNegativeButton("না", null)
             .setPositiveButton("হ্যাঁ") { _, _ ->
                 val list = LegacyTasbihStore.items(this)
                 list.removeAll { it.id == z.id }
