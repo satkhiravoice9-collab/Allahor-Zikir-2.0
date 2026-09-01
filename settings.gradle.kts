@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Muslim Time"
+rootProject.name = "Allahor Zikir"
 include(":app")
