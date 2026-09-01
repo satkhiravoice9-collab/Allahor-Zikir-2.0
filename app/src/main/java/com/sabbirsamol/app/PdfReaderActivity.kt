@@ -26,7 +26,6 @@ class PdfReaderActivity : ComponentActivity() {
         bookName = intent.getStringExtra("BOOK_NAME") ?: "Book"
         val downloadUrl = intent.getStringExtra("DOWNLOAD_URL") ?: ""
 
-        // UI Setup
         val root = RelativeLayout(this).apply { setBackgroundColor(Color.WHITE) }
         
         pdfView = PDFView(this, null)
@@ -63,7 +62,7 @@ class PdfReaderActivity : ComponentActivity() {
     }
 
     private fun downloadAndOpenPdf(urlStr: String, file: File, loadingLayout: LinearLayout) {
-        statusText.text = "প্রথমবারের জন্য ডাউনলোড হচ্ছে, দয়া করে অপেক্ষা করুন...\n(ইন্টারনেট স্পিডের উপর নির্ভরশীল)"
+        statusText.text = "ডাউনলোড হচ্ছে, দয়া করে অপেক্ষা করুন...\n(বড় ফাইলের জন্য সময় লাগতে পারে)"
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -90,7 +89,7 @@ class PdfReaderActivity : ComponentActivity() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    statusText.text = "ডাউনলোডে সমস্যা হয়েছে। আবার চেষ্টা করুন।"
+                    statusText.text = "ডাউনলোডে সমস্যা হয়েছে। ইন্টারনেট চেক করে আবার চেষ্টা করুন।"
                     progressBar.visibility = View.GONE
                 }
             }
@@ -98,16 +97,14 @@ class PdfReaderActivity : ComponentActivity() {
     }
 
     private fun openPdf(file: File) {
-        // Shared Preferences থেকে আগের পড়া পেজ বের করা
         val sharedPref = getSharedPreferences("PdfLibrary", Context.MODE_PRIVATE)
         val lastSavedPage = sharedPref.getInt(bookName, 0)
 
         pdfView.fromFile(file)
-            .defaultPage(lastSavedPage) // যেখান থেকে শেষ করেছিলেন সেখান থেকে শুরু হবে
+            .defaultPage(lastSavedPage)
             .enableSwipe(true)
             .swipeHorizontal(false)
             .onPageChange { page, _ ->
-                // পেজ পরিবর্তন হলে অটো সেভ হবে
                 sharedPref.edit().putInt(bookName, page).apply()
             }
             .enableDoubletap(true)
