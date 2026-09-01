@@ -14,6 +14,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MuslimTime">
 
+        <activity android:name=".LibraryActivity" android:exported="false" />
+        <activity android:name=".PdfReaderActivity" android:exported="false" />
+
         <activity 
             android:name=".TasbihActivity" 
             android:exported="false" />
