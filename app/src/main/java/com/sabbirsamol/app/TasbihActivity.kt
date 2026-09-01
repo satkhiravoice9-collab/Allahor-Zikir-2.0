@@ -12,10 +12,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
 
-/** Main/default Tasbih screen. Home screen remains untouched. */
+/** Main/default Tasbih screen. Home screen is not modified here. */
 class TasbihActivity : ComponentActivity() {
     private var count = 0
     private var selected = "সুবহানাল্লাহ"
@@ -24,8 +25,9 @@ class TasbihActivity : ComponentActivity() {
     private lateinit var progressText: TextView
     private val prefs by lazy { getSharedPreferences("tasbih_only", Context.MODE_PRIVATE) }
     private val listPrefs by lazy { getSharedPreferences("tasbih_list", Context.MODE_PRIVATE) }
+
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private fun targetFor(name: String): Int = listPrefs.getInt("target_$name", 0)
+    private fun targetFor(name: String) = listPrefs.getInt("target_$name", 0)
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -44,13 +46,18 @@ class TasbihActivity : ComponentActivity() {
     }
 
     private fun showMain() {
-        val root = FrameLayout(this).apply {
-            setBackgroundColor(Color.rgb(7, 45, 31))
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(7, 45, 31)) }
+
+        // Full-screen counting layer. It is deliberately behind the buttons/folder,
+        // so every free area counts while Reset and Zikir List remain clickable.
+        val tapLayer = View(this).apply {
+            isClickable = true
             setOnTouchListener { _, event ->
                 if (event.action == MotionEvent.ACTION_UP) increment()
                 true
             }
         }
+        root.addView(tapLayer, FrameLayout.LayoutParams(-1, -1))
 
         nameText = TextView(this).apply {
             text = selected
@@ -59,7 +66,7 @@ class TasbihActivity : ComponentActivity() {
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER_VERTICAL
         }
-        root.addView(nameText, FrameLayout.LayoutParams(dp(230), dp(50)).apply {
+        root.addView(nameText, FrameLayout.LayoutParams(dp(230), dp(52)).apply {
             gravity = Gravity.TOP or Gravity.START
             leftMargin = dp(10)
             topMargin = dp(4)
@@ -82,7 +89,6 @@ class TasbihActivity : ComponentActivity() {
             text = "🕋"
             textSize = 78f
             gravity = Gravity.CENTER
-            isClickable = true
             setOnClickListener { increment() }
         }
         root.addView(kaaba, FrameLayout.LayoutParams(-1, dp(135)).apply { topMargin = dp(62) })
@@ -113,7 +119,6 @@ class TasbihActivity : ComponentActivity() {
                 setColor(Color.rgb(145, 55, 25))
                 cornerRadius = dp(22).toFloat()
             }
-            isClickable = true
             setOnClickListener {
                 startActivity(Intent(this@TasbihActivity, ZikirManagerActivity::class.java))
             }
@@ -166,7 +171,6 @@ class TasbihActivity : ComponentActivity() {
                 count = 0
                 prefs.edit().putInt("count", 0).apply()
                 refresh()
-            }
-            .show()
+            }.show()
     }
 }
