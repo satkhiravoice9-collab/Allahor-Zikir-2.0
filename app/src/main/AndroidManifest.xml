@@ -11,13 +11,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MuslimTime">
 
-        <activity
-            android:name=".TasbihActivity"
-            android:exported="false" />
+        <activity android:name=".TasbihActivity" android:exported="false" />
+        <activity android:name=".ZikirManagerActivity" android:exported="false" />
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -25,5 +22,4 @@
         </activity>
 
     </application>
-
 </manifest>
