@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <application android:name=".HomeBottomMenuFix" android:allowBackup="true" android:label="Allahor Zikir" android:supportsRtl="true" android:theme="@style/Theme.MuslimTime">
+        <activity android:name=".NotepadActivity" android:exported="false" />
         <activity android:name=".LibraryActivity" android:exported="false" />
         <activity android:name=".TasbihActivity" android:exported="false" />
         <activity android:name=".ZikirManagerActivity" android:exported="false" />
