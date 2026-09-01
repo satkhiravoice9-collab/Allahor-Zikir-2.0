@@ -50,8 +50,9 @@ class PdfReaderActivity : ComponentActivity() {
         root.addView(loadingLayout, RelativeLayout.LayoutParams(-1, -1))
         setContentView(root)
 
-        val fileName = "$bookName.pdf"
-        val file = File(filesDir, fileName)
+        // ফাইলের নাম থেকে স্পেস ও স্পেশাল ক্যারেক্টার বাদ দিয়ে সেভ করা ভালো
+        val safeFileName = bookName.replace(Regex("[^A-Za-z0-9]"), "_") + ".pdf"
+        val file = File(filesDir, safeFileName)
 
         if (file.exists()) {
             loadingLayout.visibility = View.GONE
@@ -91,6 +92,9 @@ class PdfReaderActivity : ComponentActivity() {
                 withContext(Dispatchers.Main) {
                     statusText.text = "ডাউনলোডে সমস্যা হয়েছে। ইন্টারনেট চেক করে আবার চেষ্টা করুন।"
                     progressBar.visibility = View.GONE
+                    
+                    // ডাউনলোড ফেইল হলে অসম্পূর্ণ ফাইল ডিলিট করে দেওয়া
+                    if (file.exists()) file.delete()
                 }
             }
         }
@@ -105,6 +109,7 @@ class PdfReaderActivity : ComponentActivity() {
             .enableSwipe(true)
             .swipeHorizontal(false)
             .onPageChange { page, _ ->
+                // পেজ পাল্টালে অটোমেটিক সেভ হবে
                 sharedPref.edit().putInt(bookName, page).apply()
             }
             .enableDoubletap(true)
