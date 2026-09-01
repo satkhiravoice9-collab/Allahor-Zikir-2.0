@@ -47,7 +47,7 @@ class LibraryActivity : ComponentActivity() {
         PdfBookItem("muslim_vol_2.pdf", "সহীহ মুসলিম ২য় খণ্ড", "1vQU2G5qbNPouVSp3aRwkhg7KrztasfTG"),
         PdfBookItem("muslim_vol_3.pdf", "সহীহ মুসলিম ৩য় খণ্ড", "11Ul0Laj9YGGV37KYnep73RCUELz0yvU8"),
         PdfBookItem("muslim_vol_4.pdf", "সহীহ মুসলিম ৪র্থ খণ্ড", "16cTetFECwjEPtSHeajv_WTQ11LTATtJp"),
-        PdfBookItem("muslim_vol_5.pdf", "সহীহ মুসলিম ৫ম খণ্ড", "129O3bHeq2O1xY8MMsxGPJNdp1zgQ838z"),
+        PdfBookItem("muslim_vol_5.pdf", "সহীহ مسلم ৫ম খণ্ড", "129O3bHeq2O1xY8MMsxGPJNdp1zgQ838z"),
         PdfBookItem("muslim_vol_6.pdf", "সহীহ মুসলিম ৬ষ্ঠ খণ্ড", "1o4mAG-Qx6KSumsohKgUK2k8S7TAy3PKp"),
         PdfBookItem("muslim_vol_7.pdf", "সহীহ মুসলিম ৭ম খণ্ড", "121hx1VQv0HCZnztDFrhJrP4XPBuEzuQW"),
         PdfBookItem("muslim_vol_8.pdf", "সহীহ মুসলিম ৮ম খণ্ড", "1mjTLc_svuuKcUlnQXRu0e3PEAZUzn7_u")
@@ -101,7 +101,6 @@ class LibraryActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.rgb(248, 250, 247))
         }
-
         val top = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), dp(8), dp(8), dp(8))
@@ -129,9 +128,7 @@ class LibraryActivity : ComponentActivity() {
         }
         list.addView(bookButton("📖 ${quran.title}") { open(quran) })
         groups.forEach { (title, books) ->
-            list.addView(bookButton("📚 $title • ${books.size} খণ্ড") {
-                showVolumes(title, books)
-            })
+            list.addView(bookButton("📚 $title • ${books.size} খণ্ড") { showVolumes(title, books) })
         }
         root.addView(ScrollView(this).apply { addView(list) }, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
@@ -146,9 +143,7 @@ class LibraryActivity : ComponentActivity() {
         setPadding(dp(16), dp(14), dp(16), dp(14))
         background = bg(Color.WHITE, 16)
         setOnClickListener { action() }
-        layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
-            setMargins(0, 0, 0, dp(10))
-        }
+        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { setMargins(0, 0, 0, dp(10)) }
     }
 
     private fun showVolumes(title: String, books: List<PdfBookItem>) {
@@ -171,10 +166,10 @@ class LibraryActivity : ComponentActivity() {
     }
 
     private fun open(book: PdfBookItem) {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://drive.google.com/uc?export=download&id=${book.id}")))
-        } catch (_: Exception) {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://drive.google.com/file/d/${book.id}/view")))
-        }
+        val downloadUrl = "https://drive.google.com/uc?export=download&id=${book.id}"
+        val intent = Intent(this@LibraryActivity, PdfReaderActivity::class.java)
+        intent.putExtra("BOOK_NAME", book.title) // ফাইলের নামের জন্য
+        intent.putExtra("DOWNLOAD_URL", downloadUrl) // ডাউনলোডের জন্য
+        startActivity(intent)
     }
 }
