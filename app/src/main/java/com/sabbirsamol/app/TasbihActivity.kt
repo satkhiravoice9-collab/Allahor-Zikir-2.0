@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.Gravity
-import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
 import org.json.JSONArray
@@ -21,12 +20,11 @@ class TasbihActivity : ComponentActivity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    // থিম ম্যানেজারের সাথে কানেকশন
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private val bgMain get() = themeColors.bgMain
     private val textAccent get() = themeColors.textAccent
     private val textMain get() = themeColors.textMain
-    private val btnBg get() = themeColors.btnBg // এখানে ভেরিয়েবলটি সঠিকভাবে যুক্ত করা হয়েছে
+    private val btnBg get() = themeColors.btnBg
 
     private var currentCount = 0
     private var isCustomMode = false
@@ -79,7 +77,7 @@ class TasbihActivity : ComponentActivity() {
         })
         root.addView(top)
 
-        // ================= ২. কাউন্টার ও কাবার ডিজাইন সেকশন =================
+        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন =================
         val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
 
         val kaabaBox = LinearLayout(this).apply {
@@ -93,31 +91,15 @@ class TasbihActivity : ComponentActivity() {
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
-        kaabaBox.addView(TextView(this).apply {
-            text = "﷽"; textSize = 26f; setTextColor(Color.parseColor("#FBBF24"))
-            gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(4) }
+        // আপলোড করা kaaba_img ছবি এখানে রেন্ডার করা হচ্ছে
+        kaabaBox.addView(ImageView(this).apply {
+            val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
+            if (imgResId != 0) {
+                setImageResource(imgResId)
+            }
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            layoutParams = LinearLayout.LayoutParams(dp(130), dp(115)).apply { bottomMargin = dp(4) }
         })
-
-        val codedKaaba = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(65), dp(70)).apply { bottomMargin = dp(8) }
-            
-            addView(View(this@TasbihActivity).apply { background = GradientDrawable().apply { setColor(Color.parseColor("#111827")) }; layoutParams = FrameLayout.LayoutParams(-1, -1) })
-            addView(View(this@TasbihActivity).apply { background = GradientDrawable().apply { setColor(Color.parseColor("#6B7280")) }; layoutParams = FrameLayout.LayoutParams(-1, dp(14)) })
-            addView(LinearLayout(this@TasbihActivity).apply {
-                orientation = LinearLayout.HORIZONTAL; background = GradientDrawable().apply { setColor(Color.parseColor("#FBBF24")) }
-                layoutParams = FrameLayout.LayoutParams(-1, dp(8)).apply { topMargin = dp(22) }
-                addView(View(this@TasbihActivity).apply { layoutParams = LinearLayout.LayoutParams(dp(10), -1).apply { setMargins(dp(6),0,dp(4),0) }; setBackgroundColor(Color.parseColor("#111827")) })
-                addView(View(this@TasbihActivity).apply { layoutParams = LinearLayout.LayoutParams(dp(10), -1).apply { setMargins(dp(4),0,dp(4),0) }; setBackgroundColor(Color.parseColor("#111827")) })
-                addView(View(this@TasbihActivity).apply { layoutParams = LinearLayout.LayoutParams(dp(10), -1).apply { setMargins(dp(4),0,dp(6),0) }; setBackgroundColor(Color.parseColor("#111827")) })
-            })
-            addView(FrameLayout(this@TasbihActivity).apply {
-                layoutParams = FrameLayout.LayoutParams(dp(22), dp(32)).apply { gravity = Gravity.BOTTOM or Gravity.END; rightMargin = dp(10) }
-                addView(View(this@TasbihActivity).apply { background = GradientDrawable().apply { setColor(Color.parseColor("#FBBF24")) }; layoutParams = FrameLayout.LayoutParams(-1, -1) })
-                addView(View(this@TasbihActivity).apply { background = GradientDrawable().apply { setColor(Color.parseColor("#111827")) }; layoutParams = FrameLayout.LayoutParams(dp(18), dp(28)).apply { gravity = Gravity.CENTER } })
-                addView(View(this@TasbihActivity).apply { background = GradientDrawable().apply { setColor(Color.parseColor("#FBBF24")) }; layoutParams = FrameLayout.LayoutParams(dp(13), dp(24)).apply { gravity = Gravity.CENTER } })
-            })
-        }
-        kaabaBox.addView(codedKaaba)
 
         kaabaBox.addView(TextView(this).apply {
             text = "لَا إِلٰهَ إِلَّا اللّٰهُ مُحَمَّدٌ رَسُولُ اللّٰهِ"; textSize = 13f; setTextColor(Color.parseColor("#FBBF24"))
