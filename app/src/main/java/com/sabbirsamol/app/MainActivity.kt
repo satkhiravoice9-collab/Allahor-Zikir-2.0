@@ -13,13 +13,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // অ্যাপ চালু হওয়ার সাথে সাথে অনলাইন থেকে সময় এনে ইউআই-তে বসানোর ফাংশন কল করা
+        // অ্যাপ চালু হওয়ার সাথে সাথে অনলাইন থেকে সময় এনে লোড করার ফাংশন
         loadOnlinePrayerTimes()
     }
 
     private fun loadOnlinePrayerTimes() {
         lifecycleScope.launch {
-            // ইন্টারনেট কানেকশন আছে কি না চেক করা
+            // ইন্টারনেট কানেকশন চেক করা
             if (OnlinePrayerFetcher.isNetworkAvailable(this@MainActivity)) {
                 // আল-আজান এপিআই থেকে সাতক্ষীরার লাইভ সময় নিয়ে আসা
                 val onlineTimes = OnlinePrayerFetcher.fetchSatkhiraTimings()
@@ -32,14 +32,12 @@ class MainActivity : AppCompatActivity() {
                     val maghrib = onlineTimes["Maghrib"] ?: ""
                     val isha = onlineTimes["Isha"] ?: ""
 
-                    // আপনার লেআউটের টেক্সটভিউগুলোতে সময়গুলো বসিয়ে দিন
-                    // (আপনার টেক্সটভিউয়ের আইডিগুলোর সাথে মিলিয়ে নিচের কোডগুলো আনকমেন্ট করে নিন)
-                    
-                    // findViewById<TextView>(R.id.txtFajrTime).text = fajr
-                    // findViewById<TextView>(R.id.txtZoharTime).text = zohar
-                    // findViewById<TextView>(R.id.txtAsrTime).text = asr
-                    // findViewById<TextView>(R.id.txtMaghribTime).text = maghrib
-                    // findViewById<TextView>(R.id.txtIshaTime).text = isha
+                    // লেআউটের টেক্সটভিউগুলোতে সময় বসানোর কোড (আপনার আইডি অনুযায়ী uncomment করে নিন)
+                    // findViewById<TextView>(R.id.txtFajrTime)?.text = fajr
+                    // findViewById<TextView>(R.id.txtZoharTime)?.text = zohar
+                    // findViewById<TextView>(R.id.txtAsrTime)?.text = asr
+                    // findViewById<TextView>(R.id.txtMaghribTime)?.text = maghrib
+                    // findViewById<TextView>(R.id.txtIshaTime)?.text = isha
 
                     Toast.makeText(this@MainActivity, "সাতক্ষীরার লাইভ সময় সফলভাবে আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
                 } else {
