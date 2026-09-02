@@ -646,12 +646,11 @@ class MainActivity : Activity() {
     private fun highlightActiveWaqt(activeKey: String) {
         prayerRows.forEach { (key, row) ->
             if (key == activeKey) {
-                // রানিং ওয়াক্তের জন্য একদম হালকা ও স্পষ্ট প্রিমিয়াম হাইলাইট কালার, যাতে টেক্সট ক্লিয়ার দেখায়
                 row.background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#FEF08A")) // হালকা উজ্জ্বল হলুদ হাইলাইট
+                    setColor(Color.parseColor("#FEF08A"))
                     cornerRadius = dp(8).toFloat()
                 }
-                prayerNameViews[key]?.setTextColor(Color.parseColor("#78350F")) // ডিপ ব্রাউন/কালো টেক্সট
+                prayerNameViews[key]?.setTextColor(Color.parseColor("#78350F"))
                 prayerTimeViews[key]?.setTextColor(Color.parseColor("#78350F"))
             } else {
                 row.background = GradientDrawable().apply {
