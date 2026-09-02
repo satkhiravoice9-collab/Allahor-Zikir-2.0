@@ -1,31 +1,27 @@
 package com.sabbirsamol.app
 
 import android.os.Bundle
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main) // আপনার লেআউট ফাইল অনুযায়ী নাম দিন
+        setContentView(R.layout.activity_main)
 
-        // অ্যাপ চালু হলেই টাইম লোড করার ফাংশন কল করা
-        loadPrayerTimes()
+        // অ্যাপ চালু হওয়ার সাথে সাথে অনলাইন থেকে সময় এনে ইউআই-তে বসানোর ফাংশন কল করা
+        loadOnlinePrayerTimes()
     }
 
-    private fun loadPrayerTimes() {
-        // বর্তমান বছরের কততম দিন তা বের করা (১ থেকে ৩৬৫)
-        val calendar = Calendar.getInstance()
-        val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
-
-        // কোরুoutines ব্যবহার করে ব্যাকগ্রাউন্ডে চেক করা
+    private fun loadOnlinePrayerTimes() {
         lifecycleScope.launch {
+            // ইন্টারনেট কানেকশন আছে কি না চেক করা
             if (OnlinePrayerFetcher.isNetworkAvailable(this@MainActivity)) {
-                // ইন্টারনেট থাকলে অনলাইন এপিআই থেকে লাইভ টাইম আনা
+                // আল-আজান এপিআই থেকে সাতক্ষীরার লাইভ সময় নিয়ে আসা
                 val onlineTimes = OnlinePrayerFetcher.fetchSatkhiraTimings()
                 
                 if (onlineTimes != null) {
@@ -36,28 +32,22 @@ class MainActivity : AppCompatActivity() {
                     val maghrib = onlineTimes["Maghrib"] ?: ""
                     val isha = onlineTimes["Isha"] ?: ""
 
-                    // TODO: এই ভেরিয়েবলগুলোর মান আপনার অ্যাপের ইউআই টেক্সটভিউতে (TextView) বসিয়ে দিন
-                    // যেমন: 
-                    // binding.txtFajr.text = fajr
-                    // binding.txtZohar.text = zohar
+                    // আপনার লেআউটের টেক্সটভিউগুলোতে সময়গুলো বসিয়ে দিন
+                    // (আপনার টেক্সটভিউয়ের আইডিগুলোর সাথে মিলিয়ে নিচের কোডগুলো আনকমেন্ট করে নিন)
                     
-                    Toast.this@MainActivity, "অনলাইন থেকে লাইভ সময় আপডেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                    // findViewById<TextView>(R.id.txtFajrTime).text = fajr
+                    // findViewById<TextView>(R.id.txtZoharTime).text = zohar
+                    // findViewById<TextView>(R.id.txtAsrTime).text = asr
+                    // findViewById<TextView>(R.id.txtMaghribTime).text = maghrib
+                    // findViewById<TextView>(R.id.txtIshaTime).text = isha
+
+                    Toast.makeText(this@MainActivity, "সাতক্ষীরার লাইভ সময় সফলভাবে আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
                 } else {
-                    // অনলাইন ফেচ করতে ব্যর্থ হলে অফলাইন ডেটাবেজ ব্যবহার করা
-                    loadFromOfflineDatabase(dayOfYear)
+                    Toast.makeText(this@MainActivity, "সার্ভার থেকে সময় পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                // ইন্টারনেট কানেকশন না থাকলে অফলাইন ডেটাবেজ ব্যবহার করা
-                loadFromOfflineDatabase(dayOfYear)
-                Toast.makeText(this@MainActivity, "ইন্টারনেট নেই, অফলাইন ডেটা ব্যবহার করা হচ্ছে", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "ইন্টারনেট সংযোগ নেই, দয়া করে নেট চালু করুন", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    private fun loadFromOfflineDatabase(dayOfYear: Int) {
-        // আপনার তৈরি করা PrayerDatabase থেকে নির্দিষ্ট দিনের মান তুলে আনা
-        val todayPrayer = PrayerDatabase.getPrayerTime(dayOfYear)
-        
-        // এখানে todayPrayer.fuzor, todayPrayer.zohar ইত্যাদি দিয়ে অফলাইন UI সেট করে নিন
     }
 }
