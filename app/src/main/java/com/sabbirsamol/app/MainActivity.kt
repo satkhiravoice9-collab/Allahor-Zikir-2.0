@@ -2,6 +2,7 @@ package com.sabbirsamol.app
 
 import android.app.Activity
 import android.os.Bundle
+import android.widget.TextView
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,14 @@ class MainActivity : Activity() {
                 val asr = onlineTimes["Asr"] ?: ""
                 val maghrib = onlineTimes["Maghrib"] ?: ""
                 val isha = onlineTimes["Isha"] ?: ""
+
+                // টেক্সটভিউগুলোতে সময়গুলো বসিয়ে দেওয়া
+                findViewById<TextView>(R.id.txtFajrTime)?.text = "ফজর: $fajr"
+                findViewById<TextView>(R.id.txtSunriseTime)?.text = "সূর্যোদয়: $sunrise"
+                findViewById<TextView>(R.id.txtZoharTime)?.text = "যোহর: $zohar"
+                findViewById<TextView>(R.id.txtAsrTime)?.text = "আসর: $asr"
+                findViewById<TextView>(R.id.txtMaghribTime)?.text = "মাগরিব: $maghrib"
+                findViewById<TextView>(R.id.txtIshaTime)?.text = "এশা: $isha"
 
                 Toast.makeText(context, "সাতক্ষীরার লাইভ সময় সফলভাবে আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
             } else {
