@@ -28,6 +28,7 @@ class MainActivity : Activity() {
     private lateinit var tvRemainingCountdown: TextView
     private lateinit var tvSunriseTime: TextView
     private lateinit var tvSunsetTime: TextView
+    private lateinit var tvDateDisplay: TextView
 
     private lateinit var tvFajrTime: TextView
     private lateinit var tvZoharTime: TextView
@@ -97,22 +98,22 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // ================= ১. টপ বার =================
+        // ================= ১. টপ বার (ইংরেজি, বাংলা ও সন্ধ্যার পর অটো আপডেট আরবি তারিখ) =================
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(4), dp(4), dp(4), dp(10))
         }
 
-        val dateFormat = SimpleDateFormat("dd MMMM, EEEE", Locale("bn", "BD"))
-        val currentDate = dateFormat.format(Date())
-
-        topBar.addView(TextView(this).apply {
-            text = "📅 $currentDate"
-            textSize = 14f
+        tvDateDisplay = TextView(this).apply {
+            text = "তারিখ লোড হচ্ছে..."
+            textSize = 13f
             setTextColor(theme.textMain)
             setTypeface(null, Typeface.BOLD)
-        }, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        updateDynamicDates()
+
+        topBar.addView(tvDateDisplay, LinearLayout.LayoutParams(0, -2, 1f))
 
         topBar.addView(TextView(this).apply {
             text = "🔄 রিফ্রেশ"
@@ -169,8 +170,8 @@ class MainActivity : Activity() {
         countdownCard.addView(infoRow)
         content.addView(countdownCard)
 
-        // ================= ৩. হেল্পার ফাংশন (একপাশে নাম, অন্যপাশে টাইম) =================
-        fun createUniformRow(key: String, name: String, timeTextView: TextView, isSwitchNeeded: Boolean): LinearLayout {
+        // ================= ৩. হেল্পার ফাংশন =================
+        fun createUniformRow(key: String, name: String, timeTextView: TextView, isSwitchNeeded: Boolean, textColor: Int, subColor: Int): LinearLayout {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -179,7 +180,7 @@ class MainActivity : Activity() {
             val nameView = TextView(this).apply {
                 text = name
                 textSize = 14f
-                setTextColor(Color.BLACK)
+                setTextColor(textColor)
                 setTypeface(null, Typeface.BOLD)
             }
             val rightLayout = LinearLayout(this).apply {
@@ -187,7 +188,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
             }
             timeTextView.textSize = 12f
-            timeTextView.setTextColor(Color.parseColor("#334155"))
+            timeTextView.setTextColor(subColor)
             timeTextView.setPadding(0, 0, if(isSwitchNeeded) dp(10) else 0, 0)
 
             rightLayout.addView(timeTextView)
@@ -208,11 +209,11 @@ class MainActivity : Activity() {
             return row
         }
 
-        // ================= ৪. বক্স ১: পাঁচ ওয়াক্তের সময়সূচি (হলুদ ব্যাকগ্রাউন্ড, কালো লেখা) =================
+        // ================= ৪. বক্স ১: পাঁচ ওয়াক্তের সময়সূচি (হলুদ ব্যাকগ্রাউন্ড) =================
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#FACC15")) // প্রিমিয়াম হলুদ কালার
+                setColor(Color.parseColor("#FACC15"))
                 setStroke(dp(1), Color.parseColor("#EAB308"))
                 cornerRadius = dp(16).toFloat()
             }
@@ -234,19 +235,19 @@ class MainActivity : Activity() {
         tvMaghribTime = TextView(this)
         tvIshaTime = TextView(this)
 
-        prayerCard.addView(createUniformRow("Fajr", "ফজর", tvFajrTime, true))
-        prayerCard.addView(createUniformRow("Dhuhr", "যোহর", tvZoharTime, true))
-        prayerCard.addView(createUniformRow("Asr", "আসর", tvAsrTime, true))
-        prayerCard.addView(createUniformRow("Maghrib", "মাগরিব", tvMaghribTime, true))
-        prayerCard.addView(createUniformRow("Isha", "এশা", tvIshaTime, true))
+        prayerCard.addView(createUniformRow("Fajr", "ফজর", tvFajrTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createUniformRow("Dhuhr", "যোহর", tvZoharTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createUniformRow("Asr", "আসর", tvAsrTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createUniformRow("Maghrib", "মাগরিব", tvMaghribTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createUniformRow("Isha", "এশা", tvIshaTime, true, Color.BLACK, Color.parseColor("#334155")))
         content.addView(prayerCard)
 
-        // ================= ৫. বক্স ২: তাহাজ্জুদ ও সেহরি-ইফতার (হলুদ ব্যাকগ্রাউন্ড) =================
+        // ================= ৫. বক্স ২: তাহাজ্জুদ ও সেহরি-ইফতার (সাদা ব্যাকগ্রাউন্ড) =================
         val specialCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#FDE047")) // উজ্জ্বল হলুদ থিম
-                setStroke(dp(1), Color.parseColor("#EAB308"))
+                setColor(Color.WHITE) // সাদা কালার
+                setStroke(dp(1), Color.parseColor("#CBD5E1"))
                 cornerRadius = dp(16).toFloat()
             }
             setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -256,7 +257,7 @@ class MainActivity : Activity() {
         specialCard.addView(TextView(this).apply {
             text = "🌙 তাহাজ্জুদ, সেহরি ও ইফতার"
             textSize = 15f
-            setTextColor(Color.parseColor("#78350F"))
+            setTextColor(Color.parseColor("#0F172A"))
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, 0, dp(8))
         })
@@ -265,17 +266,17 @@ class MainActivity : Activity() {
         tvSehriTime = TextView(this)
         tvIftarTime = TextView(this)
 
-        specialCard.addView(createUniformRow("Tahajjud", "তাহাজ্জুদ", tvTahajjudTime, false))
-        specialCard.addView(createUniformRow("Sehri", "সেহরির শেষ সময়", tvSehriTime, false))
-        specialCard.addView(createUniformRow("Iftar", "ইফতারের সময়", tvIftarTime, false))
+        specialCard.addView(createUniformRow("Tahajjud", "তাহাজ্জুদ", tvTahajjudTime, false, Color.BLACK, Color.parseColor("#475569")))
+        specialCard.addView(createUniformRow("Sehri", "সেহরির শেষ সময়", tvSehriTime, false, Color.BLACK, Color.parseColor("#475569")))
+        specialCard.addView(createUniformRow("Iftar", "ইফতারের সময়", tvIftarTime, false, Color.BLACK, Color.parseColor("#475569")))
         content.addView(specialCard)
 
-        // ================= ৬. বক্স ৩: হারাম ওয়াক্ত (ঠিক নামাজের স্টাইলে সাজানো) =================
+        // ================= ৬. বক্স ৩: হারাম ওয়াক্ত (লাল ব্যাকগ্রাউন্ড) =================
         val haramCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#FEF08A")) // হালকা হলুদ থিম
-                setStroke(dp(1), Color.parseColor("#EAB308"))
+                setColor(Color.parseColor("#EF4444")) // লাল কালার
+                setStroke(dp(1), Color.parseColor("#DC2626"))
                 cornerRadius = dp(16).toFloat()
             }
             setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -285,7 +286,7 @@ class MainActivity : Activity() {
         haramCard.addView(TextView(this).apply {
             text = "⚠️ হারাম ওয়াক্ত (নামাজ নিষিদ্ধ সময়)"
             textSize = 15f
-            setTextColor(Color.parseColor("#7F1D1D"))
+            setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, 0, dp(8))
         })
@@ -294,9 +295,9 @@ class MainActivity : Activity() {
         tvHaramZohar = TextView(this)
         tvHaramSunset = TextView(this)
 
-        haramCard.addView(createUniformRow("HaramSunrise", "সূর্যোদয় নিষিদ্ধ সময়", tvHaramSunrise, false))
-        haramCard.addView(createUniformRow("HaramZohar", "দ্বিপ্রহর নিষিদ্ধ সময়", tvHaramZohar, false))
-        haramCard.addView(createUniformRow("HaramSunset", "সূর্যাস্ত নিষিদ্ধ সময়", tvHaramSunset, false))
+        haramCard.addView(createUniformRow("HaramSunrise", "সূর্যোদয় নিষিদ্ধ সময়", tvHaramSunrise, false, Color.WHITE, Color.parseColor("#FEE2E2")))
+        haramCard.addView(createUniformRow("HaramZohar", "দ্বিপ্রহর নিষিদ্ধ সময়", tvHaramZohar, false, Color.WHITE, Color.parseColor("#FEE2E2")))
+        haramCard.addView(createUniformRow("HaramSunset", "সূর্যাস্ত নিষিদ্ধ সময়", tvHaramSunset, false, Color.WHITE, Color.parseColor("#FEE2E2")))
         content.addView(haramCard)
 
         scroll.addView(content)
@@ -331,6 +332,24 @@ class MainActivity : Activity() {
         root.addView(bottomNav, LinearLayout.LayoutParams(-1, dp(60)))
 
         setContentView(root)
+    }
+
+    private fun updateDynamicDates() {
+        val now = Calendar.getInstance()
+        val hour = now.get(Calendar.HOUR_OF_DAY)
+        // সন্ধ্যার সময় (সন্ধ্যা ৬টা বা ১৮:০০ টার পর আরবি তারিখ পরবর্তী দিনে পরিবর্তিত হওয়ার লজিক)
+        if (hour >= 18) {
+            now.add(Calendar.DAY_OF_MONTH, 1)
+        }
+
+        // ইংরেজি, বাংলা ও আরবি তারিখ ফরম্যাট
+        val engFormat = SimpleDateFormat("dd MMM, EEEE", Locale("bn", "BD"))
+        val hijriFormat = SimpleDateFormat("dd MMMM", ULocale("ar", "SA", "@calendar=islamic-umalqura"))
+        
+        val engStr = engFormat.format(Date())
+        val hijriStr = hijriFormat.format(now.time)
+
+        tvDateDisplay.text = "📅 $engStr | আরবি: $hijriStr হি."
     }
 
     private fun loadCachedPrayerTimes() {
@@ -394,12 +413,12 @@ class MainActivity : Activity() {
         tvSunriseTime.text = "🌅 সূর্যোদয়: ${convertTo12Hour(sunrise)}"
         tvSunsetTime.text = "🌇 সূর্যাস্ত: ${convertTo12Hour(sunset)}"
 
-        // তাহাজ্জুদ, সেহরি ও ইফতার
+        // তাহাজ্জুদ ও সেহরি-ইফতার (সাদা বক্সের জন্য)
         tvTahajjudTime.text = "১২:০০ AM - ${convertTo12Hour(fajr)}"
         tvSehriTime.text = "${convertTo12Hour(fajr)} এর পূর্বে"
         tvIftarTime.text = "${convertTo12Hour(maghrib)}"
 
-        // হারাম ওয়াক্ত (বামপাশে নাম, ডানপাশে সময়)
+        // হারাম ওয়াক্ত (লাল বক্সের জন্য)
         val sunriseEnd = adjustTime(sunrise, 15)
         val sunsetStart = adjustTime(sunset, -15)
 
