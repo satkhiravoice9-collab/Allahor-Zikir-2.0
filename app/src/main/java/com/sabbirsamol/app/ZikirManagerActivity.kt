@@ -1,207 +1,138 @@
 package com.sabbirsamol.app
 
 import android.app.AlertDialog
+import android.content.Context
+import android.content.Intent
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.text.InputType
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
 
 class ZikirManagerActivity : ComponentActivity() {
-    
-    private val colors = intArrayOf(
-        Color.parseColor("#7F1D1D"), Color.parseColor("#065F46"), 
-        Color.parseColor("#92400E"), Color.parseColor("#1E3A8A"),
-        Color.parseColor("#581C87"), Color.parseColor("#9A3412"), 
-        Color.parseColor("#155E75"), Color.parseColor("#713F12")
-    )
-    
+
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    
-    private fun card(c: Int) = GradientDrawable().apply { 
-        setColor(c)
-        cornerRadius = dp(18).toFloat() 
-    }
-    
-    private fun bn(n: Int) = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
+    private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    override fun onCreate(savedInstanceState: Bundle?) { 
+    // থিম ম্যানেজারের সাথে কানেকশন
+    private val themeColors by lazy { ThemeManager.getTheme(this) }
+    private val bgMain get() = themeColors.bgMain
+    private val cardBg get() = themeColors.cardBg
+    private val cardStroke get() = themeColors.cardStroke
+    private val textAccent get() = themeColors.textAccent
+    private val btnBg get() = themeColors.btnBg
+    private val textMain get() = themeColors.textMain
+    private val textSub get() = themeColors.textSub
+
+    private fun getCardDrawable() = GradientDrawable().apply { setColor(cardBg); setStroke(dp(1), cardStroke); cornerRadius = dp(10).toFloat() }
+    private fun getBtnDrawable(color: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(6).toFloat() }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        showList() 
+        showZikirList()
     }
 
-    private fun showList() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            setBackgroundColor(Color.parseColor("#1B2A22"))
-        }
-        
-        val head = LinearLayout(this).apply { 
-            gravity = Gravity.CENTER_VERTICAL 
-        }
-        
-        val title = TextView(this).apply {
-            text = "📁  জিকির লিস্ট"
-            textSize = 23f
-            setTextColor(Color.WHITE)
-            setTypeface(null, 1)
-        }
-        
-        val main = Button(this).apply {
-            text = "মূল তাসবিহ"
-            textSize = 12f
-            setOnClickListener {
-                LegacyTasbihStore.setTargetMode(this@ZikirManagerActivity, false)
-                LegacyTasbihStore.setActiveId(this@ZikirManagerActivity, "")
-                finish()
-            }
-        }
-        
-        head.addView(title, LinearLayout.LayoutParams(0, dp(56), 1f))
-        head.addView(main, LinearLayout.LayoutParams(dp(105), dp(50)))
-        root.addView(head)
-
-        val scroll = ScrollView(this)
-        val listBox = LinearLayout(this).apply { 
-            orientation = LinearLayout.VERTICAL 
-        }
-        
-        LegacyTasbihStore.items(this).forEachIndexed { index, z ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                background = card(colors[index % colors.size])
-                setPadding(dp(10), dp(5), dp(6), dp(5))
-                setOnClickListener { select(z) }
-            }
-            
-            val info = TextView(this).apply {
-                val left = (z.target - z.count).coerceAtLeast(0)
-                val targetInfo = if (z.target > 0) "${bn(z.count)}/${bn(z.target)}  |  বাকি ${bn(left)}" else "Unlimited"
-                text = "${z.name}\n🎯 $targetInfo"
-                textSize = 15f
-                setTextColor(Color.WHITE)
-                gravity = Gravity.CENTER_VERTICAL
-            }
-            
-            val editButton = Button(this).apply { 
-                text = "✏️"
-                setOnClickListener { edit(z) } 
-            }
-            
-            val deleteButton = Button(this).apply { 
-                text = "🗑"
-                setOnClickListener { delete(z) } 
-            }
-            
-            row.addView(info, LinearLayout.LayoutParams(0, dp(70), 1f))
-            row.addView(editButton, LinearLayout.LayoutParams(dp(56), dp(54)))
-            row.addView(deleteButton, LinearLayout.LayoutParams(dp(56), dp(54)))
-            
-            listBox.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(80)).apply { 
-                bottomMargin = dp(8) 
-            })
-        }
-        
-        scroll.addView(listBox)
-        root.addView(scroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
-        
-        val addButton = Button(this).apply {
-            text = "➕  নতুন জিকির যোগ করুন"
-            textSize = 16f
-            setOnClickListener { add() }
-        }
-        root.addView(addButton, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(58)))
-        
-        setContentView(root)
+    override fun onResume() {
+        super.onResume()
+        showZikirList() 
     }
 
-    private fun select(z: LegacyZikrItem) {
-        LegacyTasbihStore.setTargetMode(this, true)
-        LegacyTasbihStore.setActiveId(this, z.id)
-        finish()
+    private fun getZikirList(): JSONArray {
+        val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
+        return JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
     }
 
-    private fun add() {
-        val box = LinearLayout(this).apply { 
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), 0, dp(12), 0) 
-        }
-        val nameInput = EditText(this).apply { hint = "জিকিরের নাম" }
-        val targetInput = EditText(this).apply { 
-            hint = "Target (0 = Unlimited)"
-            inputType = InputType.TYPE_CLASS_NUMBER 
-        }
-        
-        box.addView(nameInput)
-        box.addView(targetInput)
-        
-        AlertDialog.Builder(this)
-            .setTitle("নতুন জিকির")
-            .setView(box)
-            .setNegativeButton("বাতিল", null)
-            .setPositiveButton("যোগ") { _, _ ->
-                val n = nameInput.text.toString().trim()
-                if (n.isNotEmpty()) {
-                    val list = LegacyTasbihStore.items(this)
-                    val target = targetInput.text.toString().toIntOrNull() ?: 0
-                    list.add(LegacyZikrItem(LegacyTasbihStore.newId(), n, 0, target))
-                    LegacyTasbihStore.saveItems(this, list)
-                    showList()
-                }
-            }.show()
+    private fun saveZikirList(array: JSONArray) {
+        getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", array.toString()).apply()
     }
 
-    private fun edit(z: LegacyZikrItem) {
-        val box = LinearLayout(this).apply { 
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), 0, dp(12), 0) 
-        }
-        val nameInput = EditText(this).apply { setText(z.name) }
-        val targetInput = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER
-            setText(if (z.target > 0) z.target.toString() else "")
-        }
-        
-        box.addView(nameInput)
-        box.addView(targetInput)
-        
-        AlertDialog.Builder(this)
-            .setTitle("জিকির ও Target Edit")
-            .setView(box)
-            .setNegativeButton("বাতিল", null)
-            .setPositiveButton("Save") { _, _ ->
-                val n = nameInput.text.toString().trim()
-                if (n.isNotEmpty()) {
-                    val newTarget = targetInput.text.toString().toIntOrNull() ?: 0
-                    val list = LegacyTasbihStore.items(this)
-                    list.firstOrNull { it.id == z.id }?.let { item ->
-                        item.name = n
-                        item.target = newTarget
+    private fun showZikirList() {
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
+
+        val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
+        top.addView(TextView(this).apply { text = "←"; textSize = 22f; setTextColor(textMain); setPadding(0, 0, dp(12), 0); setOnClickListener { finish() } })
+        top.addView(TextView(this).apply { text = "📄 জিকির তালিকা ও টার্গেট শিডিউল"; textSize = 18f; setTextColor(textAccent); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(top)
+
+        val scroll = ScrollView(this).apply { isFillViewport = true }
+        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(80)) }
+
+        content.addView(Button(this).apply {
+            text = "➕ নতুন জিকির ও টার্গেট যুক্ত করুন"; isAllCaps = false; setTextColor(Color.BLACK); textSize = 15f; background = getBtnDrawable(btnBg)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(45)).apply { bottomMargin = dp(16) }
+            setOnClickListener { showAddZikirDialog() }
+        })
+
+        val listArray = getZikirList()
+        if (listArray.length() == 0) {
+            content.addView(TextView(this).apply { text = "কোনো জিকির যুক্ত করা হয়নি।"; setTextColor(textSub); gravity = Gravity.CENTER; setPadding(0, dp(40), 0, 0) })
+        } else {
+            for (i in 0 until listArray.length()) {
+                val obj = listArray.getJSONObject(i)
+                val id = obj.getString("id")
+                val name = obj.getString("name")
+                val target = obj.getInt("target")
+                val read = obj.getInt("read")
+                val isScheduled = obj.optBoolean("isScheduled", true)
+
+                val card = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) } }
+                
+                card.addView(TextView(this).apply { text = "⭕ $name"; setTextColor(textAccent); textSize = 18f; setTypeface(null, Typeface.BOLD) })
+                card.addView(TextView(this).apply { text = "টার্গেট: ${bn(target)} বার (পড়া হয়েছে: ${bn(read)} বার)"; setTextColor(textMain); textSize = 14f; setPadding(0, dp(8), 0, dp(12)) })
+                
+                val scheduleRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; background = GradientDrawable().apply { setColor(bgMain); cornerRadius = dp(6).toFloat() }; setPadding(dp(10), dp(8), dp(10), dp(8)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) } }
+                scheduleRow.addView(TextView(this).apply { text = "⏰ সিডিউল: ০৯:০০ AM"; setTextColor(Color.parseColor("#60A5FA")); textSize = 13f }, LinearLayout.LayoutParams(0, -2, 1f))
+                scheduleRow.addView(TextView(this).apply { text = if(isScheduled) "ON" else "OFF"; setTextColor(if(isScheduled) Color.parseColor("#10B981") else textSub); textSize = 12f; setTypeface(null, Typeface.BOLD) })
+                card.addView(scheduleRow)
+
+                val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+                btnRow.addView(TextView(this).apply { text = "Delete"; setTextColor(Color.parseColor("#EF4444")); textSize = 14f; setPadding(dp(10), dp(10), dp(20), dp(10)); setOnClickListener { listArray.remove(i); saveZikirList(listArray); showZikirList() } })
+                btnRow.addView(Button(this).apply {
+                    text = "পড়া শুরু করুন ➔"; isAllCaps = false; setTextColor(Color.WHITE); textSize = 13f; background = getBtnDrawable(Color.parseColor("#2563EB"))
+                    layoutParams = LinearLayout.LayoutParams(dp(130), dp(35))
+                    setOnClickListener {
+                        val intent = Intent(this@ZikirManagerActivity, TasbihActivity::class.java)
+                        intent.putExtra("ZIKIR_ID", id); intent.putExtra("ZIKIR_NAME", name); intent.putExtra("ZIKIR_TARGET", target); intent.putExtra("ZIKIR_READ", read)
+                        startActivity(intent)
                     }
-                    LegacyTasbihStore.saveItems(this, list)
-                    showList()
-                }
-            }.show()
+                })
+                card.addView(btnRow)
+                content.addView(card)
+            }
+        }
+        scroll.addView(content); root.addView(scroll); setContentView(root)
     }
 
-    private fun delete(z: LegacyZikrItem) {
-        AlertDialog.Builder(this)
-            .setTitle("জিকির মুছবেন?")
-            .setMessage(z.name)
-            .setNegativeButton("না", null)
-            .setPositiveButton("হ্যাঁ") { _, _ ->
-                val list = LegacyTasbihStore.items(this)
-                list.removeAll { it.id == z.id }
-                LegacyTasbihStore.saveItems(this, list)
-                if (LegacyTasbihStore.activeId(this) == z.id) {
-                    LegacyTasbihStore.setTargetMode(this, false)
-                    LegacyTasbihStore.setActiveId(this, "")
-                }
-                showList()
-            }.show()
+    private fun showAddZikirDialog() {
+        val dialogLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain); setPadding(dp(20), dp(20), dp(20), dp(20)) }
+        dialogLayout.addView(TextView(this).apply { text = "নতুন জিকির যুক্ত করুন"; textSize = 18f; setTextColor(textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(16)) })
+        
+        val nameInput = EditText(this).apply { hint = "জিকিরের নাম লিখুন"; setHintTextColor(Color.GRAY); setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE); setPadding(dp(12), dp(12), dp(12), dp(12)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) } }
+        val targetInput = EditText(this).apply { hint = "টার্গেট সংখ্যা (যেমন: ৩৩)"; inputType = android.text.InputType.TYPE_CLASS_NUMBER; setHintTextColor(Color.GRAY); setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE); setPadding(dp(12), dp(12), dp(12), dp(12)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(20) } }
+        
+        dialogLayout.addView(nameInput); dialogLayout.addView(targetInput)
+        
+        val dialog = AlertDialog.Builder(this).setView(dialogLayout).create()
+        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f }
+        
+        btnRow.addView(Button(this).apply { text = "সেভ করুন"; setTextColor(Color.BLACK); background = getBtnDrawable(btnBg); layoutParams = LinearLayout.LayoutParams(0, dp(45), 1f).apply { rightMargin = dp(5) }; setOnClickListener {
+            val name = nameInput.text.toString().trim()
+            val targetStr = targetInput.text.toString().trim()
+            if (name.isNotEmpty() && targetStr.isNotEmpty()) {
+                val list = getZikirList()
+                val obj = JSONObject().apply { put("id", UUID.randomUUID().toString()); put("name", name); put("target", targetStr.toInt()); put("read", 0); put("isScheduled", true) }
+                list.put(obj); saveZikirList(list); dialog.dismiss(); showZikirList()
+            } else { Toast.makeText(this@ZikirManagerActivity, "সব তথ্য পূরণ করুন", Toast.LENGTH_SHORT).show() }
+        } })
+        
+        btnRow.addView(Button(this).apply { text = "বাতিল"; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#475569")); layoutParams = LinearLayout.LayoutParams(0, dp(45), 1f).apply { leftMargin = dp(5) }; setOnClickListener { dialog.dismiss() } })
+        
+        dialogLayout.addView(btnRow)
+        dialog.show()
     }
 }
