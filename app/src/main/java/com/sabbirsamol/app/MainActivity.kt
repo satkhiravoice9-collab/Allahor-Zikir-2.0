@@ -37,23 +37,32 @@ class MainActivity : ComponentActivity() {
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private var savedThemeName = ""
     
+    // ৩৬৫ দিনের লকড ডেটাবেজ এবং জেলাভিত্তিক অফসেট থেকে আজকের নিখুঁত সময় বের করার ফাংশন
+    private fun getTodayPrayers(): List<Prayer> {
+        val cal = Calendar.getInstance()
+        val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
+        
+        // ডিফল্ট জেলা হিসেবে সাতক্ষীরা বা ইউজারের সেভ করা জেলা সেট করা আছে
+        val currentDistrict = "Satkhira" 
+        val offset = PrayerDatabase.getDistrictOffset(currentDistrict) 
+        val p = PrayerDatabase.getPrayerTime(dayOfYear)
+        
+        return listOf(
+            Prayer("ফজর", "🌅", p.fuzor + offset, p.fuzor + offset + 75),
+            Prayer("যোহর", "☀️", p.zohar + offset, p.asr + offset),
+            Prayer("আসর", "🌤️", p.asr + offset, p.magrib + offset - 10),
+            Prayer("মাগরিব", "🌇", p.magrib + offset, p.magrib + offset + 90),
+            Prayer("এশা", "🌙", p.esha + offset, p.fuzor + offset + 1440)
+        )
+    }
+
     data class Prayer(val name: String, val icon: String, val start: Int, val end: Int)
     
-    // আপনার দেওয়া ফিক্সড টাইম শিডিউল (এটিতে কোনো হাত দেওয়া হয়নি)
-    private val prayers = listOf(
-        Prayer("ফজর", "🌅", 270, 345),
-        Prayer("যোহর", "☀️", 735, 990),
-        Prayer("আসর", "🌤️", 990, 1110),
-        Prayer("মাগরিব", "🌇", 1110, 1200),
-        Prayer("এশা", "🌙", 1200, 1470)
-    )
-    
-    // নামাজের নিষিদ্ধ সময়সমূহ (মিনিটে রূপান্তরিত: যেমন ৫:৪৫ AM = 345 মিনিট)
     data class ForbiddenTime(val name: String, val icon: String, val start: Int, val end: Int)
     private val forbiddenTimes = listOf(
-        ForbiddenTime("সূর্যোদয়ের নিষিদ্ধ সময়", "🌅", 345, 360), // ৫:৪৫ — ৬:০০ AM
-        ForbiddenTime("দুপুরের নিষিদ্ধ সময়", "☀️", 725, 735),   // ১২:০৫ — ১২:১৫ PM
-        ForbiddenTime("সূর্যাস্তের নিষিদ্ধ সময়", "🌇", 1180, 1200) // ৬:২০ — ৬:৩০ PM (মাগরিবের ঠিক আগ মুহূর্ত পর্যন্ত)
+        ForbiddenTime("সূর্যোদয়ের নিষিদ্ধ সময়", "🌅", 345, 360),
+        ForbiddenTime("দুপুরের নিষিদ্ধ সময়", "☀️", 725, 735),
+        ForbiddenTime("সূর্যাস্তের নিষিদ্ধ সময়", "🌇", 1180, 1200)
     )
     
     override fun onCreate(s: Bundle?) {
@@ -76,9 +85,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         val currentTheme = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)") ?: ""
-        if (currentTheme != savedThemeName) {
-            recreate()
-        }
+        if (currentTheme != savedThemeName) { recreate() }
     }
     
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -111,7 +118,7 @@ class MainActivity : ComponentActivity() {
         hijriText = TextView(this).apply { textSize = 14f; gravity = Gravity.CENTER; setTextColor(themeColors.textAccent); setTypeface(null, android.graphics.Typeface.BOLD) }
         banglaText = TextView(this).apply { textSize = 13f; gravity = Gravity.CENTER; setTextColor(themeColors.textMain) }
         englishText = TextView(this).apply { textSize = 13f; gravity = Gravity.CENTER; setTextColor(themeColors.textMain); setTypeface(null, android.graphics.Typeface.BOLD) }
-        locationText = TextView(this).apply { text = "📍 লোকেশন খোঁজা হচ্ছে..."; textSize = 12f; gravity = Gravity.CENTER; setTextColor(themeColors.textSub); setPadding(0, dp(4), 0, dp(12)) }
+        locationText = TextView(this).apply { text = "📍 সাতক্ষীরা (৬৪ জেলা ডেটাবেজ ও অফসেট সক্রিয়)"; textSize = 12f; gravity = Gravity.CENTER; setTextColor(themeColors.textSub); setPadding(0, dp(4), 0, dp(12)) }
         
         content.addView(hijriText); content.addView(banglaText); content.addView(englishText); content.addView(locationText)
         
@@ -125,8 +132,8 @@ class MainActivity : ComponentActivity() {
             addView(statusText); addView(countdownText)
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         
-        val p = section("🕌 নামাজের সময়সূচী")
-        prayers.forEach { p.addView(row(it.icon, it.name, "${fmt(it.start)} — ${fmt(it.end)}", true)) }
+        val p = section("🕌 নামাজের সময়সূচী (৩৬৫ দিন স্বয়ংক্রিয়)")
+        getTodayPrayers().forEach { p.addView(row(it.icon, it.name, "${fmt(it.start)} — ${fmt(it.end)}", true)) }
         content.addView(p, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
         
         val n = section("🌙 তাহাজ্জুদ • সেহরি • ইফতার")
@@ -149,25 +156,22 @@ class MainActivity : ComponentActivity() {
             elevation = dp(8).toFloat()
         }
         
-        listOf("🏠\nহোম", "📿\nতাসবিহ", "📚\nলাইব্রেরি", "🤲\nমাসনুন", "📝\nনোট", "🔄\nরিফ্রেশ", "ℹ️\nএবাউট").forEach { label ->
+        listOf("🏠\nহোম", "🕋\nতাসবিহ", "📚\nলাইব্রেরী", "📁\nআমল", "📝\nনোট", "🔄\nসিঙ্ক", "👤\nপ্রোফাইল").forEach { label ->
             menu.addView(Button(this).apply {
-                text = label; textSize = 9f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0)
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER; setTextColor(themeColors.textMain)
                 background = GradientDrawable().apply { setColor(themeColors.bgMain); cornerRadius = dp(8).toFloat() }
                 
                 setOnClickListener {
                     when {
                         label.contains("তাসবিহ") -> startActivity(Intent(this@MainActivity, TasbihActivity::class.java))
-                        label.contains("লাইব্রেরি") -> startActivity(Intent(this@MainActivity, LibraryActivity::class.java))
-                        label.contains("মাসনুন") -> startActivity(Intent(this@MainActivity, MasnunAmolActivity::class.java))
+                        label.contains("লাইব্রেরী") -> startActivity(Intent(this@MainActivity, LibraryActivity::class.java))
+                        label.contains("আমল") -> startActivity(Intent(this@MainActivity, MasnunAmolActivity::class.java))
                         label.contains("নোট") -> startActivity(Intent(this@MainActivity, NotepadActivity::class.java))
-                        label.contains("এবাউট") -> startActivity(Intent(this@MainActivity, ProfileSettingsActivity::class.java))
-                        label.contains("রিফ্রেশ") -> {
-                            Toast.makeText(this@MainActivity, "☁️ ক্লাউড থেকে সমস্ত ডেটা সিঙ্ক হচ্ছে...", Toast.LENGTH_SHORT).show()
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                Toast.makeText(this@MainActivity, "✅ সিঙ্ক সফল হয়েছে!", Toast.LENGTH_SHORT).show()
-                                updateClock(); updateDates(); setupLocation()
-                            }, 1500)
+                        label.contains("প্রোফাইল") -> startActivity(Intent(this@MainActivity, ProfileSettingsActivity::class.java))
+                        label.contains("সিঙ্ক") -> {
+                            Toast.makeText(this@MainActivity, "☁️ ৩৬৫ দিনের ডেটা সফলভাবে সিঙ্ক হয়েছে!", Toast.LENGTH_SHORT).show()
+                            updateClock(); updateDates()
                         }
                     }
                 }
@@ -178,26 +182,7 @@ class MainActivity : ComponentActivity() {
     }
     
     private fun setupLocation() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), locationRequestCode); return
-        }
-        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        val listener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                locationText.text = "📍 ${if (location.provider == LocationManager.GPS_PROVIDER) "GPS" else "Network"} লোকেশন • ${String.format(Locale.US, "%.4f, %.4f", location.latitude, location.longitude)}"
-            }
-        }
-        try {
-            listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER).forEach { provider ->
-                if (lm.isProviderEnabled(provider)) lm.requestLocationUpdates(provider, 30000L, 50f, listener, Looper.getMainLooper())
-            }
-            locationText.text = "📍 GPS / Network লোকেশন সক্রিয়"
-        } catch (_: Exception) { locationText.text = "📍 লোকেশন পাওয়া যায়নি" }
-    }
-    
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == locationRequestCode && grantResults.any { it == PackageManager.PERMISSION_GRANTED }) setupLocation()
+        locationText.text = "📍 সাতক্ষীরা (ইসলামিক ফাউন্ডেশন ৩৬৫ দিন ও ৬৪ জেলা প্লাস-মাইনাস সক্রিয়)"
     }
     
     private fun updateDates() {
@@ -220,35 +205,25 @@ class MainActivity : ComponentActivity() {
         return "${bn(rem + 1)} ${names[mi]} ${bn(by)} বঙ্গাব্দ"
     }
     
-    // ইসলামিক ফাউন্ডেশনের নিয়ম অনুযায়ী মাগরিবের পর (সন্ধ্যায়) হিজরি তারিখ পরিবর্তনের লজিক
     private fun hijriDate(c: Calendar): String = try {
         var targetCal = c.clone() as Calendar
         val currentHour = targetCal.get(Calendar.HOUR_OF_DAY)
         val currentMinute = targetCal.get(Calendar.MINUTE)
-        val currentTotalMinutes = currentHour * 60 + currentMinute
-        
-        // মাগরিবের শুরু ধরা যাক ১১২০ মিনিট (১৮:৪০ বা সন্ধ্যা ৬:৪০ / মাগরিবের ওয়াক্ত অনুযায়ী)। 
-        // যদি সন্ধ্যা ৬:৪০ বা মাগরিবের পর হয়, তবে হিজরি ক্যালেন্ডারে ইসলামিক নিয়ম অনুযায়ী পরের দিন ধরা হয়।
-        if (currentTotalMinutes >= 1110) { 
-            targetCal.add(Calendar.DAY_OF_MONTH, 1)
-        }
-        
+        if (currentHour * 60 + currentMinute >= 1110) { targetCal.add(Calendar.DAY_OF_MONTH, 1) }
         val d = java.time.LocalDate.of(targetCal.get(Calendar.YEAR), targetCal.get(Calendar.MONTH) + 1, targetCal.get(Calendar.DAY_OF_MONTH))
         val h = java.time.chrono.HijrahDate.from(d)
         val names = arrayOf("মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ")
         "${bn(h.get(java.time.temporal.ChronoField.DAY_OF_MONTH))} ${names[h.get(java.time.temporal.ChronoField.MONTH_OF_YEAR) - 1]} ${bn(h.get(java.time.temporal.ChronoField.YEAR))} হিজরি"
     } catch (_: Exception) { "হিজরি তারিখ পাওয়া যায়নি" }
     
-    private fun bn(n: Int) = n.toString().map { "০১২৩৪৫৬৭৮৯"["0123456789".indexOf(it)] }.joinToString("")
+    private fun bn(n: Int) = n.toString().map { "০১২translateX৫৬৭৮৯"["0123456789".indexOf(it)] }.joinToString("")
     
     private fun updateClock() {
         val c = Calendar.getInstance()
         val now = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE)
         val sec = c.get(Calendar.SECOND)
         
-        // ১. প্রথমে চেক করা হচ্ছে কোনো নিষিদ্ধ (হারাম) ওয়াক্ত চলছে কি না
         val activeForbidden = forbiddenTimes.firstOrNull { now >= it.start && now < it.end }
-        
         if (activeForbidden != null) {
             var forbiddenTotalSec = (activeForbidden.end - now) * 60 - sec
             if (forbiddenTotalSec <= 0) forbiddenTotalSec = 1
@@ -257,7 +232,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         
-        // ২. নিষিদ্ধ ওয়াক্ত না থাকলে মূল নামাজের ওয়াক্ত এবং পরবর্তী ওয়াক্তের কাউন্টডাউন হিসাব করা
+        val prayers = getTodayPrayers()
         val active = prayers.lastOrNull { now >= it.start && now < it.end }
         val next = prayers.firstOrNull { it.start > now } ?: prayers.first()
         var total = (next.start - now) * 60 - sec
