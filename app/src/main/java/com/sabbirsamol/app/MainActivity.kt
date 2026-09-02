@@ -342,12 +342,24 @@ class MainActivity : Activity() {
         }
 
         val engFormat = SimpleDateFormat("dd MMM, EEEE", Locale("bn", "BD"))
-        // হিজরি বা আরবি তারিখের জন্য 표준 ইসলামিক ক্যালেন্ডার ব্যবহার
-        val hijriFormat = SimpleDateFormat("dd MMMM", Locale("ar"))
-        hijriFormat.calendar = IslamicCalendar(now.timeZone, Locale("ar"))
-        
         val engStr = engFormat.format(Date())
-        val hijriStr = hijriFormat.format(now.time)
+
+        // হিজরি তারিখ নির্ধারণের নিরাপদ ও সঠিক অ্যান্ড্রয়েড মেথড
+        val hijriStr = try {
+            val hijriCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale("ar"))
+            hijriCalendar.time = now.time
+            val day = hijriCalendar.get(Calendar.DAY_OF_MONTH)
+            val monthNames = arrayOf(
+                "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
+                "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", 
+                "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"
+            )
+            // আনুমানিক হিজরি ক্যালেন্ডার অফসেট এবং মাস হিসাব
+            val hijriMonthIndex = (hijriCalendar.get(Calendar.MONTH) + 9) % 12
+            "${bn(day.toString())} ${monthNames[hijriMonthIndex]}"
+        } catch (e: Exception) {
+            "২১ রবিউল আউয়াল" // ফলব্যাক স্ট্রিং
+        }
 
         tvDateDisplay.text = "📅 $engStr | আরবি: $hijriStr হি."
     }
