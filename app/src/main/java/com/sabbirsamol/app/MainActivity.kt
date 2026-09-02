@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.widget.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,7 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(90))
         }
 
-        // ================= ১. টপ বার (তারিখ ও নোটিফিকেশন) =================
+        // ================= ১. টপ বার =================
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -167,7 +168,11 @@ class MainActivity : Activity() {
         addPrayerRow("মাগরিব", "১৮:২০ - ১৯:৩৭", false)
         addPrayerRow("এশা", "১৯:৩৭ - ০৪:৩০", false)
 
-        prayerCard.addView(View(this).apply { background = GradientDrawable().apply { setColor(theme.cardStroke) }; layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(8), 0, dp(8)) } })
+        val divider = View(this).apply {
+            background = GradientDrawable().apply { setColor(theme.cardStroke) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(8), 0, dp(8)) }
+        }
+        prayerCard.addView(divider)
         
         addPrayerRow("🌙 তাহাজ্জুদ (শেষ তৃতীয়াংশ)", "রাত ০২:৩০ - ০৪:১৫", false)
         addPrayerRow("🍽️ ইফতার ও সেহরি", "সেহরি শেষ: ০৪:১৫ | ইফতার: ১৮:২০", false)
@@ -191,7 +196,6 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
 
-        // তাসবিহ শর্টকাট কার্ড
         val tasbihCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
