@@ -26,6 +26,7 @@ class TasbihActivity : ComponentActivity() {
     private val bgMain get() = themeColors.bgMain
     private val textAccent get() = themeColors.textAccent
     private val textMain get() = themeColors.textMain
+    private val btnBg get() = themeColors.btnBg // এখানে ভেরিয়েবলটি সঠিকভাবে যুক্ত করা হয়েছে
 
     private var currentCount = 0
     private var isCustomMode = false
@@ -124,13 +125,11 @@ class TasbihActivity : ComponentActivity() {
         })
         centerLayout.addView(kaabaBox)
 
-        // --- কাউন্টের সংখ্যা (থিম অনুযায়ী কালার পরিবর্তন হবে) ---
         val savedTheme = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("app_theme", "")
         val isLightMode = savedTheme?.contains("সাদা") == true
 
         countTextView = TextView(this).apply {
             textSize = 85f
-            // সাদা থিম হলে সংখ্যা কালো দেখাবে, অন্যথায় সাদা দেখাবে
             setTextColor(if (isLightMode) Color.BLACK else Color.WHITE)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
