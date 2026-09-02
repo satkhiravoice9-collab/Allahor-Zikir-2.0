@@ -53,6 +53,9 @@ class MainActivity : Activity() {
     private lateinit var tvNafalTahajjud: TextView
 
     private val prayerRows = mutableMapOf<String, LinearLayout>()
+    private val prayerNameViews = mutableMapOf<String, TextView>()
+    private val prayerTimeViews = mutableMapOf<String, TextView>()
+
     private val handler = Handler(Looper.getMainLooper())
     private var isTimerRunning = false
     private val timingsMap = mutableMapOf<String, String>()
@@ -169,7 +172,6 @@ class MainActivity : Activity() {
         }
         countdownCard.addView(cardDivider)
 
-        // ওপরে ওয়াক্তের নাম ও "শেষ হতে বাকি" টেক্সট
         tvWaqtCountdownHeader = TextView(this).apply {
             text = "ওয়াক্ত শেষ হতে বাকি"
             textSize = 16f
@@ -180,7 +182,6 @@ class MainActivity : Activity() {
         }
         countdownCard.addView(tvWaqtCountdownHeader)
 
-        // তার নিচে বড় করে কাউন্টডাউন সময়
         tvRemainingCountdown = TextView(this).apply {
             text = "০০:০০:০০"
             textSize = 28f
@@ -241,6 +242,8 @@ class MainActivity : Activity() {
             row.addView(rightLayout, LinearLayout.LayoutParams(-2, -2))
 
             prayerRows[key] = row
+            prayerNameViews[key] = nameView
+            prayerTimeViews[key] = timeTextView
             return row
         }
 
@@ -623,7 +626,6 @@ class MainActivity : Activity() {
             }
         }
 
-        // ওয়াক্তের নাম এক লাইনে এবং থাম্বনেইল সহ প্রদর্শন
         tvWaqtCountdownHeader.text = "$waqtThumbnail $currentWaqtName শেষ হতে বাকি"
 
         val currentTotalSec = (currentMinutes * 60) + currentSeconds
@@ -644,14 +646,19 @@ class MainActivity : Activity() {
     private fun highlightActiveWaqt(activeKey: String) {
         prayerRows.forEach { (key, row) ->
             if (key == activeKey) {
+                // রানিং ওয়াক্তের জন্য একদম হালকা ও স্পষ্ট প্রিমিয়াম হাইলাইট কালার, যাতে টেক্সট ক্লিয়ার দেখায়
                 row.background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#1E3A8A"))
+                    setColor(Color.parseColor("#FEF08A")) // হালকা উজ্জ্বল হলুদ হাইলাইট
                     cornerRadius = dp(8).toFloat()
                 }
+                prayerNameViews[key]?.setTextColor(Color.parseColor("#78350F")) // ডিপ ব্রাউন/কালো টেক্সট
+                prayerTimeViews[key]?.setTextColor(Color.parseColor("#78350F"))
             } else {
                 row.background = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
                 }
+                prayerNameViews[key]?.setTextColor(Color.BLACK)
+                prayerTimeViews[key]?.setTextColor(Color.parseColor("#334155"))
             }
         }
     }
