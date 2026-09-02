@@ -109,20 +109,7 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        val topBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END
-            setPadding(dp(4), dp(4), dp(4), dp(6))
-        }
-
-        topBar.addView(TextView(this).apply {
-            text = "🔄 রিফ্রেশ"
-            textSize = 13f
-            setTextColor(Color.parseColor("#3B82F6"))
-            setPadding(dp(8), dp(4), dp(8), dp(4))
-            setOnClickListener { loadOnlinePrayerTimes() }
-        })
-        content.addView(topBar)
+        // রিফ্রেশ বাটনটি টপ বার থেকে সম্পূর্ণ বাদ দেওয়া হয়েছে
 
         val countdownCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -549,7 +536,6 @@ class MainActivity : Activity() {
                 timingsMap.putAll(onlineTimes)
                 saveTimingsToCache(onlineTimes)
                 applyTimingsToUI()
-                Toast.makeText(context, "সাতক্ষীরার লাইভ সময় আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
             } else if (timingsMap.isEmpty()) {
                 val defaultTimes = mapOf(
                     "Fajr" to "04:30", "Sunrise" to "05:46", "Dhuhr" to "12:03",
