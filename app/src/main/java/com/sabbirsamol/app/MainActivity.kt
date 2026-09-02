@@ -1,7 +1,6 @@
 package com.sabbirsamol.app
 
 import android.os.Bundle
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -32,12 +31,9 @@ class MainActivity : AppCompatActivity() {
                     val maghrib = onlineTimes["Maghrib"] ?: ""
                     val isha = onlineTimes["Isha"] ?: ""
 
-                    // লেআউটের টেক্সটভিউগুলোতে সময় বসানোর কোড (আপনার আইডি অনুযায়ী uncomment করে নিন)
-                    // findViewById<TextView>(R.id.txtFajrTime)?.text = fajr
-                    // findViewById<TextView>(R.id.txtZoharTime)?.text = zohar
-                    // findViewById<TextView>(R.id.txtAsrTime)?.text = asr
-                    // findViewById<TextView>(R.id.txtMaghribTime)?.text = maghrib
-                    // findViewById<TextView>(R.id.txtIshaTime)?.text = isha
+                    // লেআউটের টেক্সটভিউগুলোতে সময় বসানোর কোড (আপনার লেআউটের আইডি অনুযায়ী নিচে বসিয়ে নেবেন)
+                    // val tvFajr = findViewById<android.widget.TextView>(R.id.txtFajrTime)
+                    // tvFajr?.text = fajr
 
                     Toast.makeText(this@MainActivity, "সাতক্ষীরার লাইভ সময় সফলভাবে আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
                 } else {
