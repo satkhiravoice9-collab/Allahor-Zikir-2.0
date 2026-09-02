@@ -24,7 +24,7 @@ class MainActivity : Activity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun bn(s: String): String = s.map { if (it in '0'..'9') "০১২৩৪৫৬৭৮৯"[it - '0'] else it }.joinToString("")
 
-    private lateinit var tvCurrentWaqtName: TextView
+    private lateinit var tvWaqtCountdownHeader: TextView
     private lateinit var tvRemainingCountdown: TextView
     private lateinit var tvSunriseTime: TextView
     private lateinit var tvSunsetTime: TextView
@@ -46,6 +46,11 @@ class MainActivity : Activity() {
     private lateinit var tvHaramSunrise: TextView
     private lateinit var tvHaramZohar: TextView
     private lateinit var tvHaramSunset: TextView
+
+    private lateinit var tvDohaTime: TextView
+    private lateinit var tvJawalTime: TextView
+    private lateinit var tvAwabinTime: TextView
+    private lateinit var tvNafalTahajjud: TextView
 
     private val prayerRows = mutableMapOf<String, LinearLayout>()
     private val handler = Handler(Looper.getMainLooper())
@@ -164,21 +169,25 @@ class MainActivity : Activity() {
         }
         countdownCard.addView(cardDivider)
 
-        tvCurrentWaqtName = TextView(this).apply {
-            text = "ওয়াক্ত লোড হচ্ছে..."
-            textSize = 20f
+        // ওপরে ওয়াক্তের নাম ও "শেষ হতে বাকি" টেক্সট
+        tvWaqtCountdownHeader = TextView(this).apply {
+            text = "ওয়াক্ত শেষ হতে বাকি"
+            textSize = 16f
             setTextColor(theme.textAccent)
             setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(4), 0, dp(2))
         }
-        countdownCard.addView(tvCurrentWaqtName)
+        countdownCard.addView(tvWaqtCountdownHeader)
 
+        // তার নিচে বড় করে কাউন্টডাউন সময়
         tvRemainingCountdown = TextView(this).apply {
             text = "০০:০০:০০"
-            textSize = 26f
+            textSize = 28f
             setTextColor(theme.textMain)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(0, dp(4), 0, dp(10))
+            setPadding(0, 0, 0, dp(10))
         }
         countdownCard.addView(tvRemainingCountdown)
 
@@ -201,7 +210,7 @@ class MainActivity : Activity() {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(6), dp(8), dp(6), dp(8))
+                setPadding(dp(8), dp(6), dp(8), dp(6))
             }
             val nameView = TextView(this).apply {
                 text = name
@@ -220,7 +229,7 @@ class MainActivity : Activity() {
             rightLayout.addView(timeTextView)
             if (isSwitchNeeded) {
                 rightLayout.addView(Switch(this).apply { 
-                    isChecked = true
+                    isChecked = false
                     setOnCheckedChangeListener { _, isChecked ->
                         val status = if (isChecked) "চালু" else "বন্ধ"
                         Toast.makeText(this@MainActivity, "$name অ্যালার্ম $status", Toast.LENGTH_SHORT).show()
@@ -235,7 +244,14 @@ class MainActivity : Activity() {
             return row
         }
 
-        // বক্স ১: পাঁচ ওয়াক্তের সময়সূচি
+        fun createDivider(): View {
+            return View(this).apply {
+                background = GradientDrawable().apply { setColor(Color.parseColor("#CA8A04")) }
+                layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(4), dp(2), dp(4), dp(2)) }
+            }
+        }
+
+        // ================= ৪. বক্স ১: পাঁচ ওয়াক্তের সময়সূচি =================
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -262,13 +278,51 @@ class MainActivity : Activity() {
         tvIshaTime = TextView(this)
 
         prayerCard.addView(createUniformRow("Fajr", "ফজর", tvFajrTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
         prayerCard.addView(createUniformRow("Dhuhr", "যোহর", tvZoharTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
         prayerCard.addView(createUniformRow("Asr", "আসর", tvAsrTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
         prayerCard.addView(createUniformRow("Maghrib", "মাগরিব", tvMaghribTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
         prayerCard.addView(createUniformRow("Isha", "এশা", tvIshaTime, true, Color.BLACK, Color.parseColor("#334155")))
         content.addView(prayerCard)
 
-        // বক্স ২: তাহাজ্জুদ ও সেহরি-ইফতার
+        // ================= ৫. বক্স ২: নফল সালাতের সময় =================
+        val nafalCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#ECFDF5"))
+                setStroke(dp(1), Color.parseColor("#10B981"))
+                cornerRadius = dp(16).toFloat()
+            }
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
+        }
+
+        nafalCard.addView(TextView(this).apply {
+            text = "✨ নফল সালাতের সময়"
+            textSize = 15f
+            setTextColor(Color.parseColor("#065F46"))
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(8))
+        })
+
+        tvDohaTime = TextView(this)
+        tvJawalTime = TextView(this)
+        tvAwabinTime = TextView(this)
+        tvNafalTahajjud = TextView(this)
+
+        nafalCard.addView(createUniformRow("Doha", "☀️ দুহা (ইশরাক ও চাশত)", tvDohaTime, false, Color.BLACK, Color.parseColor("#047857")))
+        nafalCard.addView(createDivider())
+        nafalCard.addView(createUniformRow("Jawal", "🕌 জাওয়াল শুরু (দুপুর)", tvJawalTime, false, Color.BLACK, Color.parseColor("#047857")))
+        nafalCard.addView(createDivider())
+        nafalCard.addView(createUniformRow("Awabin", "⛅ আওয়াবিন", tvAwabinTime, false, Color.BLACK, Color.parseColor("#047857")))
+        nafalCard.addView(createDivider())
+        nafalCard.addView(createUniformRow("NafalTahajjud", "🌙 তাহাজ্জুদ", tvNafalTahajjud, false, Color.BLACK, Color.parseColor("#047857")))
+        content.addView(nafalCard)
+
+        // ================= ৬. বক্স ৩: তাহাজ্জুদ ও সেহরি-ইফতার =================
         val specialCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -293,11 +347,13 @@ class MainActivity : Activity() {
         tvIftarTime = TextView(this)
 
         specialCard.addView(createUniformRow("Tahajjud", "তাহাজ্জুদ", tvTahajjudTime, false, Color.BLACK, Color.parseColor("#475569")))
+        specialCard.addView(createDivider())
         specialCard.addView(createUniformRow("Sehri", "সেহরির শেষ সময়", tvSehriTime, false, Color.BLACK, Color.parseColor("#475569")))
+        specialCard.addView(createDivider())
         specialCard.addView(createUniformRow("Iftar", "ইফতারের সময়", tvIftarTime, false, Color.BLACK, Color.parseColor("#475569")))
         content.addView(specialCard)
 
-        // বক্স ৩: হারাম ওয়াক্ত
+        // ================= ৭. বক্স ৪: হারাম ওয়াক্ত =================
         val haramCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -322,7 +378,9 @@ class MainActivity : Activity() {
         tvHaramSunset = TextView(this)
 
         haramCard.addView(createUniformRow("HaramSunrise", "সূর্যোদয় নিষিদ্ধ সময়", tvHaramSunrise, false, Color.WHITE, Color.parseColor("#FEE2E2")))
+        haramCard.addView(createDivider())
         haramCard.addView(createUniformRow("HaramZohar", "দ্বিপ্রহর নিষিদ্ধ সময়", tvHaramZohar, false, Color.WHITE, Color.parseColor("#FEE2E2")))
+        haramCard.addView(createDivider())
         haramCard.addView(createUniformRow("HaramSunset", "সূর্যাস্ত নিষিদ্ধ সময়", tvHaramSunset, false, Color.WHITE, Color.parseColor("#FEE2E2")))
         content.addView(haramCard)
 
@@ -441,10 +499,9 @@ class MainActivity : Activity() {
         val maghrib = timingsMap["Maghrib"] ?: "18:20"
         val isha = timingsMap["Isha"] ?: "19:37"
 
-        // আসরের শেষ এবং মাগরিবের শুরু এখন অনলাইনে প্রাপ্ত আসল সূর্যাস্ত/মাগরিবের টাইম অনুযায়ী নিখুঁত সেট করা হলো
         tvFajrTime.text = "${convertTo12Hour(fajr)} - ${convertTo12Hour(sunrise)}"
         tvZoharTime.text = "${convertTo12Hour(dhuhr)} - ০৪:৩৩ PM"
-        tvAsrTime.text = "০৪:৩৩ PM - ${convertTo12Hour(maghrib)}" // আসর শেষ ও মাগরিব শুরু সঠিক রাখা হলো
+        tvAsrTime.text = "০৪:৩৩ PM - ${convertTo12Hour(maghrib)}"
         tvMaghribTime.text = "${convertTo12Hour(maghrib)} - ${convertTo12Hour(isha)}"
         tvIshaTime.text = "${convertTo12Hour(isha)} - ${convertTo12Hour(fajr)}"
 
@@ -456,11 +513,19 @@ class MainActivity : Activity() {
         tvIftarTime.text = "${convertTo12Hour(maghrib)}"
 
         val sunriseEnd = adjustTime(sunrise, 15)
+        val zoharForbiddenStart = adjustTime(dhuhr, -5)
+        val zoharForbiddenEnd = convertTo12Hour(dhuhr)
         val sunsetStart = adjustTime(sunset, -15)
 
         tvHaramSunrise.text = "${convertTo12Hour(sunrise)} - $sunriseEnd"
-        tvHaramZohar.text = "০৪:২৮ PM - ০৪:৩৩ PM"
+        tvHaramZohar.text = "$zoharForbiddenStart - $zoharForbiddenEnd"
         tvHaramSunset.text = "$sunsetStart - ${convertTo12Hour(sunset)}"
+
+        val dohaEnd = adjustTime(dhuhr, -10)
+        tvDohaTime.text = "${convertTo12Hour(sunrise)} - $dohaEnd"
+        tvJawalTime.text = "${convertTo12Hour(dhuhr)}"
+        tvAwabinTime.text = "মাগরিবের পর - ${convertTo12Hour(isha)}"
+        tvNafalTahajjud.text = "এশার পর - ${convertTo12Hour(fajr)}"
 
         updateLiveCountdown()
     }
@@ -515,43 +580,51 @@ class MainActivity : Activity() {
         val isha = parseMinutes(timingsMap["Isha"])
 
         var currentWaqtName = "তাহাজ্জুদ"
+        var waqtThumbnail = "🌙"
         var targetEndMinutes = fajr
         var activeKey = "Tahajjud"
 
         when {
             currentMinutes in fajr until sunrise -> {
                 currentWaqtName = "ফজর"
+                waqtThumbnail = "🌅"
                 targetEndMinutes = sunrise
                 activeKey = "Fajr"
             }
             currentMinutes in sunrise until dhuhr -> {
                 currentWaqtName = "চাশত / নিষিদ্ধ সময়"
+                waqtThumbnail = "☀️"
                 targetEndMinutes = dhuhr
                 activeKey = "Haram"
             }
             currentMinutes in dhuhr until asr -> {
                 currentWaqtName = "যোহর"
+                waqtThumbnail = "🌤️"
                 targetEndMinutes = asr
                 activeKey = "Dhuhr"
             }
             currentMinutes in asr until maghrib -> {
                 currentWaqtName = "আসর"
+                waqtThumbnail = "⛅"
                 targetEndMinutes = maghrib
                 activeKey = "Asr"
             }
             currentMinutes in maghrib until isha -> {
                 currentWaqtName = "মাগরিব"
+                waqtThumbnail = "🌇"
                 targetEndMinutes = isha
                 activeKey = "Maghrib"
             }
             currentMinutes >= isha || currentMinutes < fajr -> {
                 currentWaqtName = "এশা"
+                waqtThumbnail = "🌃"
                 targetEndMinutes = if (currentMinutes >= isha) (24 * 60) + fajr else fajr
                 activeKey = "Isha"
             }
         }
 
-        tvCurrentWaqtName.text = currentWaqtName
+        // ওয়াক্তের নাম এক লাইনে এবং থাম্বনেইল সহ প্রদর্শন
+        tvWaqtCountdownHeader.text = "$waqtThumbnail $currentWaqtName শেষ হতে বাকি"
 
         val currentTotalSec = (currentMinutes * 60) + currentSeconds
         val targetTotalSec = targetEndMinutes * 60
@@ -563,7 +636,7 @@ class MainActivity : Activity() {
         val s = diffSec % 60
 
         val countdownStr = String.format(Locale.ENGLISH, "%02d:%02d:%02d", h, m, s)
-        tvRemainingCountdown.text = "শেষ হতে বাকি\n${bn(countdownStr)}"
+        tvRemainingCountdown.text = bn(countdownStr)
 
         highlightActiveWaqt(activeKey)
     }
