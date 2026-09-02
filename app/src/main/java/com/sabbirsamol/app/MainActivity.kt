@@ -1,11 +1,14 @@
 package com.sabbirsamol.app
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -19,6 +22,12 @@ import java.util.*
 class MainActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+    private fun bn(s: String): String = s.map { if (it in '0'..'9') "০১২৩৪৫৬৭৮৯"[it - '0'] else it }.joinToString("")
+
+    private lateinit var tvCurrentWaqtName: TextView
+    private lateinit var tvRemainingCountdown: TextView
+    private lateinit var tvSunriseTime: TextView
+    private lateinit var tvSunsetTime: TextView
 
     private lateinit var tvFajrTime: TextView
     private lateinit var tvZoharTime: TextView
@@ -26,10 +35,48 @@ class MainActivity : Activity() {
     private lateinit var tvMaghribTime: TextView
     private lateinit var tvIshaTime: TextView
 
+    private val prayerRows = mutableMapOf<String, LinearLayout>()
+
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.ENGLISH)
+    private val handler = Handler(Looper.getMainLooper())
+    private var isTimerRunning = false
+
+    private val timingsMap = mutableMapOf<String, String>()
+
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            updateLiveCountdown()
+            handler.postDelayed(this, 1000)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupProfessionalUI()
+        loadCachedPrayerTimes()
         loadOnlinePrayerTimes()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startCountdownTimer()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopCountdownTimer()
+    }
+
+    private fun startCountdownTimer() {
+        if (!isTimerRunning) {
+            handler.post(timerRunnable)
+            isTimerRunning = true
+        }
+    }
+
+    private fun stopCountdownTimer() {
+        handler.removeCallbacks(timerRunnable)
+        isTimerRunning = false
     }
 
     private fun setupProfessionalUI() {
@@ -63,14 +110,15 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(0, -2, 1f))
 
         topBar.addView(TextView(this).apply {
-            text = "🔔"
+            text = "🔄"
             textSize = 18f
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            setOnClickListener { Toast.makeText(this@MainActivity, "কোনো নতুন নোটিফিকেশন নেই", Toast.LENGTH_SHORT).show() }
+            setOnClickListener { loadOnlinePrayerTimes() }
         })
+
         content.addView(topBar)
 
-        // ================= ২. কাউন্টডাউন কার্ড =================
+        // ================= ২. কাউন্টডাউন কার্ড (লাইভ সেকেন্ডসহ রানিং) =================
         val countdownCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -83,34 +131,40 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
 
-        countdownCard.addView(TextView(this).apply {
-            text = "আসর"
+        tvCurrentWaqtName = TextView(this).apply {
+            text = "ওয়াক্ত লোড হচ্ছে..."
             textSize = 22f
             setTextColor(theme.textAccent)
             setTypeface(null, Typeface.BOLD)
-        })
+        }
+        countdownCard.addView(tvCurrentWaqtName)
 
-        countdownCard.addView(TextView(this).apply {
-            text = "শেষ হতে বাকি\n০০:১৬:০৮"
-            textSize = 26f
+        tvRemainingCountdown = TextView(this).apply {
+            text = "০০:০০:০০"
+            textSize = 28f
             setTextColor(theme.textMain)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(0, dp(8), 0, dp(12))
-        })
+        }
+        countdownCard.addView(tvRemainingCountdown)
 
         val infoRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        infoRow.addView(TextView(this).apply { text = "📍 সাতক্ষীরা ▾"; textSize = 13f; setTextColor(theme.textSub); setPadding(0, 0, dp(16), 0) })
-        infoRow.addView(TextView(this).apply { text = "🌅 সূর্যোদয়: ০৫:৪৬"; textSize = 13f; setTextColor(theme.textSub); setPadding(dp(8), 0, dp(8), 0) })
-        infoRow.addView(TextView(this).apply { text = "🌇 সূর্যাস্ত: ১৮:২০"; textSize = 13f; setTextColor(theme.textSub); setPadding(dp(16), 0, 0, 0) })
-        countdownCard.addView(infoRow)
+        infoRow.addView(TextView(this).apply { text = "📍 সাতক্ষীরা ▾"; textSize = 13f; setTextColor(theme.textSub); setPadding(0, 0, dp(14), 0) })
+        
+        tvSunriseTime = TextView(this).apply { text = "🌅 সূর্যোদয়: --:--"; textSize = 13f; setTextColor(theme.textSub); setPadding(dp(6), 0, dp(6), 0) }
+        infoRow.addView(tvSunriseTime)
 
+        tvSunsetTime = TextView(this).apply { text = "🌇 সূর্যাস্ত: --:--"; textSize = 13f; setTextColor(theme.textSub); setPadding(dp(14), 0, 0, 0) }
+        infoRow.addView(tvSunsetTime)
+
+        countdownCard.addView(infoRow)
         content.addView(countdownCard)
 
-        // ================= ৩. ট্যাব (অ্যালরম ও ক্যালেন্ডার) =================
+        // ================= ৩. ট্যাব (অ্যালার্ম ও ক্যালেন্ডার) =================
         val tabRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             weightSum = 2f
@@ -121,12 +175,14 @@ class MainActivity : Activity() {
             isAllCaps = false; textSize = 13f; setTextColor(Color.BLACK)
             background = GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
             layoutParams = LinearLayout.LayoutParams(0, -1, 1f).apply { rightMargin = dp(6) }
+            setOnClickListener { Toast.makeText(this@MainActivity, "ওয়াক্ত অ্যালার্ম চালু আছে", Toast.LENGTH_SHORT).show() }
         })
         tabRow.addView(Button(this).apply {
             text = "📅 ক্যালেন্ডার"
             isAllCaps = false; textSize = 13f; setTextColor(Color.WHITE)
             background = GradientDrawable().apply { setColor(theme.cardBg); setStroke(dp(1), theme.cardStroke); cornerRadius = dp(8).toFloat() }
             layoutParams = LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = dp(6) }
+            setOnClickListener { Toast.makeText(this@MainActivity, "হিজরি ক্যালেন্ডার", Toast.LENGTH_SHORT).show() }
         })
         content.addView(tabRow)
 
@@ -150,49 +206,44 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(10))
         })
 
-        fun createPrayerRow(name: String, timeTextView: TextView, isCurrent: Boolean): LinearLayout {
+        fun createPrayerRow(key: String, name: String, timeTextView: TextView): LinearLayout {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(8), dp(10), dp(8), dp(10))
-                if (isCurrent) {
-                    background = GradientDrawable().apply {
-                        setColor(Color.parseColor("#1E3A8A"))
-                        cornerRadius = dp(8).toFloat()
-                    }
-                }
             }
-            row.addView(TextView(this).apply { text = name; textSize = 15f; setTextColor(if(isCurrent) Color.WHITE else theme.textMain); setTypeface(null, if(isCurrent) Typeface.BOLD else Typeface.NORMAL) }, LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(timeTextView.apply { textSize = 14f; setTextColor(if(isCurrent) Color.parseColor("#FBBF24") else theme.textSub); setPadding(0, 0, dp(12), 0) })
+            row.addView(TextView(this).apply { text = name; textSize = 15f; setTextColor(theme.textMain) }, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(timeTextView.apply { textSize = 14f; setTextColor(theme.textSub); setPadding(0, 0, dp(12), 0) })
             row.addView(Switch(this).apply { isChecked = true })
+            prayerRows[key] = row
             return row
         }
 
-        tvFajrTime = TextView(this).apply { text = "লোড হচ্ছে..." }
-        tvZoharTime = TextView(this).apply { text = "লোড হচ্ছে..." }
-        tvAsrTime = TextView(this).apply { text = "লোড হচ্ছে..." }
-        tvMaghribTime = TextView(this).apply { text = "লোড হচ্ছে..." }
-        tvIshaTime = TextView(this).apply { text = "লোড হচ্ছে..." }
+        tvFajrTime = TextView(this).apply { text = "--:--" }
+        tvZoharTime = TextView(this).apply { text = "--:--" }
+        tvAsrTime = TextView(this).apply { text = "--:--" }
+        tvMaghribTime = TextView(this).apply { text = "--:--" }
+        tvIshaTime = TextView(this).apply { text = "--:--" }
 
-        prayerCard.addView(createPrayerRow("ফজর", tvFajrTime, false))
-        prayerCard.addView(createPrayerRow("যোহর", tvZoharTime, false))
-        prayerCard.addView(createPrayerRow("আসর", tvAsrTime, true)) // বর্তমান ওয়াক্ত হাইলাইট
-        prayerCard.addView(createPrayerRow("মাগরিব", tvMaghribTime, false))
-        prayerCard.addView(createPrayerRow("এশা", tvIshaTime, false))
+        prayerCard.addView(createPrayerRow("Fajr", "ফজর", tvFajrTime))
+        prayerCard.addView(createPrayerRow("Dhuhr", "যোহর", tvZoharTime))
+        prayerCard.addView(createPrayerRow("Asr", "আসর", tvAsrTime))
+        prayerCard.addView(createPrayerRow("Maghrib", "মাগরিব", tvMaghribTime))
+        prayerCard.addView(createPrayerRow("Isha", "এশা", tvIshaTime))
 
         val divider = View(this).apply {
             background = GradientDrawable().apply { setColor(theme.cardStroke) }
             layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(8), 0, dp(8)) }
         }
         prayerCard.addView(divider)
-        
-        val dummyTahajjud = TextView(this).apply { text = "রাত ০২:৩০ - ০৪:১৫" }
-        val dummyIftar = TextView(this).apply { text = "সেহরি: ০৪:১৫ | ইফতার: ১৮:২০" }
-        val dummyHaram = TextView(this).apply { text = "সূর্যোদয় ও দ্বিপ্রহর নিষিদ্ধ" }
 
-        prayerCard.addView(createPrayerRow("🌙 তাহাজ্জুদ (শেষ তৃতীয়াংশ)", dummyTahajjud, false))
-        prayerCard.addView(createPrayerRow("🍽️ ইফতার ও সেহরি", dummyIftar, false))
-        prayerCard.addView(createPrayerRow("⚠️ হারাম ওয়াক্ত (মাকরুহ)", dummyHaram, false))
+        val dummyTahajjud = TextView(this).apply { text = "রাত ০২:৩০ - ০৪:১৫" }
+        val dummyIftar = TextView(this).apply { text = "সেহরি শেষ | ইফতার মাগরিব" }
+        val dummyHaram = TextView(this).apply { text = "সূর্যোদয় ও দ্বিপ্রহরে নিষিদ্ধ" }
+
+        prayerCard.addView(createPrayerRow("Tahajjud", "🌙 তাহাজ্জুদ (শেষ তৃতীয়াংশ)", dummyTahajjud))
+        prayerCard.addView(createPrayerRow("Iftar", "🍽️ ইফতার ও সেহরি", dummyIftar))
+        prayerCard.addView(createPrayerRow("Haram", "⚠️ হারাম ওয়াক্ত (মাকরুহ)", dummyHaram))
 
         content.addView(prayerCard)
 
@@ -220,11 +271,11 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(4), 0, dp(4), 0) }
             setOnClickListener { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
         }
-        tasbihCard.addView(TextView(this).apply { text = "০%"; textSize = 16f; setTextColor(theme.textAccent); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER })
+        tasbihCard.addView(TextView(this).apply { text = "📿"; textSize = 20f; gravity = Gravity.CENTER })
         tasbihCard.addView(TextView(this).apply { text = "তাসবিহ"; textSize = 12f; setTextColor(theme.textMain); gravity = Gravity.CENTER; setPadding(0, dp(4), 0, 0) })
         shortcutsRow.addView(tasbihCard)
 
-        fun addShortcut(title: String, targetActivity: Class<*>) {
+        fun addShortcut(title: String, icon: String, targetActivity: Class<*>) {
             val sCard = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -233,14 +284,14 @@ class MainActivity : Activity() {
                 layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(4), 0, dp(4), 0) }
                 setOnClickListener { startActivity(Intent(this@MainActivity, targetActivity)) }
             }
-            sCard.addView(TextView(this).apply { text = "📿"; textSize = 22f; gravity = Gravity.CENTER })
+            sCard.addView(TextView(this).apply { text = icon; textSize = 20f; gravity = Gravity.CENTER })
             sCard.addView(TextView(this).apply { text = title; textSize = 12f; setTextColor(theme.textMain); gravity = Gravity.CENTER; setPadding(0, dp(4), 0, 0) })
             shortcutsRow.addView(sCard)
         }
 
-        addShortcut("লাইব্রেরী", LibraryActivity::class.java)
-        addShortcut("নোটপ্যাড", NotepadActivity::class.java)
-        addShortcut("সেটিংস", ProfileSettingsActivity::class.java)
+        addShortcut("লাইব্রেরী", "📚", LibraryActivity::class.java)
+        addShortcut("নোটপ্যাড", "📝", NotepadActivity::class.java)
+        addShortcut("সেটিংস", "⚙️", ProfileSettingsActivity::class.java)
 
         content.addView(shortcutsRow)
         scroll.addView(content)
@@ -275,6 +326,36 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
+    private fun loadCachedPrayerTimes() {
+        val prefs = getSharedPreferences("PrayerCache", Context.MODE_PRIVATE)
+        val keys = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Maghrib", "Isha")
+        keys.forEach { key ->
+            val cachedVal = prefs.getString(key, null)
+            if (cachedVal != null) {
+                timingsMap[key] = cachedVal
+            }
+        }
+        applyTimingsToUI()
+    }
+
+    private fun saveTimingsToCache(times: Map<String, String>) {
+        val prefs = getSharedPreferences("PrayerCache", Context.MODE_PRIVATE).edit()
+        times.forEach { (k, v) -> prefs.putString(k, v) }
+        prefs.apply()
+    }
+
+    private fun applyTimingsToUI() {
+        tvFajrTime.text = bn(timingsMap["Fajr"] ?: "--:--")
+        tvZoharTime.text = bn(timingsMap["Dhuhr"] ?: "--:--")
+        tvAsrTime.text = bn(timingsMap["Asr"] ?: "--:--")
+        tvMaghribTime.text = bn(timingsMap["Maghrib"] ?: "--:--")
+        tvIshaTime.text = bn(timingsMap["Isha"] ?: "--:--")
+
+        tvSunriseTime.text = "🌅 সূর্যোদয়: ${bn(timingsMap["Sunrise"] ?: "--:--")}"
+        tvSunsetTime.text = "🌇 সূর্যাস্ত: ${bn(timingsMap["Sunset"] ?: timingsMap["Maghrib"] ?: "--:--")}"
+        updateLiveCountdown()
+    }
+
     private fun loadOnlinePrayerTimes() {
         CoroutineScope(Dispatchers.Main).launch {
             val context = this@MainActivity
@@ -287,22 +368,110 @@ class MainActivity : Activity() {
             }
 
             if (onlineTimes != null) {
-                val fajr = onlineTimes["Fajr"] ?: ""
-                val zohar = onlineTimes["Dhuhr"] ?: ""
-                val asr = onlineTimes["Asr"] ?: ""
-                val maghrib = onlineTimes["Maghrib"] ?: ""
-                val isha = onlineTimes["Isha"] ?: ""
-
-                // লাইভ সময়গুলো প্রফেশনাল লিস্টে বসিয়ে দেওয়া হলো
-                tvFajrTime.text = fajr
-                tvZoharTime.text = zohar
-                tvAsrTime.text = asr
-                tvMaghribTime.text = maghrib
-                tvIshaTime.text = isha
-
+                timingsMap.clear()
+                timingsMap.putAll(onlineTimes)
+                saveTimingsToCache(onlineTimes)
+                applyTimingsToUI()
                 Toast.makeText(context, "সাতক্ষীরার লাইভ সময় আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
+            } else if (timingsMap.isEmpty()) {
+                // অফলাইন ডিফল্ট সময়
+                val defaultTimes = mapOf(
+                    "Fajr" to "04:30", "Sunrise" to "05:46", "Dhuhr" to "12:03",
+                    "Asr" to "15:31", "Sunset" to "18:20", "Maghrib" to "18:20", "Isha" to "19:37"
+                )
+                timingsMap.putAll(defaultTimes)
+                applyTimingsToUI()
+            }
+        }
+    }
+
+    private fun updateLiveCountdown() {
+        if (timingsMap.isEmpty()) return
+
+        val now = Calendar.getInstance()
+        val currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        val currentSeconds = now.get(Calendar.SECOND)
+
+        fun parseMinutes(timeStr: String?): Int {
+            if (timeStr.isNullOrEmpty()) return -1
+            val parts = timeStr.trim().split(":")
+            if (parts.size < 2) return -1
+            return (parts[0].toIntOrNull() ?: 0) * 60 + (parts[1].toIntOrNull() ?: 0)
+        }
+
+        val fajr = parseMinutes(timingsMap["Fajr"])
+        val sunrise = parseMinutes(timingsMap["Sunrise"])
+        val dhuhr = parseMinutes(timingsMap["Dhuhr"])
+        val asr = parseMinutes(timingsMap["Asr"])
+        val maghrib = parseMinutes(timingsMap["Maghrib"])
+        val isha = parseMinutes(timingsMap["Isha"])
+
+        var currentWaqtName = "তাহাজ্জুদ"
+        var targetEndMinutes = fajr
+        var activeKey = "Tahajjud"
+
+        when {
+            currentMinutes in fajr until sunrise -> {
+                currentWaqtName = "ফজর"
+                targetEndMinutes = sunrise
+                activeKey = "Fajr"
+            }
+            currentMinutes in sunrise until dhuhr -> {
+                currentWaqtName = "চাশত / নিষিদ্ধ সময়"
+                targetEndMinutes = dhuhr
+                activeKey = "Haram"
+            }
+            currentMinutes in dhuhr until asr -> {
+                currentWaqtName = "যোহর"
+                targetEndMinutes = asr
+                activeKey = "Dhuhr"
+            }
+            currentMinutes in asr until maghrib -> {
+                currentWaqtName = "আসর"
+                targetEndMinutes = maghrib
+                activeKey = "Asr"
+            }
+            currentMinutes in maghrib until isha -> {
+                currentWaqtName = "মাগরিব"
+                targetEndMinutes = isha
+                activeKey = "Maghrib"
+            }
+            currentMinutes >= isha || currentMinutes < fajr -> {
+                currentWaqtName = "এশা"
+                targetEndMinutes = if (currentMinutes >= isha) (24 * 60) + fajr else fajr
+                activeKey = "Isha"
+            }
+        }
+
+        tvCurrentWaqtName.text = currentWaqtName
+
+        val currentTotalSec = (currentMinutes * 60) + currentSeconds
+        val targetTotalSec = targetEndMinutes * 60
+        var diffSec = targetTotalSec - currentTotalSec
+        if (diffSec < 0) diffSec += (24 * 60 * 60)
+
+        val h = diffSec / 3600
+        val m = (diffSec % 3600) / 60
+        val s = diffSec % 60
+
+        val countdownStr = String.format(Locale.ENGLISH, "%02d:%02d:%02d", h, m, s)
+        tvRemainingCountdown.text = "শেষ হতে বাকি\n${bn(countdownStr)}"
+
+        highlightActiveWaqt(activeKey)
+    }
+
+    private fun highlightActiveWaqt(activeKey: String) {
+        val theme = ThemeManager.getTheme(this)
+        prayerRows.forEach { (key, row) ->
+            if (key == activeKey) {
+                row.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#1E3A8A"))
+                    cornerRadius = dp(8).toFloat()
+                }
             } else {
-                Toast.makeText(context, "ইন্টারনেট সংযোগ না থাকায় লাইভ সময় লোড হয়নি", Toast.LENGTH_SHORT).show()
+                row.background = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                }
             }
         }
     }
