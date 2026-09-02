@@ -1,46 +1,47 @@
 package com.sabbirsamol.app
 
+import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // অ্যাপ চালু হওয়ার সাথে সাথে অনলাইন থেকে সময় এনে লোড করার ফাংশন
+        // অ্যাপ চালু হওয়ার সাথে সাথে অনলাইন থেকে সময় আনা
         loadOnlinePrayerTimes()
     }
 
     private fun loadOnlinePrayerTimes() {
-        lifecycleScope.launch {
-            // ইন্টারনেট কানেকশন চেক করা
-            if (OnlinePrayerFetcher.isNetworkAvailable(this@MainActivity)) {
-                // আল-আজান এপিআই থেকে সাতক্ষীরার লাইভ সময় নিয়ে আসা
-                val onlineTimes = OnlinePrayerFetcher.fetchSatkhiraTimings()
-                
-                if (onlineTimes != null) {
-                    val fajr = onlineTimes["Fajr"] ?: ""
-                    val sunrise = onlineTimes["Sunrise"] ?: ""
-                    val zohar = onlineTimes["Dhuhr"] ?: ""
-                    val asr = onlineTimes["Asr"] ?: ""
-                    val maghrib = onlineTimes["Maghrib"] ?: ""
-                    val isha = onlineTimes["Isha"] ?: ""
-
-                    // লেআউটের টেক্সটভিউগুলোতে সময় বসানোর কোড (আপনার লেআউটের আইডি অনুযায়ী নিচে বসিয়ে নেবেন)
-                    // val tvFajr = findViewById<android.widget.TextView>(R.id.txtFajrTime)
-                    // tvFajr?.text = fajr
-
-                    Toast.makeText(this@MainActivity, "সাতক্ষীরার লাইভ সময় সফলভাবে আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
+        CoroutineScope(Dispatchers.Main).launch {
+            val context = this@MainActivity
+            
+            // ব্যাকগ্রাউন্ডে নেটওয়ার্ক চেক ও এপিআই কল করা
+            val onlineTimes = withContext(Dispatchers.IO) {
+                if (OnlinePrayerFetcher.isNetworkAvailable(context)) {
+                    OnlinePrayerFetcher.fetchSatkhiraTimings()
                 } else {
-                    Toast.makeText(this@MainActivity, "সার্ভার থেকে সময় পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
+                    null
                 }
+            }
+
+            if (onlineTimes != null) {
+                val fajr = onlineTimes["Fajr"] ?: ""
+                val sunrise = onlineTimes["Sunrise"] ?: ""
+                val zohar = onlineTimes["Dhuhr"] ?: ""
+                val asr = onlineTimes["Asr"] ?: ""
+                val maghrib = onlineTimes["Maghrib"] ?: ""
+                val isha = onlineTimes["Isha"] ?: ""
+
+                Toast.makeText(context, "সাতক্ষীরার লাইভ সময় সফলভাবে আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this@MainActivity, "ইন্টারনেট সংযোগ নেই, দয়া করে নেট চালু করুন", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "ইন্টারনেট সংযোগ নেই অথবা সার্ভার থেকে সময় পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
             }
         }
     }
