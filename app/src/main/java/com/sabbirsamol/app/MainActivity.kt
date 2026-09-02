@@ -32,7 +32,6 @@ class MainActivity : Activity() {
             setBackgroundColor(theme.bgMain)
         }
 
-        // মূল স্ক্রলভিউ কন্টেন্ট
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -60,11 +59,11 @@ class MainActivity : Activity() {
             text = "🔔"
             textSize = 18f
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            setOnClickListener { Toast.appToast(this@MainActivity, "কোনো নতুন নোটিফিকেশন নেই") }
+            setOnClickListener { Toast.makeText(this@MainActivity, "কোনো নতুন নোটিফিকেশন নেই", Toast.LENGTH_SHORT).show() }
         })
         content.addView(topBar)
 
-        // ================= ২. কাউন্টডাউন কার্ড (বর্তমান ওয়াক্ত ও বাকি সময়) =================
+        // ================= ২. কাউন্টডাউন কার্ড =================
         val countdownCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -93,7 +92,6 @@ class MainActivity : Activity() {
             setPadding(0, dp(8), 0, dp(12))
         })
 
-        // লোকেশন ও সূর্যোদয়-সূর্যাস্ত রো
         val infoRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -125,7 +123,7 @@ class MainActivity : Activity() {
         })
         content.addView(tabRow)
 
-        // ================= ৪. নামাজের সময়সূচি তালিকা (৫ ওয়াক্ত + হারাম, ইফতার, তাহাজ্জুদ) =================
+        // ================= ৪. নামাজের সময়সূচি তালিকা =================
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -145,7 +143,6 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(10))
         })
 
-        // ওয়াক্ত যুক্ত করার ফাংশন
         fun addPrayerRow(name: String, time: String, isCurrent: Boolean) {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -164,13 +161,12 @@ class MainActivity : Activity() {
             prayerCard.addView(row)
         }
 
-        addPrayerRow("ဖজর", "০৪:৩০ - ০৫:৪৬", false)
+        addPrayerRow("ফজর", "০৪:৩০ - ০৫:৪৬", false)
         addPrayerRow("যোহর", "১২:০৩ - ১৫:৩১", false)
-        addPrayerRow("আসর", "১৫:৩১ - ১৮:২০", true) // বর্তমান ওয়াক্ত হাইলাইট
+        addPrayerRow("আসর", "১৫:৩১ - ১৮:২০", true)
         addPrayerRow("মাগরিব", "১৮:২০ - ১৯:৩৭", false)
         addPrayerRow("এশা", "১৯:৩৭ - ০৪:৩০", false)
 
-        // অতিরিক্ত বিশেষ সময়সমূহ (হারাম ওয়াক্ত, ইফতার, তাহাজ্জুদ)
         prayerCard.addView(View(this).apply { background = GradientDrawable().apply { setColor(theme.cardStroke) }; layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(8), 0, dp(8)) } })
         
         addPrayerRow("🌙 তাহাজ্জুদ (শেষ তৃতীয়াংশ)", "রাত ০২:৩০ - ০৪:১৫", false)
@@ -179,7 +175,7 @@ class MainActivity : Activity() {
 
         content.addView(prayerCard)
 
-        // ================= ৫. টপ ফিচার শর্টকাট (গোল আইকন) =================
+        // ================= ৫. টপ ফিচার শর্টকাট =================
         val featureHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -195,6 +191,19 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
 
+        // তাসবিহ শর্টকাট কার্ড
+        val tasbihCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply { setColor(theme.cardBg); cornerRadius = dp(12).toFloat(); setStroke(dp(1), theme.cardStroke) }
+            setPadding(dp(8), dp(12), dp(8), dp(12))
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(4), 0, dp(4), 0) }
+            setOnClickListener { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
+        }
+        tasbihCard.addView(TextView(this).apply { text = "০%"; textSize = 16f; setTextColor(theme.textAccent); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER })
+        tasbihCard.addView(TextView(this).apply { text = "তাসবিহ"; textSize = 12f; setTextColor(theme.textMain); gravity = Gravity.CENTER; setPadding(0, dp(4), 0, 0) })
+        shortcutsRow.addView(tasbihCard)
+
         fun addShortcut(title: String, targetActivity: Class<*>) {
             val sCard = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -208,15 +217,6 @@ class MainActivity : Activity() {
             sCard.addView(TextView(this).apply { text = title; textSize = 12f; setTextColor(theme.textMain); gravity = Gravity.CENTER; setPadding(0, dp(4), 0, 0) })
             shortcutsRow.addView(sCard)
         }
-
-        shortcutsRow.addView(LinearLayout(this).apply {
-            // প্রোগ্রেস সার্কেল শর্টকাট
-            background = GradientDrawable().apply { setColor(theme.cardBg); cornerRadius = dp(12).toFloat(); setStroke(dp(1), theme.cardStroke) }
-            gravity = Gravity.CENTER; setPadding(dp(8), dp(12), dp(8), dp(12))
-            layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(4), 0, dp(4), 0) }
-            addView(TextView(this@MainActivity).apply { text = "০%"; textSize = 16f; setTextColor(theme.textAccent); setTypeface(null, Typeface.BOLD) })
-            setOnClickListener { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
-        })
 
         addShortcut("লাইব্রেরী", LibraryActivity::class.java)
         addShortcut("নোটপ্যাড", NotepadActivity::class.java)
@@ -267,7 +267,6 @@ class MainActivity : Activity() {
             }
 
             if (onlineTimes != null) {
-                // লাইভ সময় সফলভাবে ফেচ হলে এখানে প্রসেস করা যাবে
                 Toast.makeText(context, "নামাজের সময় আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
             }
         }
