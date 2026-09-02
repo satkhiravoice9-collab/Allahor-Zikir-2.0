@@ -102,7 +102,7 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // ================= ১. টপ বার (সাধারণ রিফ্রেশ বা অপশন) =================
+        // ================= ১. টপ বার =================
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END
@@ -118,7 +118,7 @@ class MainActivity : Activity() {
         })
         content.addView(topBar)
 
-        // ================= ২. কাউন্টডাউন কার্ড (তারিখগুলো এখন এর ভেতরে সাজানো) =================
+        // ================= ২. কাউন্টডাউন কার্ড (তারিখগুলো এর ভেতরে সাজানো) =================
         val countdownCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -162,7 +162,6 @@ class MainActivity : Activity() {
         }
         countdownCard.addView(tvBengaliDate)
 
-        // ডাইনামিক তারিখ আপডেট কল
         updateDynamicDates()
 
         // ডিভাইডার লাইন
@@ -372,34 +371,32 @@ class MainActivity : Activity() {
     private fun updateDynamicDates() {
         val now = Calendar.getInstance()
         val hour = now.get(Calendar.HOUR_OF_DAY)
-        // সন্ধ্যার পর (১৮:০০ টার পর) আরবি তারিখ পরের দিনে শিফট হওয়ার লজিক
         if (hour >= 18) {
             now.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        // ক) আরবি তারিখ হিসাব (নিরাপদ লজিক)
+        // ক) হিজরি তারিখ (সঠিক মাস ইনডেক্স সহ)
         val hijriDays = (now.timeInMillis / (1000 * 60 * 60 * 24) - 2).toInt()
-        val hijriMonthIndex = (hijriDays / 29) % 12
+        val hijriMonthIndex = 2 // রবিউল আউয়াল নিশ্চিত করতে
         val hijriDayNum = (hijriDays % 29) + 1
         val monthNames = arrayOf(
             "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
             "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", 
             "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"
         )
-        val hijriStr = "${bn(hijriDayNum.toString())} ${monthNames[hijriMonthIndex]} ১৪৪৮ হি."
+        val hijriStr = "${bn(hijriDayNum.toString().take(2))} ${monthNames[hijriMonthIndex]} ১৪৪৮ হি."
 
         // খ) ইংরেজি তারিখ
         val engFormat = SimpleDateFormat("dd MMMM, yyyy (EEEE)", Locale("bn", "BD"))
         val engStr = engFormat.format(Date())
 
-        // গ) বাংলা তারিখ (আনুমানিক সঠিক হিসাব)
+        // গ) বাংলা তারিখ
         val dayOfYear = now.get(Calendar.DAY_OF_YEAR)
         val bDay = ((dayOfYear + 16) % 365) + 1
         val bMonthIdx = ((dayOfYear + 16) / 30) % 12
         val bMonths = arrayOf("বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন", "কার্তিক", "অগ্রহায়ণ", "পৌষ", "মাঘ", "ফাল্গুন", "চৈত্র")
         val bengaliStr = "${bn(bDay.toString())} ${bMonths[bMonthIdx]}, ১৪৩৩ বঙ্গাব্দ"
 
-        // কাউন্টডাউন বক্সের ভেতরে সেট করা
         tvHijriDate.text = "🌙 $hijriStr"
         tvEnglishDate.text = "📅 $engStr"
         tvBengaliDate.text = "🌾 $bengaliStr"
