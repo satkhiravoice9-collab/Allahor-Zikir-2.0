@@ -29,11 +29,12 @@ class MainActivity : Activity() {
     private lateinit var tvSunriseTime: TextView
     private lateinit var tvSunsetTime: TextView
 
-    private lateinit var tvFajrRange: TextView
-    private lateinit var tvZoharRange: TextView
-    private lateinit var tvAsrRange: TextView
-    private lateinit var tvMaghribRange: TextView
-    private lateinit var tvIshaRange: TextView
+    private lateinit var tvFajrTime: TextView
+    private lateinit var tvZoharTime: TextView
+    private lateinit var tvAsrTime: TextView
+    private lateinit var tvMaghribTime: TextView
+    private lateinit var tvIshaTime: TextView
+
     private lateinit var tvTahajjudRange: TextView
     private lateinit var tvIftarRange: TextView
     private lateinit var tvHaramRange: TextView
@@ -212,6 +213,8 @@ class MainActivity : Activity() {
         tvAsrTime = TextView(this)
         tvMaghribTime = TextView(this)
         tvIshaTime = TextView(this)
+        tvTahajjudRange = TextView(this)
+        tvIftarRange = TextView(this)
 
         prayerCard.addView(createPrayerRow("Fajr", "ফজর", tvFajrTime))
         prayerCard.addView(createPrayerRow("Dhuhr", "যোহর", tvZoharTime))
@@ -226,9 +229,6 @@ class MainActivity : Activity() {
         }
         prayerCard.addView(divider1)
 
-        tvTahajjudRange = TextView(this)
-        tvIftarRange = TextView(this)
-        
         prayerCard.addView(createPrayerRow("Tahajjud", "🌙 তাহাজ্জুদ (শেষ তৃতীয়াংশ)", tvTahajjudRange))
         prayerCard.addView(createPrayerRow("Iftar", "🍽️ ইফতার ও সেহরি শেষ", tvIftarRange))
 
@@ -238,7 +238,7 @@ class MainActivity : Activity() {
         val haramCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#451A03")) // গাঢ় লালচে-বাদামী সতর্কবার্তা থিম
+                setColor(Color.parseColor("#451A03"))
                 setStroke(dp(1), Color.parseColor("#F87171"))
                 cornerRadius = dp(16).toFloat()
             }
