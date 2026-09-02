@@ -2,6 +2,9 @@ package com.sabbirsamol.app
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
@@ -45,7 +48,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             background = ThemeManager.getTheme(this@MainActivity).let { 
-                android.graphics.drawable.GradientDrawable().apply {
+                GradientDrawable().apply {
                     setColor(it.cardBg)
                     setStroke(dp(1), it.cardStroke)
                     cornerRadius = dp(12).toFloat()
@@ -69,7 +72,7 @@ class MainActivity : Activity() {
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = ThemeManager.getTheme(this@MainActivity).let { 
-                android.graphics.drawable.GradientDrawable().apply {
+                GradientDrawable().apply {
                     setColor(it.cardBg)
                     setStroke(dp(1), it.cardStroke)
                     cornerRadius = dp(12).toFloat()
@@ -107,7 +110,7 @@ class MainActivity : Activity() {
         content.addView(Button(this).apply {
             text = "📿 তাসবিহ কাউন্টার"
             isAllCaps = false; textSize = 16f; setTextColor(Color.BLACK)
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
+            background = GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
             layoutParams = btnParams
             setOnClickListener { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
         })
@@ -115,7 +118,7 @@ class MainActivity : Activity() {
         content.addView(Button(this).apply {
             text = "📚 ইসলামিক লাইব্রেরী ও কিতাব"
             isAllCaps = false; textSize = 16f; setTextColor(Color.BLACK)
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
+            background = GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
             layoutParams = btnParams
             setOnClickListener { startActivity(Intent(this@MainActivity, LibraryActivity::class.java)) }
         })
@@ -123,7 +126,7 @@ class MainActivity : Activity() {
         content.addView(Button(this).apply {
             text = "📝 কালার নোটপ্যাড"
             isAllCaps = false; textSize = 16f; setTextColor(Color.BLACK)
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
+            background = GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
             layoutParams = btnParams
             setOnClickListener { startActivity(Intent(this@MainActivity, NotepadActivity::class.java)) }
         })
@@ -131,7 +134,7 @@ class MainActivity : Activity() {
         content.addView(Button(this).apply {
             text = "⚙️ প্রোফাইল ও সেটিংস"
             isAllCaps = false; textSize = 16f; setTextColor(Color.BLACK)
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
+            background = GradientDrawable().apply { setColor(theme.btnBg); cornerRadius = dp(8).toFloat() }
             layoutParams = btnParams
             setOnClickListener { startActivity(Intent(this@MainActivity, ProfileSettingsActivity::class.java)) }
         })
@@ -154,7 +157,7 @@ class MainActivity : Activity() {
                 text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER
                 setTextColor(if (label.contains("হোম")) Color.parseColor("#FBBF24") else Color.parseColor("#9CA3AF"))
-                background = android.graphics.drawable.GradientDrawable()
+                background = GradientDrawable()
                 setOnClickListener {
                     when {
                         label.contains("তাসবিহ") -> startActivity(Intent(this@MainActivity, TasbihActivity::class.java))
