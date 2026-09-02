@@ -20,6 +20,12 @@ class MainActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
+    private lateinit var tvFajrTime: TextView
+    private lateinit var tvZoharTime: TextView
+    private lateinit var tvAsrTime: TextView
+    private lateinit var tvMaghribTime: TextView
+    private lateinit var tvIshaTime: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupProfessionalUI()
@@ -144,7 +150,7 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(10))
         })
 
-        fun addPrayerRow(name: String, time: String, isCurrent: Boolean) {
+        fun createPrayerRow(name: String, timeTextView: TextView, isCurrent: Boolean): LinearLayout {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -157,16 +163,22 @@ class MainActivity : Activity() {
                 }
             }
             row.addView(TextView(this).apply { text = name; textSize = 15f; setTextColor(if(isCurrent) Color.WHITE else theme.textMain); setTypeface(null, if(isCurrent) Typeface.BOLD else Typeface.NORMAL) }, LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(TextView(this).apply { text = time; textSize = 14f; setTextColor(if(isCurrent) Color.parseColor("#FBBF24") else theme.textSub); setPadding(0, 0, dp(12), 0) })
+            row.addView(timeTextView.apply { textSize = 14f; setTextColor(if(isCurrent) Color.parseColor("#FBBF24") else theme.textSub); setPadding(0, 0, dp(12), 0) })
             row.addView(Switch(this).apply { isChecked = true })
-            prayerCard.addView(row)
+            return row
         }
 
-        addPrayerRow("ফজর", "০৪:৩০ - ০৫:৪৬", false)
-        addPrayerRow("যোহর", "১২:০৩ - ১৫:৩১", false)
-        addPrayerRow("আসর", "১৫:৩১ - ১৮:২০", true)
-        addPrayerRow("মাগরিব", "১৮:২০ - ১৯:৩৭", false)
-        addPrayerRow("এশা", "১৯:৩৭ - ০৪:৩০", false)
+        tvFajrTime = TextView(this).apply { text = "লোড হচ্ছে..." }
+        tvZoharTime = TextView(this).apply { text = "লোড হচ্ছে..." }
+        tvAsrTime = TextView(this).apply { text = "লোড হচ্ছে..." }
+        tvMaghribTime = TextView(this).apply { text = "লোড হচ্ছে..." }
+        tvIshaTime = TextView(this).apply { text = "লোড হচ্ছে..." }
+
+        prayerCard.addView(createPrayerRow("ফজর", tvFajrTime, false))
+        prayerCard.addView(createPrayerRow("যোহর", tvZoharTime, false))
+        prayerCard.addView(createPrayerRow("আসর", tvAsrTime, true)) // বর্তমান ওয়াক্ত হাইলাইট
+        prayerCard.addView(createPrayerRow("মাগরিব", tvMaghribTime, false))
+        prayerCard.addView(createPrayerRow("এশা", tvIshaTime, false))
 
         val divider = View(this).apply {
             background = GradientDrawable().apply { setColor(theme.cardStroke) }
@@ -174,9 +186,13 @@ class MainActivity : Activity() {
         }
         prayerCard.addView(divider)
         
-        addPrayerRow("🌙 তাহাজ্জুদ (শেষ তৃতীয়াংশ)", "রাত ০২:৩০ - ০৪:১৫", false)
-        addPrayerRow("🍽️ ইফতার ও সেহরি", "সেহরি শেষ: ০৪:১৫ | ইফতার: ১৮:২০", false)
-        addPrayerRow("⚠️ হারাম ওয়াক্ত (মাকরুহ)", "সূর্যোদয় ও দ্বিপ্রহরের সময় নিষিদ্ধ", false)
+        val dummyTahajjud = TextView(this).apply { text = "রাত ০২:৩০ - ০৪:১৫" }
+        val dummyIftar = TextView(this).apply { text = "সেহরি: ০৪:১৫ | ইফতার: ১৮:২০" }
+        val dummyHaram = TextView(this).apply { text = "সূর্যোদয় ও দ্বিপ্রহর নিষিদ্ধ" }
+
+        prayerCard.addView(createPrayerRow("🌙 তাহাজ্জুদ (শেষ তৃতীয়াংশ)", dummyTahajjud, false))
+        prayerCard.addView(createPrayerRow("🍽️ ইফতার ও সেহরি", dummyIftar, false))
+        prayerCard.addView(createPrayerRow("⚠️ হারাম ওয়াক্ত (মাকরুহ)", dummyHaram, false))
 
         content.addView(prayerCard)
 
@@ -271,7 +287,22 @@ class MainActivity : Activity() {
             }
 
             if (onlineTimes != null) {
-                Toast.makeText(context, "নামাজের সময় আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
+                val fajr = onlineTimes["Fajr"] ?: ""
+                val zohar = onlineTimes["Dhuhr"] ?: ""
+                val asr = onlineTimes["Asr"] ?: ""
+                val maghrib = onlineTimes["Maghrib"] ?: ""
+                val isha = onlineTimes["Isha"] ?: ""
+
+                // লাইভ সময়গুলো প্রফেশনাল লিস্টে বসিয়ে দেওয়া হলো
+                tvFajrTime.text = fajr
+                tvZoharTime.text = zohar
+                tvAsrTime.text = asr
+                tvMaghribTime.text = maghrib
+                tvIshaTime.text = isha
+
+                Toast.makeText(context, "সাতক্ষীরার লাইভ সময় আপডেট হয়েছে", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "ইন্টারনেট সংযোগ না থাকায় লাইভ সময় লোড হয়নি", Toast.LENGTH_SHORT).show()
             }
         }
     }
