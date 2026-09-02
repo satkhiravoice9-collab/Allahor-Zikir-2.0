@@ -15,7 +15,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // অ্যাপ চালু হওয়ার সাথে সাথে অনলাইন থেকে সময় আনা
+        // অ্যাপের অন্যান্য ফিচার বা ইনিশিয়ালাইজেশন থাকলে এখানে কাজ করবে
+
+        // অনলাইন থেকে সাতক্ষীরার লাইভ নামাজের সময় আনা
         loadOnlinePrayerTimes()
     }
 
