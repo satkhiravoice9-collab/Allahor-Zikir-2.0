@@ -34,12 +34,12 @@ class MainActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val locationRequestCode = 501
     
-    // ================= থিম ম্যানেজারের সাথে কানেকশন =================
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private var savedThemeName = ""
     
     data class Prayer(val name: String, val icon: String, val start: Int, val end: Int)
     
+    // আপনার দেওয়া ফিক্সড টাইম শিডিউল (এটিতে কোনো হাত দেওয়া হয়নি)
     private val prayers = listOf(
         Prayer("ফজর", "🌅", 270, 345),
         Prayer("যোহর", "☀️", 735, 990),
@@ -48,9 +48,16 @@ class MainActivity : ComponentActivity() {
         Prayer("এশা", "🌙", 1200, 1470)
     )
     
+    // নামাজের নিষিদ্ধ সময়সমূহ (মিনিটে রূপান্তরিত: যেমন ৫:৪৫ AM = 345 মিনিট)
+    data class ForbiddenTime(val name: String, val icon: String, val start: Int, val end: Int)
+    private val forbiddenTimes = listOf(
+        ForbiddenTime("সূর্যোদয়ের নিষিদ্ধ সময়", "🌅", 345, 360), // ৫:৪৫ — ৬:০০ AM
+        ForbiddenTime("দুপুরের নিষিদ্ধ সময়", "☀️", 725, 735),   // ১২:০৫ — ১২:১৫ PM
+        ForbiddenTime("সূর্যাস্তের নিষিদ্ধ সময়", "🌇", 1180, 1200) // ৬:২০ — ৬:৩০ PM (মাগরিবের ঠিক আগ মুহূর্ত পর্যন্ত)
+    )
+    
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
-        // বর্তমানে কোন থিম আছে তা মনে রাখা
         savedThemeName = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)") ?: ""
         
         window.navigationBarColor = themeColors.cardBg
@@ -66,17 +73,15 @@ class MainActivity : ComponentActivity() {
         }, 1000)
     }
     
-    // থিম চেঞ্জ করে হোমপেজে ফিরলে যেন সাথে সাথে ডিজাইন আপডেট হয়
     override fun onResume() {
         super.onResume()
         val currentTheme = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)") ?: ""
         if (currentTheme != savedThemeName) {
-            recreate() // থিম পরিবর্তন হলে পেজ রিলোড হবে
+            recreate()
         }
     }
     
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    
     private fun bg(c: Int, r: Int = 16) = GradientDrawable().apply { setColor(c); cornerRadius = dp(r).toFloat() }
     
     private fun row(icon: String, label: String, value: String, alarm: Boolean = false) = LinearLayout(this).apply {
@@ -138,7 +143,6 @@ class MainActivity : ComponentActivity() {
         
         root.addView(ScrollView(this).apply { addView(content); isFillViewport = true }, LinearLayout.LayoutParams(-1, 0, 1f))
         
-        // ================= ডায়নামিক বটম মেনু =================
         val menu = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER 
             setBackgroundColor(themeColors.cardBg); setPadding(dp(2), dp(2), dp(2), dp(2))
@@ -149,8 +153,6 @@ class MainActivity : ComponentActivity() {
             menu.addView(Button(this).apply {
                 text = label; textSize = 9f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER; setTextColor(themeColors.textMain)
-                
-                // মেনু বাটনের ব্যাকগ্রাউন্ড (থিম অনুযায়ী)
                 background = GradientDrawable().apply { setColor(themeColors.bgMain); cornerRadius = dp(8).toFloat() }
                 
                 setOnClickListener {
@@ -218,8 +220,20 @@ class MainActivity : ComponentActivity() {
         return "${bn(rem + 1)} ${names[mi]} ${bn(by)} বঙ্গাব্দ"
     }
     
+    // ইসলামিক ফাউন্ডেশনের নিয়ম অনুযায়ী মাগরিবের পর (সন্ধ্যায়) হিজরি তারিখ পরিবর্তনের লজিক
     private fun hijriDate(c: Calendar): String = try {
-        val d = java.time.LocalDate.of(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH))
+        var targetCal = c.clone() as Calendar
+        val currentHour = targetCal.get(Calendar.HOUR_OF_DAY)
+        val currentMinute = targetCal.get(Calendar.MINUTE)
+        val currentTotalMinutes = currentHour * 60 + currentMinute
+        
+        // মাগরিবের শুরু ধরা যাক ১১২০ মিনিট (১৮:৪০ বা সন্ধ্যা ৬:৪০ / মাগরিবের ওয়াক্ত অনুযায়ী)। 
+        // যদি সন্ধ্যা ৬:৪০ বা মাগরিবের পর হয়, তবে হিজরি ক্যালেন্ডারে ইসলামিক নিয়ম অনুযায়ী পরের দিন ধরা হয়।
+        if (currentTotalMinutes >= 1110) { 
+            targetCal.add(Calendar.DAY_OF_MONTH, 1)
+        }
+        
+        val d = java.time.LocalDate.of(targetCal.get(Calendar.YEAR), targetCal.get(Calendar.MONTH) + 1, targetCal.get(Calendar.DAY_OF_MONTH))
         val h = java.time.chrono.HijrahDate.from(d)
         val names = arrayOf("মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ")
         "${bn(h.get(java.time.temporal.ChronoField.DAY_OF_MONTH))} ${names[h.get(java.time.temporal.ChronoField.MONTH_OF_YEAR) - 1]} ${bn(h.get(java.time.temporal.ChronoField.YEAR))} হিজরি"
@@ -231,10 +245,24 @@ class MainActivity : ComponentActivity() {
         val c = Calendar.getInstance()
         val now = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE)
         val sec = c.get(Calendar.SECOND)
+        
+        // ১. প্রথমে চেক করা হচ্ছে কোনো নিষিদ্ধ (হারাম) ওয়াক্ত চলছে কি না
+        val activeForbidden = forbiddenTimes.firstOrNull { now >= it.start && now < it.end }
+        
+        if (activeForbidden != null) {
+            var forbiddenTotalSec = (activeForbidden.end - now) * 60 - sec
+            if (forbiddenTotalSec <= 0) forbiddenTotalSec = 1
+            statusText.text = "🚫 ${activeForbidden.name} চলছে"
+            countdownText.text = "%02d:%02d:%02d বাকি".format(forbiddenTotalSec / 3600, (forbiddenTotalSec % 3600) / 60, forbiddenTotalSec % 60)
+            return
+        }
+        
+        // ২. নিষিদ্ধ ওয়াক্ত না থাকলে মূল নামাজের ওয়াক্ত এবং পরবর্তী ওয়াক্তের কাউন্টডাউন হিসাব করা
         val active = prayers.lastOrNull { now >= it.start && now < it.end }
         val next = prayers.firstOrNull { it.start > now } ?: prayers.first()
         var total = (next.start - now) * 60 - sec
         if (total <= 0) total += 86400
+        
         statusText.text = if (active != null) "🕐 ${active.name} ওয়াক্ত চলছে" else "🕐 পরবর্তী ওয়াক্ত: ${next.name}"
         countdownText.text = "%02d:%02d:%02d বাকি".format(total / 3600, (total % 3600) / 60, total % 60)
     }
