@@ -15,9 +15,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // অ্যাপের অন্যান্য ফিচার বা ইনিশিয়ালাইজেশন থাকলে এখানে কাজ করবে
+        // অ্যাপের অন্যান্য ফিচার বা ইনিশিয়ালাইজেশন থাকলে এখানে কাজ করবে[span_1](start_span)[span_1](end_span)
 
-        // অনলাইন থেকে সাতক্ষীরার লাইভ নামাজের সময় আনা
+        // অনলাইন থেকে সাতক্ষীরার লাইভ নামাজের সময় আনা[span_2](start_span)[span_2](end_span)
         loadOnlinePrayerTimes()
     }
 
@@ -25,7 +25,7 @@ class MainActivity : Activity() {
         CoroutineScope(Dispatchers.Main).launch {
             val context = this@MainActivity
             
-            // ব্যাকগ্রাউন্ডে নেটওয়ার্ক চেক ও এপিআই কল করা
+            // ব্যাকগ্রাউন্ডে নেটওয়ার্ক চেক ও এপিআই কল করা[span_3](start_span)[span_3](end_span)
             val onlineTimes = withContext(Dispatchers.IO) {
                 if (OnlinePrayerFetcher.isNetworkAvailable(context)) {
                     OnlinePrayerFetcher.fetchSatkhiraTimings()
@@ -42,7 +42,7 @@ class MainActivity : Activity() {
                 val maghrib = onlineTimes["Maghrib"] ?: ""
                 val isha = onlineTimes["Isha"] ?: ""
 
-                // টেক্সটভিউগুলোতে সময়গুলো বসিয়ে দেওয়া
+                // টেক্সটভিউগুলোতে সময়গুলো বসিয়ে দেওয়া[span_4](start_span)[span_4](end_span)
                 findViewById<TextView>(R.id.txtFajrTime)?.text = "ফজর: $fajr"
                 findViewById<TextView>(R.id.txtSunriseTime)?.text = "সূর্যোদয়: $sunrise"
                 findViewById<TextView>(R.id.txtZoharTime)?.text = "যোহর: $zohar"
