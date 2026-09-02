@@ -29,7 +29,6 @@ class MainActivity : Activity() {
     private lateinit var tvSunriseTime: TextView
     private lateinit var tvSunsetTime: TextView
     
-    // কাউন্টডাউন বক্সের ভেতরের তারিখ লেআউটের জন্য
     private lateinit var tvHijriDate: TextView
     private lateinit var tvEnglishDate: TextView
     private lateinit var tvBengaliDate: TextView
@@ -102,7 +101,6 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // ================= ১. টপ বার =================
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END
@@ -118,7 +116,6 @@ class MainActivity : Activity() {
         })
         content.addView(topBar)
 
-        // ================= ২. কাউন্টডাউন কার্ড (তারিখগুলো এর ভেতরে সাজানো) =================
         val countdownCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -131,7 +128,6 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
 
-        // ক) ওপরে আরবি তারিখ
         tvHijriDate = TextView(this).apply {
             text = "আরবি তারিখ লোড হচ্ছে..."
             textSize = 14f
@@ -142,7 +138,6 @@ class MainActivity : Activity() {
         }
         countdownCard.addView(tvHijriDate)
 
-        // খ) মাঝে ইংরেজি তারিখ
         tvEnglishDate = TextView(this).apply {
             text = "ইংরেজি তারিখ"
             textSize = 12f
@@ -152,7 +147,6 @@ class MainActivity : Activity() {
         }
         countdownCard.addView(tvEnglishDate)
 
-        // গ) নিচে বাংলা তারিখ
         tvBengaliDate = TextView(this).apply {
             text = "বাংলা তারিখ"
             textSize = 12f
@@ -164,7 +158,6 @@ class MainActivity : Activity() {
 
         updateDynamicDates()
 
-        // ডিভাইডার লাইন
         val cardDivider = View(this).apply {
             background = GradientDrawable().apply { setColor(theme.cardStroke) }
             layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(4), 0, dp(8)) }
@@ -204,7 +197,6 @@ class MainActivity : Activity() {
         countdownCard.addView(infoRow)
         content.addView(countdownCard)
 
-        // ================= ৩. হেল্পার ফাংশন =================
         fun createUniformRow(key: String, name: String, timeTextView: TextView, isSwitchNeeded: Boolean, textColor: Int, subColor: Int): LinearLayout {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -243,7 +235,7 @@ class MainActivity : Activity() {
             return row
         }
 
-        // ================= ৪. বক্স ১: পাঁচ ওয়াক্তের সময়সূচি (হলুদ ব্যাকগ্রাউন্ড) =================
+        // বক্স ১: পাঁচ ওয়াক্তের সময়সূচি
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -276,7 +268,7 @@ class MainActivity : Activity() {
         prayerCard.addView(createUniformRow("Isha", "এশা", tvIshaTime, true, Color.BLACK, Color.parseColor("#334155")))
         content.addView(prayerCard)
 
-        // ================= ৫. বক্স ২: তাহাজ্জুদ ও সেহরি-ইফতার (সাদা ব্যাকগ্রাউন্ড) =================
+        // বক্স ২: তাহাজ্জুদ ও সেহরি-ইফতার
         val specialCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -305,7 +297,7 @@ class MainActivity : Activity() {
         specialCard.addView(createUniformRow("Iftar", "ইফতারের সময়", tvIftarTime, false, Color.BLACK, Color.parseColor("#475569")))
         content.addView(specialCard)
 
-        // ================= ৬. বক্স ৩: হারাম ওয়াক্ত (লাল ব্যাকগ্রাউন্ড) =================
+        // বক্স ৩: হারাম ওয়াক্ত
         val haramCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -337,7 +329,6 @@ class MainActivity : Activity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= ৭. ফিক্সড বটম নেভিগেশন বার =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -375,9 +366,8 @@ class MainActivity : Activity() {
             now.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        // ক) হিজরি তারিখ (সঠিক মাস ইনডেক্স সহ)
         val hijriDays = (now.timeInMillis / (1000 * 60 * 60 * 24) - 2).toInt()
-        val hijriMonthIndex = 2 // রবিউল আউয়াল নিশ্চিত করতে
+        val hijriMonthIndex = 2
         val hijriDayNum = (hijriDays % 29) + 1
         val monthNames = arrayOf(
             "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
@@ -386,11 +376,9 @@ class MainActivity : Activity() {
         )
         val hijriStr = "${bn(hijriDayNum.toString().take(2))} ${monthNames[hijriMonthIndex]} ১৪৪৮ হি."
 
-        // খ) ইংরেজি তারিখ
         val engFormat = SimpleDateFormat("dd MMMM, yyyy (EEEE)", Locale("bn", "BD"))
         val engStr = engFormat.format(Date())
 
-        // গ) বাংলা তারিখ
         val dayOfYear = now.get(Calendar.DAY_OF_YEAR)
         val bDay = ((dayOfYear + 16) % 365) + 1
         val bMonthIdx = ((dayOfYear + 16) / 30) % 12
@@ -453,9 +441,10 @@ class MainActivity : Activity() {
         val maghrib = timingsMap["Maghrib"] ?: "18:20"
         val isha = timingsMap["Isha"] ?: "19:37"
 
+        // আসরের শেষ এবং মাগরিবের শুরু এখন অনলাইনে প্রাপ্ত আসল সূর্যাস্ত/মাগরিবের টাইম অনুযায়ী নিখুঁত সেট করা হলো
         tvFajrTime.text = "${convertTo12Hour(fajr)} - ${convertTo12Hour(sunrise)}"
         tvZoharTime.text = "${convertTo12Hour(dhuhr)} - ০৪:৩৩ PM"
-        tvAsrTime.text = "০৪:৩৩ PM - ${convertTo12Hour(sunset)}"
+        tvAsrTime.text = "০৪:৩৩ PM - ${convertTo12Hour(maghrib)}" // আসর শেষ ও মাগরিব শুরু সঠিক রাখা হলো
         tvMaghribTime.text = "${convertTo12Hour(maghrib)} - ${convertTo12Hour(isha)}"
         tvIshaTime.text = "${convertTo12Hour(isha)} - ${convertTo12Hour(fajr)}"
 
