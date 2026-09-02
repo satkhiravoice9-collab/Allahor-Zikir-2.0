@@ -87,10 +87,11 @@ class MainActivity : Activity() {
             setBackgroundColor(theme.bgMain)
         }
 
+        // মূল স্ক্রলভিউ কন্টেন্ট (নিচে পর্যাপ্ত প্যাডিং যাতে বটম বারের নিচে লেখা ঢাকা না পড়ে)
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(90))
+            setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
         // ================= ১. টপ বার =================
@@ -165,11 +166,11 @@ class MainActivity : Activity() {
         countdownCard.addView(infoRow)
         content.addView(countdownCard)
 
-        // ================= ৩. বক্স ১: পাঁচ ওয়াক্তের সময়সূচি (একপাশে নাম, অন্যপাশে টাইম) =================
+        // ================= ৩. বক্স ১: পাঁচ ওয়াক্তের সময়সূচি =================
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#0F172A")) // ডিপ স্লেট থিম
+                setColor(Color.parseColor("#0F172A"))
                 setStroke(dp(1), Color.parseColor("#334155"))
                 cornerRadius = dp(16).toFloat()
             }
@@ -191,14 +192,12 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(6), dp(8), dp(6), dp(8))
             }
-            // বাম পাশে ওয়াক্তের নাম
             val nameView = TextView(this).apply {
                 text = name
                 textSize = 14f
                 setTextColor(Color.WHITE)
                 setTypeface(null, Typeface.BOLD)
             }
-            // ডান পাশে সময় ও সুইচ
             val rightLayout = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -240,7 +239,7 @@ class MainActivity : Activity() {
         val specialCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#065F46")) // ডিপ গ্রিন থিম
+                setColor(Color.parseColor("#065F46"))
                 setStroke(dp(1), Color.parseColor("#059669"))
                 cornerRadius = dp(16).toFloat()
             }
@@ -264,7 +263,7 @@ class MainActivity : Activity() {
             }
             timeView.textSize = 13f
             timeView.setTextColor(Color.WHITE)
-            row.addView(TextView(this).apply { text = label; textSize = 13f; textColor = Color.parseColor("#E2E8F0") }, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(TextView(this).apply { text = label; textSize = 13f; setTextColor(Color.parseColor("#E2E8F0")) }, LinearLayout.LayoutParams(0, -2, 1f))
             row.addView(timeView)
             return row
         }
@@ -276,11 +275,11 @@ class MainActivity : Activity() {
         specialCard.addView(createSimpleRow("সেহরি ও ইফতার", tvIftarTime))
         content.addView(specialCard)
 
-        // ================= ৫. বক্স ৩: হারাম ওয়াক্ত (নিষিদ্ধ সময়) =================
+        // ================= ৫. বক্স ৩: হারাম ওয়াক্ত =================
         val haramCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#7F1D1D")) // ডিপ রেড থিম
+                setColor(Color.parseColor("#7F1D1D"))
                 setStroke(dp(1), Color.parseColor("#EF4444"))
                 cornerRadius = dp(16).toFloat()
             }
@@ -304,49 +303,15 @@ class MainActivity : Activity() {
         haramCard.addView(tvHaramTime)
         content.addView(haramCard)
 
-        // ================= ৬. টপ ফিচার শর্টকাট =================
-        val featureHeader = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, dp(8))
-        }
-        featureHeader.addView(TextView(this).apply { text = "⭐ টপ ফিচারসমূহ"; textSize = 16f; setTextColor(theme.textAccent); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
-        content.addView(featureHeader)
-
-        val shortcutsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = 3f
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
-        }
-
-        fun addShortcut(title: String, icon: String, targetActivity: Class<*>) {
-            val sCard = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                background = GradientDrawable().apply { setColor(theme.cardBg); cornerRadius = dp(12).toFloat(); setStroke(dp(1), theme.cardStroke) }
-                setPadding(dp(8), dp(12), dp(8), dp(12))
-                layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(4), 0, dp(4), 0) }
-                setOnClickListener { startActivity(Intent(this@MainActivity, targetActivity)) }
-            }
-            sCard.addView(TextView(this).apply { text = icon; textSize = 22f; gravity = Gravity.CENTER })
-            sCard.addView(TextView(this).apply { text = title; textSize = 12f; setTextColor(theme.textMain); gravity = Gravity.CENTER; setPadding(0, dp(4), 0, 0) })
-            shortcutsRow.addView(sCard)
-        }
-
-        addShortcut("তাসবিহ", "📿", TasbihActivity::class.java)
-        addShortcut("লাইব্রেরী", "📚", LibraryActivity::class.java)
-        addShortcut("নোটপ্যাড", "📝", NotepadActivity::class.java)
-
-        content.addView(shortcutsRow)
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= ৭. নেভিগেশন বার =================
+        // ================= ৬. ফিক্সড বটম নেভিগেশন বার =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(6), dp(2), dp(6))
+            setPadding(dp(2), dp(4), dp(2), dp(4))
             elevation = dp(8).toFloat()
         }
 
@@ -424,7 +389,6 @@ class MainActivity : Activity() {
         val maghrib = timingsMap["Maghrib"] ?: "18:20"
         val isha = timingsMap["Isha"] ?: "19:37"
 
-        // এক সাইডে ওয়াক্ত, অন্য সাইডে শুরু ও শেষ সময়
         tvFajrTime.text = "${convertTo12Hour(fajr)} - ${convertTo12Hour(sunrise)}"
         tvZoharTime.text = "${convertTo12Hour(dhuhr)} - ${convertTo12Hour(asr)}"
         tvAsrTime.text = "${convertTo12Hour(asr)} - ${convertTo12Hour(sunset)}"
