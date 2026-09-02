@@ -28,7 +28,11 @@ class MainActivity : Activity() {
     private lateinit var tvRemainingCountdown: TextView
     private lateinit var tvSunriseTime: TextView
     private lateinit var tvSunsetTime: TextView
-    private lateinit var tvDateDisplay: TextView
+    
+    // কাউন্টডাউন বক্সের ভেতরের তারিখ লেআউটের জন্য
+    private lateinit var tvHijriDate: TextView
+    private lateinit var tvEnglishDate: TextView
+    private lateinit var tvBengaliDate: TextView
 
     private lateinit var tvFajrTime: TextView
     private lateinit var tvZoharTime: TextView
@@ -98,33 +102,23 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // ================= ১. টপ বার =================
+        // ================= ১. টপ বার (সাধারণ রিফ্রেশ বা অপশন) =================
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(10))
+            gravity = Gravity.END
+            setPadding(dp(4), dp(4), dp(4), dp(6))
         }
-
-        tvDateDisplay = TextView(this).apply {
-            text = "তারিখ লোড হচ্ছে..."
-            textSize = 13f
-            setTextColor(theme.textMain)
-            setTypeface(null, Typeface.BOLD)
-        }
-        updateDynamicDates()
-
-        topBar.addView(tvDateDisplay, LinearLayout.LayoutParams(0, -2, 1f))
 
         topBar.addView(TextView(this).apply {
             text = "🔄 রিফ্রেশ"
             textSize = 13f
             setTextColor(Color.parseColor("#3B82F6"))
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(dp(8), dp(4), dp(8), dp(4))
             setOnClickListener { loadOnlinePrayerTimes() }
         })
         content.addView(topBar)
 
-        // ================= ২. কাউন্টডাউন কার্ড =================
+        // ================= ২. কাউন্টডাউন কার্ড (তারিখগুলো এখন এর ভেতরে সাজানো) =================
         val countdownCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -137,9 +131,50 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
 
+        // ক) ওপরে আরবি তারিখ
+        tvHijriDate = TextView(this).apply {
+            text = "আরবি তারিখ লোড হচ্ছে..."
+            textSize = 14f
+            setTextColor(theme.textAccent)
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(4))
+        }
+        countdownCard.addView(tvHijriDate)
+
+        // খ) মাঝে ইংরেজি তারিখ
+        tvEnglishDate = TextView(this).apply {
+            text = "ইংরেজি তারিখ"
+            textSize = 12f
+            setTextColor(theme.textMain)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(2))
+        }
+        countdownCard.addView(tvEnglishDate)
+
+        // গ) নিচে বাংলা তারিখ
+        tvBengaliDate = TextView(this).apply {
+            text = "বাংলা তারিখ"
+            textSize = 12f
+            setTextColor(theme.textSub)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(8))
+        }
+        countdownCard.addView(tvBengaliDate)
+
+        // ডাইনামিক তারিখ আপডেট কল
+        updateDynamicDates()
+
+        // ডিভাইডার লাইন
+        val cardDivider = View(this).apply {
+            background = GradientDrawable().apply { setColor(theme.cardStroke) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(4), 0, dp(8)) }
+        }
+        countdownCard.addView(cardDivider)
+
         tvCurrentWaqtName = TextView(this).apply {
             text = "ওয়াক্ত লোড হচ্ছে..."
-            textSize = 22f
+            textSize = 20f
             setTextColor(theme.textAccent)
             setTypeface(null, Typeface.BOLD)
         }
@@ -147,11 +182,11 @@ class MainActivity : Activity() {
 
         tvRemainingCountdown = TextView(this).apply {
             text = "০০:০০:০০"
-            textSize = 28f
+            textSize = 26f
             setTextColor(theme.textMain)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(0, dp(8), 0, dp(12))
+            setPadding(0, dp(4), 0, dp(10))
         }
         countdownCard.addView(tvRemainingCountdown)
 
@@ -159,12 +194,12 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        infoRow.addView(TextView(this).apply { text = "📍 সাতক্ষীরা"; textSize = 13f; setTextColor(theme.textSub); setPadding(0, 0, dp(12), 0) })
+        infoRow.addView(TextView(this).apply { text = "📍 সাতক্ষীরা"; textSize = 12f; setTextColor(theme.textSub); setPadding(0, 0, dp(10), 0) })
         
-        tvSunriseTime = TextView(this).apply { text = "🌅 সূর্যোদয়: --:--"; textSize = 12f; setTextColor(theme.textSub); setPadding(dp(4), 0, dp(4), 0) }
+        tvSunriseTime = TextView(this).apply { text = "🌅 সূর্যোদয়: --:--"; textSize = 11f; setTextColor(theme.textSub); setPadding(dp(4), 0, dp(4), 0) }
         infoRow.addView(tvSunriseTime)
 
-        tvSunsetTime = TextView(this).apply { text = "🌇 সূর্যাস্ত: --:--"; textSize = 12f; setTextColor(theme.textSub); setPadding(dp(12), 0, 0, 0) }
+        tvSunsetTime = TextView(this).apply { text = "🌇 সূর্যাস্ত: --:--"; textSize = 11f; setTextColor(theme.textSub); setPadding(dp(10), 0, 0, 0) }
         infoRow.addView(tvSunsetTime)
 
         countdownCard.addView(infoRow)
@@ -337,31 +372,37 @@ class MainActivity : Activity() {
     private fun updateDynamicDates() {
         val now = Calendar.getInstance()
         val hour = now.get(Calendar.HOUR_OF_DAY)
+        // সন্ধ্যার পর (১৮:০০ টার পর) আরবি তারিখ পরের দিনে শিফট হওয়ার লজিক
         if (hour >= 18) {
             now.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        val engFormat = SimpleDateFormat("dd MMM, EEEE", Locale("bn", "BD"))
+        // ক) আরবি তারিখ হিসাব (নিরাপদ লজিক)
+        val hijriDays = (now.timeInMillis / (1000 * 60 * 60 * 24) - 2).toInt()
+        val hijriMonthIndex = (hijriDays / 29) % 12
+        val hijriDayNum = (hijriDays % 29) + 1
+        val monthNames = arrayOf(
+            "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
+            "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", 
+            "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"
+        )
+        val hijriStr = "${bn(hijriDayNum.toString())} ${monthNames[hijriMonthIndex]} ১৪৪৮ হি."
+
+        // খ) ইংরেজি তারিখ
+        val engFormat = SimpleDateFormat("dd MMMM, yyyy (EEEE)", Locale("bn", "BD"))
         val engStr = engFormat.format(Date())
 
-        // হিজরি তারিখ নির্ধারণের নিরাপদ ও সঠিক অ্যান্ড্রয়েড মেথড
-        val hijriStr = try {
-            val hijriCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale("ar"))
-            hijriCalendar.time = now.time
-            val day = hijriCalendar.get(Calendar.DAY_OF_MONTH)
-            val monthNames = arrayOf(
-                "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
-                "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", 
-                "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"
-            )
-            // আনুমানিক হিজরি ক্যালেন্ডার অফসেট এবং মাস হিসাব
-            val hijriMonthIndex = (hijriCalendar.get(Calendar.MONTH) + 9) % 12
-            "${bn(day.toString())} ${monthNames[hijriMonthIndex]}"
-        } catch (e: Exception) {
-            "২১ রবিউল আউয়াল" // ফলব্যাক স্ট্রিং
-        }
+        // গ) বাংলা তারিখ (আনুমানিক সঠিক হিসাব)
+        val dayOfYear = now.get(Calendar.DAY_OF_YEAR)
+        val bDay = ((dayOfYear + 16) % 365) + 1
+        val bMonthIdx = ((dayOfYear + 16) / 30) % 12
+        val bMonths = arrayOf("বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন", "কার্তিক", "অগ্রহায়ণ", "পৌষ", "মাঘ", "ফাল্গুন", "চৈত্র")
+        val bengaliStr = "${bn(bDay.toString())} ${bMonths[bMonthIdx]}, ১৪৩৩ বঙ্গাব্দ"
 
-        tvDateDisplay.text = "📅 $engStr | আরবি: $hijriStr হি."
+        // কাউন্টডাউন বক্সের ভেতরে সেট করা
+        tvHijriDate.text = "🌙 $hijriStr"
+        tvEnglishDate.text = "📅 $engStr"
+        tvBengaliDate.text = "🌾 $bengaliStr"
     }
 
     private fun loadCachedPrayerTimes() {
