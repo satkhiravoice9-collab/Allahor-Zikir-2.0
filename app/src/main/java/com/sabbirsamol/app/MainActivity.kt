@@ -98,7 +98,7 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // ================= ১. টপ বার (ইংরেজি, বাংলা ও সন্ধ্যার পর অটো আপডেট আরবি তারিখ) =================
+        // ================= ১. টপ বার =================
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -246,7 +246,7 @@ class MainActivity : Activity() {
         val specialCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.WHITE) // সাদা কালার
+                setColor(Color.WHITE)
                 setStroke(dp(1), Color.parseColor("#CBD5E1"))
                 cornerRadius = dp(16).toFloat()
             }
@@ -275,7 +275,7 @@ class MainActivity : Activity() {
         val haramCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#EF4444")) // লাল কালার
+                setColor(Color.parseColor("#EF4444"))
                 setStroke(dp(1), Color.parseColor("#DC2626"))
                 cornerRadius = dp(16).toFloat()
             }
@@ -337,14 +337,14 @@ class MainActivity : Activity() {
     private fun updateDynamicDates() {
         val now = Calendar.getInstance()
         val hour = now.get(Calendar.HOUR_OF_DAY)
-        // সন্ধ্যার সময় (সন্ধ্যা ৬টা বা ১৮:০০ টার পর আরবি তারিখ পরবর্তী দিনে পরিবর্তিত হওয়ার লজিক)
         if (hour >= 18) {
             now.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        // ইংরেজি, বাংলা ও আরবি তারিখ ফরম্যাট
         val engFormat = SimpleDateFormat("dd MMM, EEEE", Locale("bn", "BD"))
-        val hijriFormat = SimpleDateFormat("dd MMMM", ULocale("ar", "SA", "@calendar=islamic-umalqura"))
+        // হিজরি বা আরবি তারিখের জন্য 표준 ইসলামিক ক্যালেন্ডার ব্যবহার
+        val hijriFormat = SimpleDateFormat("dd MMMM", Locale("ar"))
+        hijriFormat.calendar = IslamicCalendar(now.timeZone, Locale("ar"))
         
         val engStr = engFormat.format(Date())
         val hijriStr = hijriFormat.format(now.time)
@@ -403,7 +403,6 @@ class MainActivity : Activity() {
         val maghrib = timingsMap["Maghrib"] ?: "18:20"
         val isha = timingsMap["Isha"] ?: "19:37"
 
-        // পাঁচ ওয়াক্ত
         tvFajrTime.text = "${convertTo12Hour(fajr)} - ${convertTo12Hour(sunrise)}"
         tvZoharTime.text = "${convertTo12Hour(dhuhr)} - ০৪:৩৩ PM"
         tvAsrTime.text = "০৪:৩৩ PM - ${convertTo12Hour(sunset)}"
@@ -413,12 +412,10 @@ class MainActivity : Activity() {
         tvSunriseTime.text = "🌅 সূর্যোদয়: ${convertTo12Hour(sunrise)}"
         tvSunsetTime.text = "🌇 সূর্যাস্ত: ${convertTo12Hour(sunset)}"
 
-        // তাহাজ্জুদ ও সেহরি-ইফতার (সাদা বক্সের জন্য)
         tvTahajjudTime.text = "১২:০০ AM - ${convertTo12Hour(fajr)}"
         tvSehriTime.text = "${convertTo12Hour(fajr)} এর পূর্বে"
         tvIftarTime.text = "${convertTo12Hour(maghrib)}"
 
-        // হারাম ওয়াক্ত (লাল বক্সের জন্য)
         val sunriseEnd = adjustTime(sunrise, 15)
         val sunsetStart = adjustTime(sunset, -15)
 
@@ -474,7 +471,7 @@ class MainActivity : Activity() {
         val fajr = parseMinutes(timingsMap["Fajr"])
         val sunrise = parseMinutes(timingsMap["Sunrise"])
         val dhuhr = parseMinutes(timingsMap["Dhuhr"])
-        val asr = 16 * 60 + 33 // ৪:৩৩ PM
+        val asr = 16 * 60 + 33
         val maghrib = parseMinutes(timingsMap["Maghrib"])
         val isha = parseMinutes(timingsMap["Isha"])
 
