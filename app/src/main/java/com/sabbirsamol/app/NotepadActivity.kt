@@ -19,7 +19,7 @@ import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -42,8 +42,8 @@ class NotepadActivity : ComponentActivity() {
     private val noteBgColors = arrayOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2", "#114D3C", "#1F2937")
     private val textColors = arrayOf(Color.RED, Color.parseColor("#10B981"), Color.parseColor("#3B82F6"), Color.parseColor("#F59E0B"), Color.parseColor("#8B5CF6"), Color.BLACK, Color.WHITE)
 
-    // ফায়ারবেস ইনস্ট্যান্স
-    private val db = FirebaseFirestore.getInstance()
+    // Firebase Realtime Database ইনস্ট্যান্স
+    private val databaseRef = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
 
     private fun getCardDrawable(bgColor: Int = cardBg) = GradientDrawable().apply {
@@ -95,24 +95,18 @@ class NotepadActivity : ComponentActivity() {
         // ১. লোকাল সেভ
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
-        // ২. ফায়ারবেস ক্লাউডে সিঙ্ক ও সেভ
-        val userId = auth.currentUser?.uid ?: "anonymous_user"
-        val notesMap = mapOf(
-            "notes_data" to array.toString(),
-            "updated_at" to System.currentTimeMillis()
-        )
-        db.collection("users_notes").document(userId).set(notesMap)
+        // ২. Realtime Database এ ক্লাউড সিঙ্ক
+        val userId = auth.currentUser?.uid ?: "default_user"
+        databaseRef.child("users").child(userId).child("notes_data").setValue(array.toString())
     }
 
     private fun fetchNotesFromFirebase() {
-        val userId = auth.currentUser?.uid ?: "anonymous_user"
-        db.collection("users_notes").document(userId).get().addOnSuccessListener { document ->
-            if (document != null && document.exists()) {
-                val cloudNotes = document.getString("notes_data")
-                if (!cloudNotes.isNullOrEmpty()) {
-                    getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
-                    showNotesList()
-                }
+        val userId = auth.currentUser?.uid ?: "default_user"
+        databaseRef.child("users").child(userId).child("notes_data").get().addOnSuccessListener { snapshot ->
+            val cloudNotes = snapshot.value as? String
+            if (!cloudNotes.isNullOrEmpty()) {
+                getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
+                showNotesList()
             }
         }
     }
@@ -188,12 +182,8 @@ class NotepadActivity : ComponentActivity() {
 
         navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
-                text = label
-                textSize = 10f
-                isAllCaps = false
-                minHeight = 0; minWidth = 0
-                setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0
+                setPadding(0, 0, 0, 0); gravity = Gravity.CENTER
                 setTextColor(if (label.contains("নোটপ্যাড")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
@@ -203,7 +193,7 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@NotepadActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> {}
-                        label.contains("সিঙ্ক") -> { fetchNotesFromFirebase(); Toast.makeText(this@NotepadActivity, "ফায়ারবেস থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { fetchNotesFromFirebase(); Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -276,11 +266,8 @@ class NotepadActivity : ComponentActivity() {
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val bottomNav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-            elevation = dp(8).toFloat()
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#0F172A")); setPadding(dp(2), dp(4), dp(2), dp(4)); elevation = dp(8).toFloat()
         }
 
         val navItems = listOf(
@@ -295,12 +282,7 @@ class NotepadActivity : ComponentActivity() {
 
         navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
-                text = label
-                textSize = 10f
-                isAllCaps = false
-                minHeight = 0; minWidth = 0
-                setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0); gravity = Gravity.CENTER
                 setTextColor(if (label.contains("নোটপ্যাড")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
