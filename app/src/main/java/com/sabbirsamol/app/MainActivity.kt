@@ -113,13 +113,13 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // আকর্ষণীয় আকাশী কালারের লোকেশন কার্ড (Sky Blue Theme)
+        // আকাশী কালারের লোকেশন কার্ড (Sky Blue Theme)
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#E0F2FE")) // হালকা আকাশী ব্যাকগ্রাউন্ড
-                setStroke(dp(1), Color.parseColor("#38BDF8")) // ডিপ আকাশী বর্ডার
+                setColor(Color.parseColor("#E0F2FE"))
+                setStroke(dp(1), Color.parseColor("#38BDF8"))
                 cornerRadius = dp(12).toFloat()
             }
             setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -129,7 +129,7 @@ class MainActivity : Activity() {
         topBar.addView(TextView(this).apply {
             text = "📍 জেলা:"
             textSize = 14f
-            setTextColor(Color.parseColor("#0369A1")) // ডিপ স্কাই ব্লু টেক্সট
+            setTextColor(Color.parseColor("#0369A1"))
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, dp(8), 0)
         })
@@ -446,6 +446,7 @@ class MainActivity : Activity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
+        // ================= বটম নেভিগেশন বার (হোম সর্ববামে, প্রোফাইল সর্বডানে) =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -454,19 +455,35 @@ class MainActivity : Activity() {
             elevation = dp(8).toFloat()
         }
 
-        val navItems = listOf("🏠\nহোম", "📿\nতাসবিহ", "📚\nলাইব্রেরী", "📝\nনোট", "⚙️\nসেটিংস")
-        navItems.forEach { label ->
+        val navItems = listOf(
+            Triple("🏠\nহোম", MainActivity::class.java, true),
+            Triple("📿\nতাসবিহ", TasbihActivity::class.java, false),
+            Triple("📚\nলাইব্রেরী", LibraryActivity::class.java, false),
+            Triple("📖\nআমল", LibraryActivity::class.java, false),
+            Triple("🔄\nরিফ্রেশ", null, false),
+            Triple("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java, false)
+        )
+
+        navItems.forEach { (label, targetActivityClass, isHome) ->
             bottomNav.addView(Button(this).apply {
-                text = label; textSize = 11f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0)
+                text = label
+                textSize = 11f
+                isAllCaps = false
+                minHeight = 0
+                minWidth = 0
+                setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER
                 setTextColor(if (label.contains("হোম")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
                     when {
-                        label.contains("তাসবিহ") -> startActivity(Intent(this@MainActivity, TasbihActivity::class.java))
-                        label.contains("লাইব্রেরী") -> startActivity(Intent(this@MainActivity, LibraryActivity::class.java))
-                        label.contains("নোট") -> startActivity(Intent(this@MainActivity, NotepadActivity::class.java))
-                        label.contains("সেটিংস") -> startActivity(Intent(this@MainActivity, ProfileSettingsActivity::class.java))
+                        label.contains("রিফ্রেশ") -> {
+                            loadOnlinePrayerTimes()
+                            Toast.makeText(this@MainActivity, "তথ্য আপডেট ও সিংক করা হয়েছে!", Toast.LENGTH_SHORT).show()
+                        }
+                        targetActivityClass != null && !isHome -> {
+                            startActivity(Intent(this@MainActivity, targetActivityClass))
+                        }
                     }
                 }
             }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
