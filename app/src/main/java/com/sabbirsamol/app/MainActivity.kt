@@ -1,6 +1,5 @@
 package com.sabbirsamol.app
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -13,7 +12,6 @@ import androidx.activity.ComponentActivity
 class MainActivity : ComponentActivity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-
     private val themeColors by lazy { ThemeManager.getTheme(this) }
 
     private val bgMain get() = themeColors.bgMain
@@ -69,25 +67,27 @@ class MainActivity : ComponentActivity() {
             setPadding(dp(16), dp(16), dp(16), dp(80))
         }
 
-        // ================= কাবা শরীফের ছবি (তাসবিহ কাউন্টারের ওপরে) =================
+        // ================= কাবা শরীফের ছবি =================
         val kaabaCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = getCardDrawable()
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            layoutParams = LinearLayout.LayoutParams(-1, dp(180)).apply { bottomMargin = dp(14) }
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(170)).apply { bottomMargin = dp(14) }
             gravity = Gravity.CENTER
         }
         
         val kaabaImageView = ImageView(this).apply {
-            // res/drawable/kaaba_img.png ছবিটিকে এখানে লোড করা হচ্ছে
-            setImageResource(resources.getIdentifier("kaaba_img", "drawable", packageName))
+            val imageId = resources.getIdentifier("kaaba_img", "drawable", packageName)
+            if (imageId != 0) {
+                setImageResource(imageId)
+            }
             scaleType = ImageView.ScaleType.CENTER_CROP
             layoutParams = LinearLayout.LayoutParams(-1, -1)
         }
         kaabaCard.addView(kaabaImageView)
         content.addView(kaabaCard)
 
-        // ================= তাসবিহ কাউন্টার শর্টকাট কার্ড =================
+        // ================= তাসবিহ কাউন্টার কার্ড =================
         val tasbihCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = getCardDrawable()
