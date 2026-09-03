@@ -72,16 +72,19 @@ class TasbihActivity : ComponentActivity() {
             text = "রিসেট (০)"; isAllCaps = false; textSize = 13f; setTextColor(textMain)
             background = getBtnDrawable(Color.parseColor("#475569"), 4)
             layoutParams = LinearLayout.LayoutParams(dp(85), dp(38))
-            setOnClickListener { currentCount = 0; hasShownPopup = false; updateDisplay(); saveProgress() }
+            setOnClickListener { 
+                currentCount = 0; hasShownPopup = false; updateDisplay(); saveProgress() 
+                Toast.makeText(this@TasbihActivity, "গণনা রিসেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+            }
         })
         root.addView(top)
 
-        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন (আপলোড করা ছবির নিজস্ব ব্যাকগ্রাউন্ডসহ) =================
+        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন =================
         val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
 
         val kaabaBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-            background = null // ছবির নিজস্ব ব্যাকগ্রাউন্ড ও বর্ডার বজায় রাখার জন্য
+            background = null
             layoutParams = LinearLayout.LayoutParams(dp(220), dp(220)).apply { bottomMargin = dp(15) }
             setPadding(0, 0, 0, 0)
         }
@@ -188,20 +191,37 @@ class TasbihActivity : ComponentActivity() {
     }
 
     private fun incrementCount() {
-        currentCount++
-        updateDisplay()
-        saveProgress()
-
         val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
         if (isCustomMode) {
-            if (currentCount == customTarget && !hasShownPopup) {
+            // টার্গেট পূর্ণ হয়ে গেলে আর গোনা যাবে না, পপআপ দেখাবে
+            if (currentCount >= customTarget) {
+                if (!hasShownPopup) {
+                    vibratePhone(v, 500)
+                    showTargetPopup()
+                    hasShownPopup = true
+                }
+                return
+            }
+            
+            currentCount++
+            updateDisplay()
+            saveProgress()
+
+            if (currentCount == customTarget) {
                 vibratePhone(v, 500)
                 showTargetPopup()
                 hasShownPopup = true
-            } else { vibratePhone(v, 50) }
+            }
         } else {
-            if (currentCount > 0 && currentCount % 100 == 0) { vibratePhone(v, 500) } 
-            else { vibratePhone(v, 50) }
+            // সাধারণ মোড: প্রতি ১০০০ বা ১০০ বারে ভাইব্রেশন (প্রতি ক্লিকে নয়)
+            currentCount++
+            updateDisplay()
+            saveProgress()
+
+            if (currentCount > 0 && currentCount % 100 == 0) {
+                vibratePhone(v, 500)
+            }
         }
     }
 
@@ -232,13 +252,28 @@ class TasbihActivity : ComponentActivity() {
     private fun showTargetPopup() {
         val dialogLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain); setPadding(dp(20), dp(20), dp(20), dp(20)) }
         dialogLayout.addView(TextView(this).apply { text = "মাশাআল্লাহ!"; textSize = 22f; setTextColor(textMain); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(10)) })
-        dialogLayout.addView(TextView(this).apply { text = "আপনার নির্ধারিত টার্গেট (${bn(customTarget)} বার) পূর্ণ হয়েছে।"; textSize = 16f; setTextColor(textMain); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(20)) })
+        dialogLayout.addView(TextView(this).apply { text = "আপনার নির্ধারিত টার্গেট (${bn(customTarget)} বার) পূর্ণ হয়েছে। নতুন করে শুরু করতে রিসেট করুন।"; textSize = 15f; setTextColor(textMain); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(20)) })
         
         val dialog = AlertDialog.Builder(this).setView(dialogLayout).setCancelable(false).create()
+        
         dialogLayout.addView(Button(this).apply {
-            text = "ঠিক আছে"; setTextColor(Color.BLACK); background = getBtnDrawable(btnBg); layoutParams = LinearLayout.LayoutParams(-1, dp(45))
+            text = "রিসেট করে আবার শুরু করুন"; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#047857"), 6)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(45)).apply { bottomMargin = dp(8) }
+            setOnClickListener { 
+                currentCount = 0
+                hasShownPopup = false
+                updateDisplay()
+                saveProgress()
+                dialog.dismiss()
+            }
+        })
+
+        dialogLayout.addView(Button(this).apply {
+            text = "বন্ধ করুন"; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#475569"), 6)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(45))
             setOnClickListener { dialog.dismiss() }
         })
+
         dialog.show()
     }
 }
