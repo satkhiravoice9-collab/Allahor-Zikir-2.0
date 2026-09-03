@@ -162,6 +162,52 @@ class TasbihActivity : ComponentActivity() {
         }
         root.addView(actionRow)
 
+        // ================= ৪. বটম মেনু (৭টি আইটেম: হোম থেকে প্রোফাইল, সিঙ্কের আগে নোটপ্যাড) =================
+        val menu = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#0F172A"))
+            setPadding(dp(2), dp(4), dp(2), dp(4))
+            elevation = dp(8).toFloat()
+        }
+
+        val navItems = listOf(
+            Triple("🏠\nহোম", MainActivity::class.java),
+            Triple("📿\nতাসবিহ", TasbihActivity::class.java),
+            Triple("📚\nলাইব্রেরী", LibraryActivity::class.java),
+            Triple("📖\nআমল", MasnunAmolActivity::class.java),
+            Triple("📝\nনোটপ্যাড", NotepadActivity::class.java),
+            Triple("🔄\nসিঙ্ক", null),
+            Triple("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
+        )
+
+        navItems.forEach { (label, targetClass) ->
+            menu.addView(Button(this).apply {
+                text = label
+                textSize = 10f
+                isAllCaps = false
+                minHeight = 0
+                minWidth = 0
+                setPadding(0, 0, 0, 0)
+                gravity = Gravity.CENTER
+                // তাসবিহ পেজে আছি তাই তাসবিহ আইকন সবুজ বা হাইলাইট থাকবে, বাকিগুলো গ্রে
+                setTextColor(if (label.contains("তাসবিহ")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
+                background = GradientDrawable()
+                setOnClickListener {
+                    when {
+                        label.contains("হোম") -> { startActivity(Intent(this@TasbihActivity, MainActivity::class.java)); finish() }
+                        label.contains("তাসবিহ") -> { /* বর্তমান পেজ */ }
+                        label.contains("লাইব্রেরী") -> { startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java)); finish() }
+                        label.contains("আমল") -> { startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java)); finish() }
+                        label.contains("নোটপ্যাড") -> { startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java)); finish() }
+                        label.contains("সিঙ্ক") -> { Toast.makeText(this@TasbihActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("প্রোফাইল") -> { startActivity(Intent(this@TasbihActivity, ProfileSettingsActivity::class.java)); finish() }
+                    }
+                }
+            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
+        }
+        root.addView(menu, LinearLayout.LayoutParams(-1, dp(60)))
+
         setContentView(root)
         updateDisplay()
     }
