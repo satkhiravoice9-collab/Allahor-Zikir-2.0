@@ -76,7 +76,7 @@ class TasbihActivity : ComponentActivity() {
         })
         root.addView(top)
 
-        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন =================
+        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন (শুধু ছবি, অতিরিক্ত টেক্সট বাদ) =================
         val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
 
         val kaabaBox = LinearLayout(this).apply {
@@ -86,34 +86,18 @@ class TasbihActivity : ComponentActivity() {
                 setStroke(dp(2), Color.parseColor("#FBBF24")) 
                 cornerRadius = dp(14).toFloat()
             }
-            layoutParams = LinearLayout.LayoutParams(dp(210), dp(190)).apply { bottomMargin = dp(15) }
+            layoutParams = LinearLayout.LayoutParams(dp(160), dp(160)).apply { bottomMargin = dp(15) }
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
-        kaabaBox.addView(TextView(this).apply {
-            text = "الله أكبر"
-            textSize = 16f
-            setTextColor(Color.parseColor("#0F172A"))
-            setTypeface(null, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(2))
-        })
-
+        // শুধু কাবা শরীফের ছবি বা আইকন (অতিরিক্ত টেক্সট রিমুভ করা হয়েছে)
         kaabaBox.addView(ImageView(this).apply {
             val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
             if (imgResId != 0) {
                 setImageResource(imgResId)
             }
             scaleType = ImageView.ScaleType.FIT_CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(110), dp(95)).apply { bottomMargin = dp(4) }
-        })
-
-        kaabaBox.addView(TextView(this).apply {
-            text = "لا إله إلا الله محمد رسول الله"
-            textSize = 13f
-            setTextColor(Color.parseColor("#0F172A"))
-            setTypeface(null, Typeface.BOLD)
-            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(-1, -1)
         })
         centerLayout.addView(kaabaBox)
 
