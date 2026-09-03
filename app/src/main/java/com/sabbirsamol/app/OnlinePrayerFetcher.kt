@@ -3,11 +3,12 @@ package com.sabbirsamol.app
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import java.util.Locale
 
 object OnlinePrayerFetcher {
 
     fun isNetworkAvailable(context: Context): Boolean {
-        val connectivityManager = context.getSystemService(Context.ConnectivityManager.class.java) as ConnectivityManager
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -15,7 +16,6 @@ object OnlinePrayerFetcher {
 
     // ৬৪ জেলার জন্য অফলাইন/অনলাইন নিখুঁত সময় রিটার্ন করার লজিক
     fun fetchTimingsForDistrict(districtName: String): Map<String, String> {
-        // জেলা ভেদে সামান্য ব্যবধান বা স্ট্যান্ডার্ড সময় সেট করা হলো যাতে প্রতিটি জেলা কাজ করে
         val baseFajr = "04:30"
         val baseSunrise = "05:46"
         val baseDhuhr = "12:03"
@@ -24,10 +24,9 @@ object OnlinePrayerFetcher {
         val baseMaghrib = "18:20"
         val baseIsha = "19:37"
 
-        // কিছু জেলার ভৌগোলিক পার্থক্য অনুযায়ী মাইনর অ্যাডজাস্টমেন্ট
         var offsetMinutes = 0
         when (districtName) {
-            "সিলেট", "সুনামগঞ্জ", "মৌলভীবাজার", "হবিগঞ্জ" -> offsetMinutes = -12 // পূর্বে হওয়ায় সময় আগে হয়
+            "সিলেট", "সুনামগঞ্জ", "মৌলভীবাজার", "হবিগঞ্জ" -> offsetMinutes = -12
             "চট্টগ্রাম", "কক্সবাজার", "বান্দরবান", "রাঙামাটি", "খাগড়াছড়ি", "নোয়াখালী", "লক্ষ্মীপুর", "ফেনী", "চাঁদপুর", "ব্রাহ্মণবাড়িয়া" -> offsetMinutes = -8
             "ঢাকা", "নারায়ণগঞ্জ", "মুন্সিগঞ্জ", "গাজীপুর", "নরসিংদী", "টঙ্গী" -> offsetMinutes = -3
             "রাজশাহী", "নওগাঁ", "নাটোর", "পাবনা", "সিরাজগঞ্জ", "বগুড়া", "জয়পুরহাট" -> offsetMinutes = +4
