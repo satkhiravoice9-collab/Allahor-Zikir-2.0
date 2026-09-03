@@ -13,51 +13,78 @@ class LibraryActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
+    private var bgMain: Int = Color.BLACK
+    private var cardBg: Int = Color.WHITE
+    private var cardStroke: Int = Color.GRAY
+    private var textMain: Int = Color.WHITE
+    private var textSub: Int = Color.GRAY
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val theme = ThemeManager.getTheme(this)
+        bgMain = theme.bgMain
+        cardBg = theme.cardBg
+        cardStroke = theme.cardStroke
+        textMain = theme.textMain
+        textSub = theme.textSub
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(theme.bgMain)
+            setBackgroundColor(bgMain)
         }
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(75))
+            setPadding(dp(16), dp(16), dp(16), dp(75))
         }
 
         content.addView(TextView(this).apply {
             text = "📚 ইসলামিক লাইব্রেরী ও কিতাব ভাণ্ডার"
-            textSize = 16f
-            setTextColor(theme.textMain)
+            textSize = 18f
+            setTextColor(textMain)
             setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(10))
+            setPadding(0, 0, 0, dp(15))
         })
 
-        // লাইব্রেরীর কন্টেন্ট বা কার্ডসমূহ এখানে যুক্ত করতে পারেন
-        val sampleCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(theme.cardBg)
-                setStroke(dp(1), theme.cardStroke)
-                cornerRadius = dp(12).toFloat()
+        val categories = listOf(
+            Pair("📖 পবিত্র কুরআন শরীফ", "সম্পূর্ণ ৩০ পারা ও ১لاه সুরা অনুবাদসহ"),
+            Pair("📜 সহীহ হাদিস সংকলন", "বুখারী, মুসলিম, তিরমিযী ও অন্যান্য"),
+            Pair("🤲 মাসনুন দোয়া ও কলেমা", "দৈনন্দিন জীবনের প্রয়োজনীয় সকল দোয়া"),
+            Pair("🌙 ইসলামিক মাসআলা-মাসায়েল", "দৈনিক ইবাদত ও আকায়েদ সম্পর্কিত")
+        )
+
+        categories.forEach { (title, desc) ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                background = GradientDrawable().apply {
+                    setColor(cardBg)
+                    setStroke(dp(1), cardStroke)
+                    cornerRadius = dp(12).toFloat()
+                }
+                setPadding(dp(16), dp(16), dp(16), dp(16))
+                layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
             }
-            setPadding(dp(14), dp(14), dp(14), dp(14))
+            card.addView(TextView(this).apply {
+                text = title
+                textSize = 16f
+                setTextColor(textMain)
+                setTypeface(null, Typeface.BOLD)
+                setPadding(0, 0, 0, dp(4))
+            })
+            card.addView(TextView(this).apply {
+                text = desc
+                textSize = 13f
+                setTextColor(textSub)
+            })
+            content.addView(card)
         }
-        sampleCard.addView(TextView(this).apply {
-            text = "📖 পবিত্র কুরআন শরীফ (সম্পূর্ণ ৩০ পারা ও ১১৪ সুরা)"
-            textSize = 14f
-            setTextColor(theme.textMain)
-            setTypeface(null, Typeface.BOLD)
-        })
-        content.addView(sampleCard)
 
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার =================
+        // বটম নেভিগেশন বার
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -76,7 +103,7 @@ class LibraryActivity : Activity() {
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetClass) ->
+        navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
                 text = label
                 textSize = 10f
@@ -91,7 +118,7 @@ class LibraryActivity : Activity() {
                     when {
                         label.contains("হোম") -> { startActivity(Intent(this@LibraryActivity, MainActivity::class.java)); finish() }
                         label.contains("তাসবিহ") -> { startActivity(Intent(this@LibraryActivity, TasbihActivity::class.java)); finish() }
-                        label.contains("লাইব্রেরী") -> { /* বর্তমান পেজ */ }
+                        label.contains("লাইব্রেরী") -> {}
                         label.contains("আমল") -> { startActivity(Intent(this@LibraryActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@LibraryActivity, NotepadActivity::class.java)); finish() }
                         label.contains("সিঙ্ক") -> { Toast.makeText(this@LibraryActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
