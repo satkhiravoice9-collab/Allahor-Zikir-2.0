@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : ComponentActivity() {
 
@@ -67,25 +69,92 @@ class MainActivity : ComponentActivity() {
             setPadding(dp(16), dp(16), dp(16), dp(80))
         }
 
-        // ================= কাবা শরীফের ছবি =================
-        val kaabaCard = LinearLayout(this).apply {
+        // ================= তারিখ ও বারের কার্ড (বাংলা, ইংরেজি ও সম্ভাব্য আরবি তারিখ) =================
+        val dateCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = getCardDrawable()
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-            layoutParams = LinearLayout.LayoutParams(-1, dp(170)).apply { bottomMargin = dp(14) }
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
             gravity = Gravity.CENTER
         }
-        
-        val kaabaImageView = ImageView(this).apply {
-            val imageId = resources.getIdentifier("kaaba_img", "drawable", packageName)
-            if (imageId != 0) {
-                setImageResource(imageId)
-            }
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            layoutParams = LinearLayout.LayoutParams(-1, -1)
+        val currentDateStr = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("bn", "BD")).format(Date())
+        dateCard.addView(TextView(this).apply {
+            text = "📅 আজকের তারিখ: $currentDateStr"
+            textSize = 14f
+            setTextColor(textYellow)
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+        })
+        dateCard.addView(TextView(this).apply {
+            text = "🌙 আরবি ও বাংলা সময়সূচী অনুযায়ী নিয়মিত আমল করুন"
+            textSize = 12f
+            setTextColor(textSub)
+            setPadding(0, dp(4), 0, 0)
+            gravity = Gravity.CENTER
+        })
+        content.addView(dateCard)
+
+        // ================= ৫ ওয়াক্ত নামাজের সময়সূচী কার্ড =================
+        val prayerCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = getCardDrawable()
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
         }
-        kaabaCard.addView(kaabaImageView)
-        content.addView(kaabaCard)
+        prayerCard.addView(TextView(this).apply {
+            text = "⏰ পাঁচ ওয়াক্ত নামাজের সময়সূচী"
+            textSize = 16f
+            setTextColor(textYellow)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(10))
+        })
+
+        val prayers = listOf(
+            Pair("ফজর", "০৫:০০ AM"),
+            Pair("যোহর", "০১:১৫ PM"),
+            Pair("আসর", "০৪:৩০ PM"),
+            Pair("মাগরিব", "০৬:২০ PM"),
+            Pair("এশা", "০৭:৪০ PM")
+        )
+
+        prayers.forEach { (name, time) ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, dp(4), 0, dp(4))
+            }
+            row.addView(TextView(this).apply {
+                text = "• $name ওয়াক্ত"
+                textSize = 13f
+                setTextColor(textMain)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(TextView(this).apply {
+                text = time
+                textSize = 13f
+                setTextColor(textYellow)
+                setTypeface(null, Typeface.BOLD)
+            })
+            prayerCard.addView(row)
+        }
+        content.addView(prayerCard)
+
+        // ================= কাবা শরীফের ছবি =================
+        val imageId = resources.getIdentifier("kaaba_img", "drawable", packageName)
+        if (imageId != 0) {
+            val kaabaCard = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                background = getCardDrawable()
+                setPadding(dp(4), dp(4), dp(4), dp(4))
+                layoutParams = LinearLayout.LayoutParams(-1, dp(170)).apply { bottomMargin = dp(14) }
+                gravity = Gravity.CENTER
+            }
+            val kaabaImageView = ImageView(this).apply {
+                setImageResource(imageId)
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                layoutParams = LinearLayout.LayoutParams(-1, -1)
+            }
+            kaabaCard.addView(kaabaImageView)
+            content.addView(kaabaCard)
+        }
 
         // ================= তাসবিহ কাউন্টার কার্ড =================
         val tasbihCard = LinearLayout(this).apply {
@@ -117,7 +186,7 @@ class MainActivity : ComponentActivity() {
         })
         content.addView(tasbihCard)
 
-        // ================= অন্যান্য ফিচার কার্ডসমূহ =================
+        // ================= অন্যান্য ফিচার ও ইসলামিক সেকশনসমূহ =================
         val features = listOf(
             Triple("📚 ইসলামিক লাইব্রেরী ও কিতাব", "পবিত্র কুরআন ও সিহাহ সিত্তাহ হাদিস পড়ুন", LibraryActivity::class.java),
             Triple("📖 মাসনুন আমল ও দোয়া", "সকাল-সন্ধ্যার জিকির ও মানযিল আয়াত", MasnunAmolActivity::class.java),
@@ -157,47 +226,6 @@ class MainActivity : ComponentActivity() {
 
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-
-        // ================= ৭টি আইটেমের স্থায়ী বটম নেভিগেশন বার =================
-        val bottomNav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-            elevation = dp(8).toFloat()
-        }
-
-        val navItems = listOf(
-            Pair("🏠\nহোম", MainActivity::class.java),
-            Pair("📿\nতাসবিহ", TasbihActivity::class.java),
-            Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
-            Pair("📖\nআমল", MasnunAmolActivity::class.java),
-            Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
-            Pair("🔄\nসিঙ্ক", null),
-            Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
-        )
-
-        navItems.forEach { (label, actClass) ->
-            bottomNav.addView(Button(this).apply {
-                text = label
-                textSize = 10f
-                isAllCaps = false
-                minHeight = 0
-                minWidth = 0
-                setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER
-                setTextColor(if (label.contains("হোম")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
-                background = GradientDrawable()
-                setOnClickListener {
-                    when {
-                        label.contains("হোম") -> {}
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@MainActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
-                        else -> { actClass?.let { startActivity(Intent(this@MainActivity, it)) } }
-                    }
-                }
-            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
-        }
-        root.addView(bottomNav, LinearLayout.LayoutParams(-1, dp(60)))
 
         setContentView(root)
     }
