@@ -1,6 +1,7 @@
 package com.sabbirsamol.app
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -13,50 +14,116 @@ class ProfileSettingsActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
+    private var bgMain: Int = Color.BLACK
+    private var cardBg: Int = Color.WHITE
+    private var cardStroke: Int = Color.GRAY
+    private var textMain: Int = Color.WHITE
+    private var textSub: Int = Color.GRAY
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val theme = ThemeManager.getTheme(this)
+        bgMain = theme.bgMain
+        cardBg = theme.cardBg
+        cardStroke = theme.cardStroke
+        textMain = theme.textMain
+        textSub = theme.textSub
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(theme.bgMain)
+            setBackgroundColor(bgMain)
         }
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(75))
+            setPadding(dp(16), dp(16), dp(16), dp(75))
         }
 
         content.addView(TextView(this).apply {
-            text = "👤 প্রোফাইল, ব্যাকআপ ও সেটিংস"
+            text = "👤 প্রোফাইল ও সেটিংস"
+            textSize = 18f
+            setTextColor(textMain)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(15))
+        })
+
+        // ইউপ্রোফাইল কার্ড
+        val profileCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(cardBg)
+                setStroke(dp(1), cardStroke)
+                cornerRadius = dp(12).toFloat()
+            }
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+        }
+        profileCard.addView(TextView(this).apply {
+            text = "অ্যাপ ব্যবহারকারী"
             textSize = 16f
-            setTextColor(theme.textMain)
+            setTextColor(textMain)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(4))
+        })
+        profileCard.addView(TextView(this).apply {
+            text = "সংস্করণ: 2.0 (আল্লাহর জিকির)"
+            textSize = 13f
+            setTextColor(textSub)
+        })
+        content.addView(profileCard)
+
+        // থেম সেটিংস কার্ড
+        val themeCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(cardBg)
+                setStroke(dp(1), cardStroke)
+                cornerRadius = dp(12).toFloat()
+            }
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+        }
+        themeCard.addView(TextView(this).apply {
+            text = "🎨 অ্যাপ থেম নির্বাচন"
+            textSize = 16f
+            setTextColor(textMain)
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, 0, dp(10))
         })
 
-        val sampleCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(theme.cardBg)
-                setStroke(dp(1), theme.cardStroke)
-                cornerRadius = dp(12).toFloat()
+        val btnDark = Button(this).apply {
+            text = "ডার্ক থেম (ডিফল্ট)"
+            setTextColor(Color.WHITE)
+            isAllCaps = false
+            background = GradientDrawable().apply { setColor(Color.parseColor("#111827")); cornerRadius = dp(6).toFloat(); setStroke(dp(1), Color.parseColor("#374151")) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(8) }
+            setOnClickListener {
+                getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("app_theme", "গাঢ় থেম (ডিফল্ট)").apply()
+                Toast.makeText(this@ProfileSettingsActivity, "ডার্ক থেম সেট করা হয়েছে। রিস্টার্ট করুন।", Toast.LENGTH_SHORT).show()
             }
-            setPadding(dp(14), dp(14), dp(14), dp(14))
         }
-        sampleCard.addView(TextView(this).apply {
-            text = "নাম: সাব্বির আহমেদ"
-            textSize = 14f
-            setTextColor(theme.textMain)
-            setTypeface(null, Typeface.BOLD)
-        })
-        content.addView(sampleCard)
+        themeCard.addView(btnDark)
+
+        val btnLight = Button(this).apply {
+            text = "লাইট থেম (সাদা ব্যাকগ্রাউন্ড)"
+            setTextColor(Color.BLACK)
+            isAllCaps = false
+            background = GradientDrawable().apply { setColor(Color.parseColor("#F1F5F9")); cornerRadius = dp(6).toFloat(); setStroke(dp(1), Color.parseColor("#CBD5E1")) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
+            setOnClickListener {
+                getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("app_theme", "সাদা থেম").apply()
+                Toast.makeText(this@ProfileSettingsActivity, "লাইট থেম সেট করা হয়েছে। রিস্টার্ট করুন।", Toast.LENGTH_SHORT).show()
+            }
+        }
+        themeCard.addView(btnLight)
+        content.addView(themeCard)
 
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার =================
+        // বটম নেভিগেশন বার
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -75,7 +142,7 @@ class ProfileSettingsActivity : Activity() {
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetClass) ->
+        navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
                 text = label
                 textSize = 10f
@@ -94,7 +161,7 @@ class ProfileSettingsActivity : Activity() {
                         label.contains("আমল") -> { startActivity(Intent(this@ProfileSettingsActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@ProfileSettingsActivity, NotepadActivity::class.java)); finish() }
                         label.contains("সিঙ্ক") -> { Toast.makeText(this@ProfileSettingsActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
-                        label.contains("প্রোফাইল") -> { /* বর্তমান পেজ */ }
+                        label.contains("প্রোফাইল") -> {}
                     }
                 }
             }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
