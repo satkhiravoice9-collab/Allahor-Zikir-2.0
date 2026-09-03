@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -112,24 +113,62 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // লোকেশন সিলেক্টর টপ বার
+        // স্পষ্ট দৃশ্যমান লোকেশন সিলেক্টর টপ বার
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(6))
+            background = GradientDrawable().apply {
+                setColor(theme.cardBg)
+                setStroke(dp(1), theme.cardStroke)
+                cornerRadius = dp(10).toFloat()
+            }
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) }
         }
 
         topBar.addView(TextView(this).apply {
-            text = "📍 লোকেশন:"
-            textSize = 13f
-            setTextColor(theme.textMain)
+            text = "📍 জেলা নির্বাচন:"
+            textSize = 14f
+            setTextColor(theme.textAccent)
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, dp(8), 0)
         })
 
         spinnerLocation = Spinner(this).apply {
-            val districts = arrayOf("সাতক্ষীরা", "ঢাকা", "খুলনা", "চট্টগ্রাম", "সিলেট", "রাজশাহী", "বরিশাল", "রংপুর", "ময়মনসিংহ")
-            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, districts)
+            val districts = arrayOf(
+                "ঢাকা", "ফরিদপুর", "গোপালগঞ্জ", "জামালপুর", "কিশোরগঞ্জ", "মাদারীপুর", "মানিকগঞ্জ", 
+                "মুন্সিগঞ্জ", "ময়মনসিংহ", "নারায়ণগঞ্জ", "নরসিংদী", "নেত্রকোণা", "রাজবাড়ী", "শরীয়তপুর", 
+                "শেরপুর", "টাঙ্গাইল", "বগুড়া", "জয়পুরহাট", "নওগাঁ", "নাটোর", "নবাবগঞ্জ", "পাবনা", 
+                "রাজশাহী", "সিরাজগঞ্জ", "দিনাজপুর", "গাইবান্ধা", "কুড়িগ্রাম", "লালমনিরহাট", "নীলফামারী", 
+                "পঞ্চগড়", "রংপুর", "ঠাকুরগাঁও", "বাগেরহাট", "চুয়াডাঙ্গা", "যশোর", "ঝিনাইদহ", "খুলনা", 
+                "কুষ্টিয়া", "মাগুরা", "মেহেরপুর", "নড়াইল", "সাতক্ষীরা", "বরগুনা", "বরিশাল", "ভোলা", 
+                "ঝালকাঠি", "পটুয়াখালী", "পিরোজপুর", "বান্দরবান", "ব্রাহ্মণবাড়িয়া", "চাঁদপুর", "চট্টগ্রাম", 
+                "কুমিল্লা", "কক্সবাজার", "ফেনী", "খাগড়াছড়ি", "লক্ষ্মীপুর", "নোয়াখালী", "রাঙামাটি", 
+                "হবিগঞ্জ", "মৌলভীবাজার", "সুনামগঞ্জ", "সিলেট"
+            )
+            
+            val adapter = object : ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_spinner_item, districts) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getView(position, convertView, parent) as TextView
+                    view.setTextColor(theme.textMain)
+                    view.textSize = 14f
+                    view.typeface = Typeface.DEFAULT_BOLD
+                    return view
+                }
+                override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getDropDownView(position, convertView, parent) as TextView
+                    view.setTextColor(Color.BLACK)
+                    view.textSize = 14f
+                    view.setPadding(dp(10), dp(10), dp(10), dp(10))
+                    return view
+                }
+            }
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setAdapter(adapter)
+
+            val defaultIndex = districts.indexOf("সাতক্ষীরা")
+            if (defaultIndex >= 0) setSelection(defaultIndex)
+
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                     selectedDistrict = districts[position]
@@ -557,7 +596,7 @@ class MainActivity : Activity() {
                 if (OnlinePrayerFetcher.isNetworkAvailable(context)) {
                     OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
                 } else {
-                    null
+                    OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
                 }
             }
 
@@ -565,13 +604,6 @@ class MainActivity : Activity() {
                 timingsMap.clear()
                 timingsMap.putAll(onlineTimes)
                 saveTimingsToCache(onlineTimes)
-                applyTimingsToUI()
-            } else if (timingsMap.isEmpty()) {
-                val defaultTimes = mapOf(
-                    "Fajr" to "04:30", "Sunrise" to "05:46", "Dhuhr" to "12:03",
-                    "Asr" to "15:31", "Sunset" to "18:20", "Maghrib" to "18:20", "Isha" to "19:37"
-                )
-                timingsMap.putAll(defaultTimes)
                 applyTimingsToUI()
             }
         }
