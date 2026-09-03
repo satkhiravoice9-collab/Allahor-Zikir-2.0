@@ -52,6 +52,9 @@ class MainActivity : Activity() {
     private lateinit var tvAwabinTime: TextView
     private lateinit var tvNafalTahajjud: TextView
 
+    private lateinit var spinnerLocation: Spinner
+    private var selectedDistrict = "সাতক্ষীরা"
+
     private val prayerRows = mutableMapOf<String, LinearLayout>()
     private val prayerNameViews = mutableMapOf<String, TextView>()
     private val prayerTimeViews = mutableMapOf<String, TextView>()
@@ -109,7 +112,34 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // রিফ্রেশ বাটনটি টপ বার থেকে সম্পূর্ণ বাদ দেওয়া হয়েছে
+        // লোকেশন সিলেক্টর টপ বার
+        val topBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(6))
+        }
+
+        topBar.addView(TextView(this).apply {
+            text = "📍 লোকেশন:"
+            textSize = 13f
+            setTextColor(theme.textMain)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, dp(8), 0)
+        })
+
+        spinnerLocation = Spinner(this).apply {
+            val districts = arrayOf("সাতক্ষীরা", "ঢাকা", "খুলনা", "চট্টগ্রাম", "সিলেট", "রাজশাহী", "বরিশাল", "রংপুর", "ময়মনসিংহ")
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, districts)
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                    selectedDistrict = districts[position]
+                    loadOnlinePrayerTimes()
+                }
+                override fun onNothingSelected(parent: AdapterView<*>) {}
+            }
+        }
+        topBar.addView(spinnerLocation, LinearLayout.LayoutParams(0, -2, 1f))
+        content.addView(topBar)
 
         val countdownCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -160,8 +190,8 @@ class MainActivity : Activity() {
         countdownCard.addView(cardDivider)
 
         tvWaqtCountdownHeader = TextView(this).apply {
-            text = "ওয়াক্ত শেষ হতে বাকি"
-            textSize = 16f
+            text = "দুহা (ইশরাক ও চাশত) সময় শেষ হতে বাকি"
+            textSize = 15f
             setTextColor(theme.textAccent)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
@@ -183,7 +213,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        infoRow.addView(TextView(this).apply { text = "📍 সাতক্ষীরা"; textSize = 12f; setTextColor(theme.textSub); setPadding(0, 0, dp(10), 0) })
+        infoRow.addView(TextView(this).apply { text = "📍 $selectedDistrict"; textSize = 12f; setTextColor(theme.textSub); setPadding(0, 0, dp(10), 0) })
         
         tvSunriseTime = TextView(this).apply { text = "🌅 সূর্যোদয়: --:--"; textSize = 11f; setTextColor(theme.textSub); setPadding(dp(4), 0, dp(4), 0) }
         infoRow.addView(tvSunriseTime)
@@ -525,7 +555,7 @@ class MainActivity : Activity() {
             val context = this@MainActivity
             val onlineTimes = withContext(Dispatchers.IO) {
                 if (OnlinePrayerFetcher.isNetworkAvailable(context)) {
-                    OnlinePrayerFetcher.fetchSatkhiraTimings()
+                    OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
                 } else {
                     null
                 }
@@ -563,8 +593,12 @@ class MainActivity : Activity() {
 
         val fajr = parseMinutes(timingsMap["Fajr"])
         val sunrise = parseMinutes(timingsMap["Sunrise"])
+        val sunriseForbiddenEnd = sunrise + 15
         val dhuhr = parseMinutes(timingsMap["Dhuhr"])
+        val zoharForbiddenStart = dhuhr - 5
         val asr = 16 * 60 + 33
+        val sunset = parseMinutes(timingsMap["Sunset"])
+        val sunsetForbiddenStart = sunset - 15
         val maghrib = parseMinutes(timingsMap["Maghrib"])
         val isha = parseMinutes(timingsMap["Isha"])
 
@@ -580,11 +614,23 @@ class MainActivity : Activity() {
                 targetEndMinutes = sunrise
                 activeKey = "Fajr"
             }
-            currentMinutes in sunrise until dhuhr -> {
-                currentWaqtName = "চাশত / নিষিদ্ধ সময়"
+            currentMinutes in sunrise until sunriseForbiddenEnd -> {
+                currentWaqtName = "সূর্যোদয়ের নিষিদ্ধ সময় (হারাম)"
+                waqtThumbnail = "⚠️"
+                targetEndMinutes = sunriseForbiddenEnd
+                activeKey = "HaramSunrise"
+            }
+            currentMinutes in sunriseForbiddenEnd until zoharForbiddenStart -> {
+                currentWaqtName = "দুহা (ইশরাক ও চাশত)"
                 waqtThumbnail = "☀️"
+                targetEndMinutes = zoharForbiddenStart
+                activeKey = "Doha"
+            }
+            currentMinutes in zoharForbiddenStart until dhuhr -> {
+                currentWaqtName = "দ্বিপ্রহরের নিষিদ্ধ সময় (হারাম)"
+                waqtThumbnail = "⚠️"
                 targetEndMinutes = dhuhr
-                activeKey = "Haram"
+                activeKey = "HaramZohar"
             }
             currentMinutes in dhuhr until asr -> {
                 currentWaqtName = "যোহর"
@@ -592,11 +638,17 @@ class MainActivity : Activity() {
                 targetEndMinutes = asr
                 activeKey = "Dhuhr"
             }
-            currentMinutes in asr until maghrib -> {
+            currentMinutes in asr until sunsetForbiddenStart -> {
                 currentWaqtName = "আসর"
                 waqtThumbnail = "⛅"
-                targetEndMinutes = maghrib
+                targetEndMinutes = sunsetForbiddenStart
                 activeKey = "Asr"
+            }
+            currentMinutes in sunsetForbiddenStart until sunset -> {
+                currentWaqtName = "সূর্যাস্তের নিষিদ্ধ সময় (হারাম)"
+                waqtThumbnail = "⚠️"
+                targetEndMinutes = sunset
+                activeKey = "HaramSunset"
             }
             currentMinutes in maghrib until isha -> {
                 currentWaqtName = "মাগরিব"
@@ -612,7 +664,12 @@ class MainActivity : Activity() {
             }
         }
 
-        tvWaqtCountdownHeader.text = "$waqtThumbnail $currentWaqtName শেষ হতে বাকি"
+        // সুনির্দিষ্ট হেডার ফরম্যাট
+        if (activeKey == "Doha") {
+            tvWaqtCountdownHeader.text = "$waqtThumbnail দুহা (ইশরাক ও চাশত) সময় শেষ হতে বাকি"
+        } else {
+            tvWaqtCountdownHeader.text = "$waqtThumbnail $currentWaqtName শেষ হতে বাকি"
+        }
 
         val currentTotalSec = (currentMinutes * 60) + currentSeconds
         val targetTotalSec = targetEndMinutes * 60
