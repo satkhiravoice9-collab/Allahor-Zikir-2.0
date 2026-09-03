@@ -113,7 +113,6 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // আকাশী কালারের লোকেশন কার্ড (Sky Blue Theme)
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -195,7 +194,7 @@ class MainActivity : Activity() {
         tvHijriDate = TextView(this).apply {
             text = "আরবি তারিখ লোড হচ্ছে..."
             textSize = 14f
-            setTextColor(theme.textAccent)
+            setTextColor(theme.textMain)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, dp(4))
@@ -231,7 +230,7 @@ class MainActivity : Activity() {
         tvWaqtCountdownHeader = TextView(this).apply {
             text = "দুহা (ইশরাক ও চাশত) সময় শেষ হতে বাকি"
             textSize = 15f
-            setTextColor(theme.textAccent)
+            setTextColor(theme.textMain)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(0, dp(4), 0, dp(2))
@@ -310,7 +309,6 @@ class MainActivity : Activity() {
             }
         }
 
-        // ================= ৪. বক্স ১: পাঁচ ওয়াক্তের সময়সূচি =================
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -347,7 +345,6 @@ class MainActivity : Activity() {
         prayerCard.addView(createUniformRow("Isha", "এশা", tvIshaTime, true, Color.BLACK, Color.parseColor("#334155")))
         content.addView(prayerCard)
 
-        // ================= ৫. বক্স ২: নফল সালাতের সময় =================
         val nafalCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -381,7 +378,6 @@ class MainActivity : Activity() {
         nafalCard.addView(createUniformRow("NafalTahajjud", "🌙 তাহাজ্জুদ", tvNafalTahajjud, false, Color.BLACK, Color.parseColor("#047857")))
         content.addView(nafalCard)
 
-        // ================= ৬. বক্স ৩: তাহাজ্জুদ ও সেহরি-ইফতার =================
         val specialCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -412,7 +408,6 @@ class MainActivity : Activity() {
         specialCard.addView(createUniformRow("Iftar", "ইফতারের সময়", tvIftarTime, false, Color.BLACK, Color.parseColor("#475569")))
         content.addView(specialCard)
 
-        // ================= ৭. বক্স ৪: হারাম ওয়াক্ত =================
         val haramCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -446,7 +441,7 @@ class MainActivity : Activity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার (হোম সর্ববামে, প্রোফাইল সর্বডানে) =================
+        // ================= বটম নেভিগেশন বার (৭টি আইটেম: নোটপ্যাড সিঙ্কের ঠিক আগে) =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -459,15 +454,16 @@ class MainActivity : Activity() {
             Triple("🏠\nহোম", MainActivity::class.java, true),
             Triple("📿\nতাসবিহ", TasbihActivity::class.java, false),
             Triple("📚\nলাইব্রেরী", LibraryActivity::class.java, false),
-            Triple("📖\nআমল", LibraryActivity::class.java, false),
-            Triple("🔄\nরিফ্রেশ", null, false),
+            Triple("📖\nআমল", MasnunAmolActivity::class.java, false),
+            Triple("📝\nনোটপ্যাড", NotepadActivity::class.java, false),
+            Triple("🔄\nসিঙ্ক", null, false),
             Triple("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java, false)
         )
 
         navItems.forEach { (label, targetActivityClass, isHome) ->
             bottomNav.addView(Button(this).apply {
                 text = label
-                textSize = 11f
+                textSize = 10f
                 isAllCaps = false
                 minHeight = 0
                 minWidth = 0
@@ -477,7 +473,7 @@ class MainActivity : Activity() {
                 background = GradientDrawable()
                 setOnClickListener {
                     when {
-                        label.contains("রিফ্রেশ") -> {
+                        label.contains("সিঙ্ক") -> {
                             loadOnlinePrayerTimes()
                             Toast.makeText(this@MainActivity, "তথ্য আপডেট ও সিংক করা হয়েছে!", Toast.LENGTH_SHORT).show()
                         }
@@ -672,7 +668,7 @@ class MainActivity : Activity() {
                 activeKey = "Doha"
             }
             currentMinutes in zoharForbiddenStart until dhuhr -> {
-                currentWaqtName = "দ্বিপ্রহরের নিষিদ্ধ সময় (হারাম)"
+                currentWargtName = "দ্বিপ্রহরের নিষিদ্ধ সময় (হারাম)"
                 waqtThumbnail = "⚠️"
                 targetEndMinutes = dhuhr
                 activeKey = "HaramZohar"
