@@ -82,7 +82,7 @@ class TasbihActivity : ComponentActivity() {
         val kaabaBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
             background = GradientDrawable().apply {
-                setColor(Color.WHITE) // ব্যাকগ্রাউন্ড সাদা করা হলো
+                setColor(Color.WHITE) // ব্যাকগ্রাউন্ড সাদা
                 setStroke(dp(2), Color.parseColor("#FBBF24")) 
                 cornerRadius = dp(14).toFloat()
             }
@@ -162,8 +162,6 @@ class TasbihActivity : ComponentActivity() {
         }
         root.addView(actionRow)
 
-        // এখানে অতিরিক্ত বা জগাখিচুড়ি কোনো নেভিগেশন ফোল্ডার বা মেনু রাখা হয়নি, তাসবিহ পেজ একদম স্বাধীন রাখা হয়েছে[span_8](start_span)[span_8](end_span)
-
         setContentView(root)
         updateDisplay()
     }
@@ -212,7 +210,7 @@ class TasbihActivity : ComponentActivity() {
 
     private fun showTargetPopup() {
         val dialogLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain); setPadding(dp(20), dp(20), dp(20), dp(20)) }
-        dialogLayout.addView(TextView(this).apply { text = "মাশাআল্লাহ!"; textSize = 22f; setTextColor(textAccent); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(10)) })
+        dialogLayout.addView(TextView(this).apply { text = "মাশাআল্লাহ!"; textSize = 22f; setTextColor(textMain); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(10)) })
         dialogLayout.addView(TextView(this).apply { text = "আপনার নির্ধারিত টার্গেট (${bn(customTarget)} বার) পূর্ণ হয়েছে।"; textSize = 16f; setTextColor(textMain); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(20)) })
         
         val dialog = AlertDialog.Builder(this).setView(dialogLayout).setCancelable(false).create()
