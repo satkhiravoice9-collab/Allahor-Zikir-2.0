@@ -13,50 +13,78 @@ class MasnunAmolActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
+    private var bgMain: Int = Color.BLACK
+    private var cardBg: Int = Color.WHITE
+    private var cardStroke: Int = Color.GRAY
+    private var textMain: Int = Color.WHITE
+    private var textSub: Int = Color.GRAY
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val theme = ThemeManager.getTheme(this)
+        bgMain = theme.bgMain
+        cardBg = theme.cardBg
+        cardStroke = theme.cardStroke
+        textMain = theme.textMain
+        textSub = theme.textSub
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(theme.bgMain)
+            setBackgroundColor(bgMain)
         }
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(75))
+            setPadding(dp(16), dp(16), dp(16), dp(75))
         }
 
         content.addView(TextView(this).apply {
-            text = "📖 আমল, মাসনুন ও দোয়া ভাণ্ডার"
-            textSize = 16f
-            setTextColor(theme.textMain)
+            text = "📖 আমল, মাসনুন ও দৈনন্দিন আমল"
+            textSize = 18f
+            setTextColor(textMain)
             setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(10))
+            setPadding(0, 0, 0, dp(15))
         })
 
-        val sampleCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(theme.cardBg)
-                setStroke(dp(1), theme.cardStroke)
-                cornerRadius = dp(12).toFloat()
+        val amolList = listOf(
+            Pair("🌅 সকাল-সন্ধ্যার মাসনুন আমল", "আয়াতুল কুরসি, তিন কুল এবং নির্দিষ্ট দোয়া সমূহ"),
+            Pair("🌙 ঘুমানোর পূর্বের আমল", "সুরা মূলক পাঠ এবং ডান কাতে শোয়া"),
+            Pair("🕌 সালাতের পরের তাসবিহাত", "সুবহানাল্লাহ ৩৩ বার, আলহামদুলিল্লাহ ৩৩ বার, আল্লাহু আকবার ৩৪ বার"),
+            Pair("📿 দরুদ শরীফ পাঠ", "প্রতিদিন নিয়মিত নির্দিষ্ট সংখ্যক দরুদ পাঠ")
+        )
+
+        amolList.forEach { (title, desc) ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                background = GradientDrawable().apply {
+                    setColor(cardBg)
+                    setStroke(dp(1), cardStroke)
+                    cornerRadius = dp(12).toFloat()
+                }
+                setPadding(dp(16), dp(16), dp(16), dp(16))
+                layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
             }
-            setPadding(dp(14), dp(14), dp(14), dp(14))
+            card.addView(TextView(this).apply {
+                text = title
+                textSize = 16f
+                setTextColor(textMain)
+                setTypeface(null, Typeface.BOLD)
+                setPadding(0, 0, 0, dp(4))
+            })
+            card.addView(TextView(this).apply {
+                text = desc
+                textSize = 13f
+                setTextColor(textSub)
+            })
+            content.addView(card)
         }
-        sampleCard.addView(TextView(this).apply {
-            text = "✨ ফোল্ডার ১: মাসনুন আমল (সকাল-সন্ধ্যা)"
-            textSize = 14f
-            setTextColor(theme.textMain)
-            setTypeface(null, Typeface.BOLD)
-        })
-        content.addView(sampleCard)
 
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার =================
+        // বটম নেভিগেশন বার
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -75,7 +103,7 @@ class MasnunAmolActivity : Activity() {
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetClass) ->
+        navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
                 text = label
                 textSize = 10f
@@ -91,8 +119,8 @@ class MasnunAmolActivity : Activity() {
                         label.contains("হোম") -> { startActivity(Intent(this@MasnunAmolActivity, MainActivity::class.java)); finish() }
                         label.contains("তাসবিহ") -> { startActivity(Intent(this@MasnunAmolActivity, TasbihActivity::class.java)); finish() }
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@MasnunAmolActivity, LibraryActivity::class.java)); finish() }
-                        label.contains("আমল") -> { /* বর্তমান পেজ */ }
-                        label.contains("নোটপ্যাড") -> { startActivity(Intent(this@MasnunAmolActivity, NotepadActivity::class.java)); finish() }
+                        label.contains("আমল") -> {}
+                        label.contains("নোটপ্যাড") -> { startActivity(Intent(this@MasnunAmolActivity, MasnunAmolActivity::class.java)); finish() } // fixed target
                         label.contains("সিঙ্ক") -> { Toast.makeText(this@MasnunAmolActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@MasnunAmolActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
