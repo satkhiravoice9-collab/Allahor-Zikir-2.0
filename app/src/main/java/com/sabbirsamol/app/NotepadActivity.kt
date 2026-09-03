@@ -18,6 +18,8 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -39,6 +41,10 @@ class NotepadActivity : ComponentActivity() {
 
     private val noteBgColors = arrayOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2", "#114D3C", "#1F2937")
     private val textColors = arrayOf(Color.RED, Color.parseColor("#10B981"), Color.parseColor("#3B82F6"), Color.parseColor("#F59E0B"), Color.parseColor("#8B5CF6"), Color.BLACK, Color.WHITE)
+
+    // ফায়ারবেস ইনস্ট্যান্স
+    private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     private fun getCardDrawable(bgColor: Int = cardBg) = GradientDrawable().apply {
         setColor(bgColor); setStroke(dp(1), cardStroke); cornerRadius = dp(10).toFloat()
@@ -71,6 +77,7 @@ class NotepadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showNotesList()
+        fetchNotesFromFirebase()
     }
     
     override fun onBackPressed() {
@@ -85,7 +92,29 @@ class NotepadActivity : ComponentActivity() {
     }
 
     private fun saveNotes(array: JSONArray) {
+        // ১. লোকাল সেভ
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
+
+        // ২. ফায়ারবেস ক্লাউডে সিঙ্ক ও সেভ
+        val userId = auth.currentUser?.uid ?: "anonymous_user"
+        val notesMap = mapOf(
+            "notes_data" to array.toString(),
+            "updated_at" to System.currentTimeMillis()
+        )
+        db.collection("users_notes").document(userId).set(notesMap)
+    }
+
+    private fun fetchNotesFromFirebase() {
+        val userId = auth.currentUser?.uid ?: "anonymous_user"
+        db.collection("users_notes").document(userId).get().addOnSuccessListener { document ->
+            if (document != null && document.exists()) {
+                val cloudNotes = document.getString("notes_data")
+                if (!cloudNotes.isNullOrEmpty()) {
+                    getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
+                    showNotesList()
+                }
+            }
+        }
     }
 
     private fun showNotesList() {
@@ -139,7 +168,6 @@ class NotepadActivity : ComponentActivity() {
         bottomBar.addView(Button(this).apply { text = "＋ নতুন নোট তৈরি করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow); layoutParams = LinearLayout.LayoutParams(-1, dp(45)); setOnClickListener { showAddEditNoteDialog(-1, null) } })
         root.addView(bottomBar)
 
-        // ================= বটম নেভিগেশন বার (৭টি আইটেম ফিক্সড) =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -163,8 +191,7 @@ class NotepadActivity : ComponentActivity() {
                 text = label
                 textSize = 10f
                 isAllCaps = false
-                minHeight = 0
-                minWidth = 0
+                minHeight = 0; minWidth = 0
                 setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER
                 setTextColor(if (label.contains("নোটপ্যাড")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
@@ -176,7 +203,7 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@NotepadActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> {}
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@NotepadActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { fetchNotesFromFirebase(); Toast.makeText(this@NotepadActivity, "ফায়ারবেস থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -204,30 +231,24 @@ class NotepadActivity : ComponentActivity() {
             if (existingObj != null) setText(fromHtmlSafe(existingObj.optString("content", "")))
         }
 
-        val formatToolbar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
         val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        
-        formatRow.addView(Button(this).apply { text = "B"; setTypeface(null, Typeface.BOLD); setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(4) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) else Toast.makeText(this@NotepadActivity, "প্রথমে লেখা সিলেক্ট করুন", Toast.LENGTH_SHORT).show() } })
-        formatRow.addView(Button(this).apply { text = "U"; paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG; setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(8) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) else Toast.makeText(this@NotepadActivity, "প্রথমে লেখা সিলেক্ট করুন", Toast.LENGTH_SHORT).show() } })
+        formatRow.addView(Button(this).apply { text = "B"; setTypeface(null, Typeface.BOLD); setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(4) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
+        formatRow.addView(Button(this).apply { text = "U"; paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG; setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(8) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
         textColors.forEach { color -> formatRow.addView(View(this).apply { background = getCircleColorDrawable(color); layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply { rightMargin = dp(6); gravity = Gravity.CENTER_VERTICAL }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } }) }
 
-        val bgToolbar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(10), 0, dp(10)) }
-        bgToolbar.addView(TextView(this).apply { text = "নোটের ব্যাকগ্রাউন্ড থিম (সাদা, লাল, সবুজ ইত্যাদি):"; setTextColor(Color.LTGRAY); textSize = 11f; setPadding(0, 0, 0, dp(4)) })
-        
         val bgColorsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        noteBgColors.forEach { hexColor -> bgColorsRow.addView(View(this).apply { background = getCircleColorDrawable(Color.parseColor(hexColor)); layoutParams = LinearLayout.LayoutParams(dp(35), dp(35)).apply { rightMargin = dp(8) }; setOnClickListener { currentBgColor = hexColor; contentInput.setBackgroundColor(Color.parseColor(hexColor)); val isDark = hexColor == "#114D3C" || hexColor == "#1F2937"; contentInput.setTextColor(if (isDark) Color.WHITE else Color.BLACK); contentInput.setHintTextColor(if (isDark) Color.LTGRAY else Color.GRAY) } }) }
-        bgToolbar.addView(HorizontalScrollView(this).apply { addView(bgColorsRow); isHorizontalScrollBarEnabled = false })
+        noteBgColors.forEach { hexColor -> bgColorsRow.addView(View(this).apply { background = getCircleColorDrawable(Color.parseColor(hexColor)); layoutParams = LinearLayout.LayoutParams(dp(35), dp(35)).apply { rightMargin = dp(8) }; setOnClickListener { currentBgColor = hexColor; contentInput.setBackgroundColor(Color.parseColor(hexColor)); val isDark = hexColor == "#114D3C" || hexColor == "#1F2937"; contentInput.setTextColor(if (isDark) Color.WHITE else Color.BLACK) } }) }
 
         dialogView.addView(TextView(this).apply { text = if (index == -1) "নতুন নোট তৈরি" else "নোট সম্পাদনা"; setTextColor(textYellow); textSize = 18f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
         dialogView.addView(titleInput, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         dialogView.addView(contentInput, LinearLayout.LayoutParams(-1, dp(200)).apply { bottomMargin = dp(5) })
-        dialogView.addView(LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(TextView(this@NotepadActivity).apply { text = "টেক্সট ফরম্যাটিং ও কালার টুলস (লেখা সিলেক্ট করে চাপুন):"; setTextColor(Color.LTGRAY); textSize = 11f; setPadding(0, dp(8), 0, dp(4)) }); addView(formatRow) })
-        dialogView.addView(bgToolbar)
+        dialogView.addView(formatRow)
+        dialogView.addView(HorizontalScrollView(this).apply { addView(bgColorsRow); setPadding(0, dp(8), 0, dp(8)) })
 
         val dialog = AlertDialog.Builder(this).setView(dialogScrollContainer.apply { addView(dialogView) }).create()
 
         val btnLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f; setPadding(0, dp(10), 0, 0) }
-        btnLayout.addView(Button(this).apply { text = "সংরক্ষণ"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow); layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(5) }; setOnClickListener { val t = titleInput.text.toString().trim(); val htmlContent = toHtmlSafe(contentInput.text).trim(); if (t.isNotEmpty() && contentInput.text.toString().trim().isNotEmpty()) { val notes = getNotes(); val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()); val obj = JSONObject().apply { put("title", t); put("content", htmlContent); put("date", sdf.format(Date())); put("bgColor", currentBgColor) }; if (index == -1) notes.put(obj) else notes.put(index, obj); saveNotes(notes); dialog.dismiss(); if (isInsideNote) showViewOrEditNoteDialog(index, obj) else showNotesList() } else Toast.makeText(this@NotepadActivity, "শিরোনাম ও বিবরণ লিখুন", Toast.LENGTH_SHORT).show() } })
+        btnLayout.addView(Button(this).apply { text = "সংরক্ষণ"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow); layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(5) }; setOnClickListener { val t = titleInput.text.toString().trim(); val htmlContent = toHtmlSafe(contentInput.text).trim(); if (t.isNotEmpty() && contentInput.text.toString().trim().isNotEmpty()) { val notes = getNotes(); val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()); val obj = JSONObject().apply { put("title", t); put("content", htmlContent); put("date", sdf.format(Date())); put("bgColor", currentBgColor) }; if (index == -1) notes.put(obj) else notes.put(index, obj); saveNotes(notes); dialog.dismiss(); showNotesList() } else Toast.makeText(this@NotepadActivity, "শিরোনাম ও বিবরণ লিখুন", Toast.LENGTH_SHORT).show() } })
         btnLayout.addView(Button(this).apply { text = "বাতিল"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#E5E7EB")); layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { leftMargin = dp(5) }; setOnClickListener { dialog.dismiss() } })
         dialogView.addView(btnLayout)
         dialog.show()
@@ -254,7 +275,6 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(contentBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার (৭টি আইটেম ফিক্সড) =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -278,8 +298,7 @@ class NotepadActivity : ComponentActivity() {
                 text = label
                 textSize = 10f
                 isAllCaps = false
-                minHeight = 0
-                minWidth = 0
+                minHeight = 0; minWidth = 0
                 setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER
                 setTextColor(if (label.contains("নোটপ্যাড")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
@@ -291,7 +310,7 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@NotepadActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { showNotesList() }
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@NotepadActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { fetchNotesFromFirebase(); Toast.makeText(this@NotepadActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
