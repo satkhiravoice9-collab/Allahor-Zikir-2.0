@@ -1,8 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // ফায়ারবেস গুগল সার্ভিসেস প্লাগইন
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -38,22 +36,22 @@ android {
 }
 
 dependencies {
-
     implementation("androidx.activity:activity-ktx:1.9.3")
     implementation("androidx.core:core-ktx:1.13.1")
 
-    // PDF Viewer (অফলাইন পড়া ও রিজিউম করার জন্য)
+    // PDF Viewer
     implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
     
-    // Coroutines (ফাইল ডাউনলোডের জন্য)
+    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
 
-    // --- Firebase BoM (Bill of Materials) ---
+    // --- Firebase BoM ---
     implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
 
-    // --- Firebase Firestore (নোটপ্যাড ও তাসবিহ কাউন্ট সিঙ্ক করার জন্য) ---
+    // --- Firebase Firestore & Auth ---
     implementation("com.google.firebase:firebase-firestore-ktx")
-
-    // --- Firebase Authentication (জিমেইল দিয়ে লগইন করার জন্য) ---
     implementation("com.google.firebase:firebase-auth-ktx")
 }
+
+// ফায়ারবেসের গুগল সার্ভিসেস প্লাগইন লোকালভাবে এপ্লাই করার নিরাপদ নিয়ম
+apply(plugin = "com.google.gms.google-services")
