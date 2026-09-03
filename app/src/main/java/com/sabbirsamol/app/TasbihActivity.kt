@@ -13,6 +13,8 @@ import android.os.Vibrator
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONArray
 
 class TasbihActivity : ComponentActivity() {
@@ -32,6 +34,10 @@ class TasbihActivity : ComponentActivity() {
     private var hasShownPopup = false
 
     private lateinit var countTextView: TextView
+
+    // ফায়ারবেস ইনস্ট্যান্স
+    private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     private fun getBtnDrawable(color: Int, radius: Int = 6) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
@@ -56,6 +62,21 @@ class TasbihActivity : ComponentActivity() {
         }
 
         buildUI()
+        fetchTasbihFromFirebase()
+    }
+
+    private fun fetchTasbihFromFirebase() {
+        val userId = auth.currentUser?.uid ?: "anonymous_user"
+        db.collection("users_tasbih").document(userId).get().addOnSuccessListener { document ->
+            if (document != null && document.exists()) {
+                if (!isCustomMode) {
+                    val cloudCount = document.getLong("main_count")?.toInt() ?: currentCount
+                    currentCount = cloudCount
+                    getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+                    updateDisplay()
+                }
+            }
+        }
     }
 
     private fun buildUI() {
@@ -163,8 +184,7 @@ class TasbihActivity : ComponentActivity() {
                 text = label
                 textSize = 10f
                 isAllCaps = false
-                minHeight = 0
-                minWidth = 0
+                minHeight = 0; minWidth = 0
                 setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER
                 setTextColor(if (label.contains("তাসবিহ")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
@@ -176,7 +196,7 @@ class TasbihActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java)); finish() }
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@TasbihActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { fetchTasbihFromFirebase(); Toast.makeText(this@TasbihActivity, "তাসবিহ ডেটা সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@TasbihActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -231,6 +251,7 @@ class TasbihActivity : ComponentActivity() {
     private fun updateDisplay() { countTextView.text = bn(currentCount) }
 
     private fun saveProgress() {
+        val userId = auth.currentUser?.uid ?: "anonymous_user"
         if (isCustomMode) {
             val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
             val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
@@ -239,8 +260,16 @@ class TasbihActivity : ComponentActivity() {
                 if (obj.getString("id") == customZikirId) { obj.put("read", currentCount); break }
             }
             prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
+
+            // ফায়ারবেসে কাস্টম জিকির সেভ
+            val zikirMap = mapOf("zikir_list_data" to jsonArray.toString())
+            db.collection("users_zikir_manager").document(userId).set(zikirMap)
         } else {
             getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+
+            // ফায়ারবেসে সাধারণ কাউন্ট সেভ
+            val tasbihMap = mapOf("main_count" to currentCount)
+            db.collection("users_tasbih").document(userId).set(tasbihMap)
         }
     }
 
