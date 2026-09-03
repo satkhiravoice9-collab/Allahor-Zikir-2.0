@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -52,6 +53,3 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
 }
-
-// ফায়ারবেসের গুগল সার্ভিসেস প্লাগইন লোকালভাবে এপ্লাই করার নিরাপদ নিয়ম
-apply(plugin = "com.google.gms.google-services")
