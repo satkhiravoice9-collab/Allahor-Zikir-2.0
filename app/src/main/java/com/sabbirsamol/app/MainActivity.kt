@@ -441,7 +441,7 @@ class MainActivity : Activity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার (৭টি আইটেম: নোটপ্যাড সিঙ্কের ঠিক আগে) =================
+        // ================= বটম নেভিগেশন বার (৭টি আইটেম: হোম থেকে প্রোফাইল, সিঙ্কের আগে নোটপ্যাড) =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -451,16 +451,16 @@ class MainActivity : Activity() {
         }
 
         val navItems = listOf(
-            Triple("🏠\nহোম", MainActivity::class.java, true),
-            Triple("📿\nতাসবিহ", TasbihActivity::class.java, false),
-            Triple("📚\nলাইব্রেরী", LibraryActivity::class.java, false),
-            Triple("📖\nআমল", MasnunAmolActivity::class.java, false),
-            Triple("📝\nনোটপ্যাড", NotepadActivity::class.java, false),
-            Triple("🔄\nসিঙ্ক", null, false),
-            Triple("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java, false)
+            Pair("🏠\nহোম", MainActivity::class.java),
+            Pair("📿\nতাসবিহ", TasbihActivity::class.java),
+            Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
+            Pair("📖\nআমল", MasnunAmolActivity::class.java),
+            Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
+            Pair("🔄\nসিঙ্ক", null),
+            Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetActivityClass, isHome) ->
+        navItems.forEach { (label, targetClass) ->
             bottomNav.addView(Button(this).apply {
                 text = label
                 textSize = 10f
@@ -473,13 +473,16 @@ class MainActivity : Activity() {
                 background = GradientDrawable()
                 setOnClickListener {
                     when {
+                        label.contains("হোম") -> { /* বর্তমান পেজ */ }
+                        label.contains("তাসবিহ") -> { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
+                        label.contains("লাইব্রেরী") -> { startActivity(Intent(this@MainActivity, LibraryActivity::class.java)) }
+                        label.contains("আমল") -> { startActivity(Intent(this@MainActivity, MasnunAmolActivity::class.java)) }
+                        label.contains("নোটপ্যাড") -> { startActivity(Intent(this@MainActivity, NotepadActivity::class.java)) }
                         label.contains("সিঙ্ক") -> {
                             loadOnlinePrayerTimes()
                             Toast.makeText(this@MainActivity, "তথ্য আপডেট ও সিংক করা হয়েছে!", Toast.LENGTH_SHORT).show()
                         }
-                        targetActivityClass != null && !isHome -> {
-                            startActivity(Intent(this@MainActivity, targetActivityClass))
-                        }
+                        label.contains("প্রোফাইল") -> { startActivity(Intent(this@MainActivity, ProfileSettingsActivity::class.java)) }
                     }
                 }
             }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
@@ -604,7 +607,6 @@ class MainActivity : Activity() {
 
     private fun loadOnlinePrayerTimes() {
         CoroutineScope(Dispatchers.Main).launch {
-            val context = this@MainActivity
             val onlineTimes = withContext(Dispatchers.IO) {
                 OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
             }
@@ -668,7 +670,7 @@ class MainActivity : Activity() {
                 activeKey = "Doha"
             }
             currentMinutes in zoharForbiddenStart until dhuhr -> {
-                currentWargtName = "দ্বিপ্রহরের নিষিদ্ধ সময় (হারাম)"
+                currentWaqtName = "দ্বিপ্রহরের নিষিদ্ধ সময় (হারাম)"
                 waqtThumbnail = "⚠️"
                 targetEndMinutes = dhuhr
                 activeKey = "HaramZohar"
