@@ -22,7 +22,6 @@ class TasbihActivity : ComponentActivity() {
 
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private val bgMain get() = themeColors.bgMain
-    private val textAccent get() = themeColors.textAccent
     private val textMain get() = themeColors.textMain
     private val btnBg get() = themeColors.btnBg
 
@@ -77,32 +76,47 @@ class TasbihActivity : ComponentActivity() {
         })
         root.addView(top)
 
-        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন =================
+        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন (সাদা ব্যাকগ্রাউন্ড বক্স) =================
         val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
 
         val kaabaBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#0F172A")) 
+                setColor(Color.WHITE) // ব্যাকগ্রাউন্ড সাদা করা হলো
                 setStroke(dp(2), Color.parseColor("#FBBF24")) 
                 cornerRadius = dp(14).toFloat()
             }
-            layoutParams = LinearLayout.LayoutParams(dp(190), dp(175)).apply { bottomMargin = dp(15) }
+            layoutParams = LinearLayout.LayoutParams(dp(210), dp(190)).apply { bottomMargin = dp(15) }
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
+        // ওপরে "আল্লাহু আকবার" লেখা
+        kaabaBox.addView(TextView(this).apply {
+            text = "الله أكبر"
+            textSize = 16f
+            setTextColor(Color.parseColor("#0F172A"))
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(2))
+        })
+
+        // কাবা শরীফের ছবি বা আইকন
         kaabaBox.addView(ImageView(this).apply {
             val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
             if (imgResId != 0) {
                 setImageResource(imgResId)
             }
             scaleType = ImageView.ScaleType.FIT_CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(130), dp(115)).apply { bottomMargin = dp(4) }
+            layoutParams = LinearLayout.LayoutParams(dp(110), dp(95)).apply { bottomMargin = dp(4) }
         })
 
+        // নিচে মূল কালিমা লেখা
         kaabaBox.addView(TextView(this).apply {
-            text = "لَا إِلٰهَ إِلَّا اللّٰهُ مُحَمَّدٌ رَسُولُ اللّٰهِ"; textSize = 13f; setTextColor(Color.parseColor("#FBBF24"))
-            setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER
+            text = "لا إله إلا الله محمد رسول الله"
+            textSize = 13f
+            setTextColor(Color.parseColor("#0F172A"))
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
         })
         centerLayout.addView(kaabaBox)
 
@@ -148,46 +162,7 @@ class TasbihActivity : ComponentActivity() {
         }
         root.addView(actionRow)
 
-        // ================= ৪. বটম মেনু (হোম সর্ববামে, প্রোফাইল সর্বডানে - কোনো অতিরিক্ত ফোল্ডার নেই) =================
-        val menu = LinearLayout(this).apply { 
-            orientation = LinearLayout.HORIZONTAL; 
-            gravity = Gravity.CENTER; 
-            setBackgroundColor(Color.parseColor("#0F172A")); 
-            setPadding(dp(2), dp(4), dp(2), dp(4)); 
-            elevation = dp(8).toFloat() 
-        }
-
-        val navItems = listOf(
-            "🏠\nহোম", 
-            "📿\nতাসবিহ", 
-            "📚\nলাইব্রেরী", 
-            "📖\nআমল", 
-            "📝\nনোট", 
-            "🔄\nসিঙ্ক", 
-            "👤\nপ্রোফাইল"
-        )
-
-        navItems.forEach { label ->
-            menu.addView(Button(this).apply {
-                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER; setTextColor(Color.parseColor("#9CA3AF")); background = Color.TRANSPARENT.let { GradientDrawable() }
-                
-                if(label.contains("তাসবিহ")) setTextColor(Color.parseColor("#10B981"))
-                
-                setOnClickListener {
-                    when {
-                        label.contains("হোম") -> { startActivity(Intent(this@TasbihActivity, MainActivity::class.java)); finishAffinity() }
-                        label.contains("তাসবিহ") -> { /* বর্তমান পেজ */ }
-                        label.contains("লাইব্রেরী") -> { startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java)); finish() }
-                        label.contains("আমল") -> { startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java)); finish() }
-                        label.contains("নোট") -> { startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java)); finish() }
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@TasbihActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
-                        label.contains("প্রোফাইল") -> { startActivity(Intent(this@TasbihActivity, ProfileSettingsActivity::class.java)); finish() }
-                    }
-                }
-            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
-        }
-        root.addView(menu, LinearLayout.LayoutParams(-1, dp(60)))
+        // এখানে অতিরিক্ত বা জগাখিচুড়ি কোনো নেভিগেশন ফোল্ডার বা মেনু রাখা হয়নি, তাসবিহ পেজ একদম স্বাধীন রাখা হয়েছে[span_8](start_span)[span_8](end_span)
 
         setContentView(root)
         updateDisplay()
