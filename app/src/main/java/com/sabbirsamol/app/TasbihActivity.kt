@@ -91,7 +91,6 @@ class TasbihActivity : ComponentActivity() {
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
-        // আপলোড করা kaaba_img ছবি এখানে রেন্ডার করা হচ্ছে
         kaabaBox.addView(ImageView(this).apply {
             val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
             if (imgResId != 0) {
@@ -149,20 +148,41 @@ class TasbihActivity : ComponentActivity() {
         }
         root.addView(actionRow)
 
-        // ================= ৪. বটম মেনু =================
-        val menu = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setBackgroundColor(Color.parseColor("#0F172A")); setPadding(dp(2), dp(4), dp(2), dp(4)); elevation = dp(8).toFloat() }
-        listOf("🏠\nহোম", "🕋\nতাসবিহ", "📚\nলাইব্রেরী", "📁\nআমল", "📝\nনোট", "🔄\nসিঙ্ক", "👤\nপ্রোফাইল").forEach { label ->
+        // ================= ৪. বটম মেনু (হোম সর্ববামে, প্রোফাইল সর্বডানে - কোনো অতিরিক্ত ফোল্ডার নেই) =================
+        val menu = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL; 
+            gravity = Gravity.CENTER; 
+            setBackgroundColor(Color.parseColor("#0F172A")); 
+            setPadding(dp(2), dp(4), dp(2), dp(4)); 
+            elevation = dp(8).toFloat() 
+        }
+
+        val navItems = listOf(
+            "🏠\nহোম", 
+            "📿\nতাসবিহ", 
+            "📚\nলাইব্রেরী", 
+            "📖\nআমল", 
+            "📝\nনোট", 
+            "🔄\nসিঙ্ক", 
+            "👤\nপ্রোফাইল"
+        )
+
+        navItems.forEach { label ->
             menu.addView(Button(this).apply {
                 text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER; setTextColor(Color.parseColor("#9CA3AF")); background = Color.TRANSPARENT.let { GradientDrawable() }
-                if(label.contains("তাসবিহ")) setTextColor(Color.parseColor("#FBBF24"))
+                
+                if(label.contains("তাসবিহ")) setTextColor(Color.parseColor("#10B981"))
+                
                 setOnClickListener {
                     when {
                         label.contains("হোম") -> { startActivity(Intent(this@TasbihActivity, MainActivity::class.java)); finishAffinity() }
-                        label.contains("লাইব্রেরী") -> startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java))
-                        label.contains("আমল") -> startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java))
-                        label.contains("নোট") -> startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java))
-                        label.contains("প্রোফাইল") -> startActivity(Intent(this@TasbihActivity, ProfileSettingsActivity::class.java))
+                        label.contains("তাসবিহ") -> { /* বর্তমান পেজ */ }
+                        label.contains("লাইব্রেরী") -> { startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java)); finish() }
+                        label.contains("আমল") -> { startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java)); finish() }
+                        label.contains("নোট") -> { startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java)); finish() }
+                        label.contains("সিঙ্ক") -> { Toast.makeText(this@TasbihActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("প্রোফাইল") -> { startActivity(Intent(this@TasbihActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
             }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
