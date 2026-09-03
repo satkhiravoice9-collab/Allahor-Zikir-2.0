@@ -20,10 +20,9 @@ class TasbihActivity : ComponentActivity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    private val themeColors by lazy { ThemeManager.getTheme(this) }
-    private val bgMain get() = themeColors.bgMain
-    private val textMain get() = themeColors.textMain
-    private val btnBg get() = themeColors.btnBg
+    private var bgMain: Int = Color.BLACK
+    private var textMain: Int = Color.WHITE
+    private var btnBg: Int = Color.GRAY
 
     private var currentCount = 0
     private var isCustomMode = false
@@ -41,6 +40,11 @@ class TasbihActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        val themeColors = ThemeManager.getTheme(this)
+        bgMain = themeColors.bgMain
+        textMain = themeColors.textMain
+        btnBg = themeColors.btnBg
+
         customZikirId = intent.getStringExtra("ZIKIR_ID") ?: ""
         if (customZikirId.isNotEmpty()) {
             isCustomMode = true
@@ -60,7 +64,6 @@ class TasbihActivity : ComponentActivity() {
             setOnClickListener { incrementCount() }
         }
 
-        // ================= ১. টপ বার =================
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)) }
         top.addView(TextView(this).apply { 
             text = if (isCustomMode) "🕋 $customZikirName" else "🕋 সাধারণ তাসবিহ কাউন্টার"
@@ -79,7 +82,6 @@ class TasbihActivity : ComponentActivity() {
         })
         root.addView(top)
 
-        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন =================
         val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
 
         val kaabaBox = LinearLayout(this).apply {
@@ -91,9 +93,7 @@ class TasbihActivity : ComponentActivity() {
 
         kaabaBox.addView(ImageView(this).apply {
             val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
-            if (imgResId != 0) {
-                setImageResource(imgResId)
-            }
+            if (imgResId != 0) setImageResource(imgResId)
             scaleType = ImageView.ScaleType.FIT_CENTER
             layoutParams = LinearLayout.LayoutParams(-1, -1)
         })
@@ -119,7 +119,6 @@ class TasbihActivity : ComponentActivity() {
 
         root.addView(centerLayout, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= ৩. অ্যাকশন বাটনসমূহ =================
         val actionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f; setPadding(dp(16), dp(8), dp(16), dp(8)) }
         if (isCustomMode) {
             actionRow.addView(Button(this).apply {
@@ -141,7 +140,6 @@ class TasbihActivity : ComponentActivity() {
         }
         root.addView(actionRow)
 
-        // ================= ৪. বটম মেনু (৭টি ফিক্সড আইটেম) =================
         val menu = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -160,7 +158,7 @@ class TasbihActivity : ComponentActivity() {
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetClass) ->
+        navItems.forEach { (label, _) ->
             menu.addView(Button(this).apply {
                 text = label
                 textSize = 10f
@@ -174,7 +172,7 @@ class TasbihActivity : ComponentActivity() {
                 setOnClickListener {
                     when {
                         label.contains("হোম") -> { startActivity(Intent(this@TasbihActivity, MainActivity::class.java)); finish() }
-                        label.contains("তাসবিহ") -> { /* বর্তমান পেজ */ }
+                        label.contains("তাসবিহ") -> {}
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java)); finish() }
@@ -194,7 +192,6 @@ class TasbihActivity : ComponentActivity() {
         val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
         if (isCustomMode) {
-            // টার্গেট পূর্ণ হয়ে গেলে আর গোনা যাবে না, পপআপ দেখাবে
             if (currentCount >= customTarget) {
                 if (!hasShownPopup) {
                     vibratePhone(v, 500)
@@ -203,7 +200,6 @@ class TasbihActivity : ComponentActivity() {
                 }
                 return
             }
-            
             currentCount++
             updateDisplay()
             saveProgress()
@@ -214,7 +210,6 @@ class TasbihActivity : ComponentActivity() {
                 hasShownPopup = true
             }
         } else {
-            // সাধারণ মোড: প্রতি ১০০০ বা ১০০ বারে ভাইব্রেশন (প্রতি ক্লিকে নয়)
             currentCount++
             updateDisplay()
             saveProgress()
