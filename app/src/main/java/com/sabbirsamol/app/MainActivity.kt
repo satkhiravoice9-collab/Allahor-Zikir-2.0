@@ -441,7 +441,6 @@ class MainActivity : Activity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার (৭টি আইটেম: হোম থেকে প্রোফাইল, সিঙ্কের আগে নোটপ্যাড) =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -473,7 +472,7 @@ class MainActivity : Activity() {
                 background = GradientDrawable()
                 setOnClickListener {
                     when {
-                        label.contains("হোম") -> { /* বর্তমান পেজ */ }
+                        label.contains("হোম") -> { }
                         label.contains("তাসবিহ") -> { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@MainActivity, LibraryActivity::class.java)) }
                         label.contains("আমল") -> { startActivity(Intent(this@MainActivity, MasnunAmolActivity::class.java)) }
