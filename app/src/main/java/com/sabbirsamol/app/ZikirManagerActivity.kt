@@ -12,6 +12,7 @@ import android.view.Gravity
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 class ZikirManagerActivity : Activity() {
 
@@ -224,7 +225,7 @@ class ZikirManagerActivity : Activity() {
         }
 
         dialogLayout.addView(TextView(this).apply {
-            text = if (existingObj == null) "নতুন জিকির যোগ করুন" : "জিকির এডিট করুন"
+            text = if (existingObj == null) "নতুন জিকির যোগ করুন" else "জিকির এডিট করুন"
             textSize = 18f
             setTextColor(textMain)
             setTypeface(null, Typeface.BOLD)
