@@ -664,7 +664,6 @@ class MainActivity : Activity() {
             }
         }
 
-        // সুনির্দিষ্ট হেডার ফরম্যাট
         if (activeKey == "Doha") {
             tvWaqtCountdownHeader.text = "$waqtThumbnail দুহা (ইশরাক ও চাশত) সময় শেষ হতে বাকি"
         } else {
