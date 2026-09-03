@@ -76,21 +76,16 @@ class TasbihActivity : ComponentActivity() {
         })
         root.addView(top)
 
-        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন (শুধু ছবি, অতিরিক্ত টেক্সট বাদ) =================
+        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন (আপলোড করা ছবির নিজস্ব ব্যাকগ্রাউন্ডসহ) =================
         val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
 
         val kaabaBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE) 
-                setStroke(dp(2), Color.parseColor("#FBBF24")) 
-                cornerRadius = dp(14).toFloat()
-            }
-            layoutParams = LinearLayout.LayoutParams(dp(160), dp(160)).apply { bottomMargin = dp(15) }
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = null // ছবির নিজস্ব ব্যাকগ্রাউন্ড ও বর্ডার বজায় রাখার জন্য
+            layoutParams = LinearLayout.LayoutParams(dp(220), dp(220)).apply { bottomMargin = dp(15) }
+            setPadding(0, 0, 0, 0)
         }
 
-        // শুধু কাবা শরীফের ছবি বা আইকন (অতিরিক্ত টেক্সট রিমুভ করা হয়েছে)
         kaabaBox.addView(ImageView(this).apply {
             val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
             if (imgResId != 0) {
@@ -143,7 +138,7 @@ class TasbihActivity : ComponentActivity() {
         }
         root.addView(actionRow)
 
-        // ================= ৪. বটম মেনু (৭টি আইটেম ফিক্সড) =================
+        // ================= ৪. বটম মেনু (৭টি ফিক্সড আইটেম) =================
         val menu = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
