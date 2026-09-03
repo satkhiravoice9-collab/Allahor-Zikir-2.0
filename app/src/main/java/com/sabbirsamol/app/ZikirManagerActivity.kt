@@ -19,18 +19,24 @@ class ZikirManagerActivity : Activity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    private val themeColors by lazy { ThemeManager.getTheme(this) }
-    private val bgMain get() = themeColors.bgMain
-    private val cardBg get() = themeColors.cardBg
-    private val cardStroke get() = themeColors.cardStroke
-    private val textMain get() = themeColors.textMain
-    private val textSub get() = themeColors.textSub
-    private val btnBg get() = themeColors.btnBg
+    private var bgMain: Int = Color.BLACK
+    private var cardBg: Int = Color.WHITE
+    private var cardStroke: Int = Color.GRAY
+    private var textMain: Int = Color.WHITE
+    private var textSub: Int = Color.GRAY
 
     private lateinit var listContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        val themeColors = ThemeManager.getTheme(this)
+        bgMain = themeColors.bgMain
+        cardBg = themeColors.cardBg
+        cardStroke = themeColors.cardStroke
+        textMain = themeColors.textMain
+        textSub = themeColors.textSub
+
         buildUI()
     }
 
@@ -40,7 +46,6 @@ class ZikirManagerActivity : Activity() {
             setBackgroundColor(bgMain)
         }
 
-        // টপ বার
         val top = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
@@ -63,7 +68,6 @@ class ZikirManagerActivity : Activity() {
         })
         root.addView(top)
 
-        // স্ক্রলভিউ কন্টেন্ট
         val scroll = ScrollView(this).apply { isFillViewport = true }
         listContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -72,7 +76,6 @@ class ZikirManagerActivity : Activity() {
         scroll.addView(listContainer)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // বটম নেভিগেশন বার (৭টি আইটেম ফিক্সড)
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -91,7 +94,7 @@ class ZikirManagerActivity : Activity() {
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetClass) ->
+        navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
                 text = label
                 textSize = 10f
@@ -170,7 +173,6 @@ class ZikirManagerActivity : Activity() {
                 setPadding(0, 0, 0, dp(8))
             })
 
-            // বাটন রো
             val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 3f }
 
             btnRow.addView(Button(this).apply {
