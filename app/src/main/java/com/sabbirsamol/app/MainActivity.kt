@@ -1,232 +1,749 @@
 package com.sabbirsamol.app
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
 import android.widget.*
-import androidx.activity.ComponentActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : ComponentActivity() {
+class MainActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private val themeColors by lazy { ThemeManager.getTheme(this) }
+    private fun bn(s: String): String = s.map { if (it in '0'..'9') "০১২৩৪৫৬৭৮৯"[it - '0'] else it }.joinToString("")
 
-    private val bgMain get() = themeColors.bgMain
-    private val cardBg get() = themeColors.cardBg
-    private val cardStroke get() = themeColors.cardStroke
-    private val textYellow get() = themeColors.textAccent
-    private val btnYellow get() = themeColors.btnBg
-    private val textMain get() = themeColors.textMain
-    private val textSub get() = themeColors.textSub
+    private lateinit var tvWaqtCountdownHeader: TextView
+    private lateinit var tvRemainingCountdown: TextView
+    private lateinit var tvSunriseTime: TextView
+    private lateinit var tvSunsetTime: TextView
+    
+    private lateinit var tvHijriDate: TextView
+    private lateinit var tvEnglishDate: TextView
+    private lateinit var tvBengaliDate: TextView
 
-    private fun getCardDrawable() = GradientDrawable().apply {
-        setColor(cardBg); setStroke(dp(1), cardStroke); cornerRadius = dp(12).toFloat()
-    }
-    private fun getBtnDrawable(color: Int) = GradientDrawable().apply {
-        setColor(color); cornerRadius = dp(8).toFloat()
+    private lateinit var tvFajrTime: TextView
+    private lateinit var tvZoharTime: TextView
+    private lateinit var tvAsrTime: TextView
+    private lateinit var tvMaghribTime: TextView
+    private lateinit var tvIshaTime: TextView
+
+    private lateinit var tvTahajjudTime: TextView
+    private lateinit var tvSehriTime: TextView
+    private lateinit var tvIftarTime: TextView
+
+    private lateinit var tvHaramSunrise: TextView
+    private lateinit var tvHaramZohar: TextView
+    private lateinit var tvHaramSunset: TextView
+
+    private lateinit var tvDohaTime: TextView
+    private lateinit var tvJawalTime: TextView
+    private lateinit var tvAwabinTime: TextView
+    private lateinit var tvNafalTahajjud: TextView
+
+    private lateinit var spinnerLocation: Spinner
+    private var selectedDistrict = "সাতক্ষীরা"
+
+    private val prayerRows = mutableMapOf<String, LinearLayout>()
+    private val prayerNameViews = mutableMapOf<String, TextView>()
+    private val prayerTimeViews = mutableMapOf<String, TextView>()
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var isTimerRunning = false
+    private val timingsMap = mutableMapOf<String, String>()
+
+    private val timerRunnable = object : Runnable {
+        override fun run() {
+            updateLiveCountdown()
+            handler.postDelayed(this, 1000)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        showHomePage()
+        setupProfessionalUI()
+        loadCachedPrayerTimes()
+        loadOnlinePrayerTimes()
     }
 
-    private fun showHomePage() {
+    override fun onResume() {
+        super.onResume()
+        startCountdownTimer()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopCountdownTimer()
+    }
+
+    private fun startCountdownTimer() {
+        if (!isTimerRunning) {
+            handler.post(timerRunnable)
+            isTimerRunning = true
+        }
+    }
+
+    private fun stopCountdownTimer() {
+        handler.removeCallbacks(timerRunnable)
+        isTimerRunning = false
+    }
+
+    private fun setupProfessionalUI() {
+        val theme = ThemeManager.getTheme(this)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(bgMain)
+            setBackgroundColor(theme.bgMain)
         }
-
-        // --- টপ বার ---
-        val topBar = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = getCardDrawable()
-        }
-        topBar.addView(TextView(this).apply {
-            text = "🕌 আল্লাহর জিকির ও আমল"
-            textSize = 18f
-            setTextColor(textYellow)
-            setTypeface(null, Typeface.BOLD)
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        
-        topBar.addView(TextView(this).apply {
-            text = "⚙️"
-            textSize = 20f
-            setPadding(dp(8), 0, 0, 0)
-            setOnClickListener { startActivity(Intent(this@MainActivity, ProfileSettingsActivity::class.java)) }
-        })
-        root.addView(topBar)
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(16), dp(16), dp(80))
+            setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // ================= তারিখ ও বারের কার্ড (বাংলা, ইংরেজি ও সম্ভাব্য আরবি তারিখ) =================
-        val dateCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = getCardDrawable()
-            setPadding(dp(14), dp(14), dp(14), dp(14))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
-            gravity = Gravity.CENTER
+        val topBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#E0F2FE"))
+                setStroke(dp(1), Color.parseColor("#38BDF8"))
+                cornerRadius = dp(12).toFloat()
+            }
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
-        val currentDateStr = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("bn", "BD")).format(Date())
-        dateCard.addView(TextView(this).apply {
-            text = "📅 আজকের তারিখ: $currentDateStr"
+
+        topBar.addView(TextView(this).apply {
+            text = "📍 জেলা:"
             textSize = 14f
-            setTextColor(textYellow)
+            setTextColor(Color.parseColor("#0369A1"))
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, dp(8), 0)
+        })
+
+        spinnerLocation = Spinner(this).apply {
+            val districts = arrayOf(
+                "ঢাকা", "ফরিদপুর", "গোপালগঞ্জ", "জামালপুর", "কিশোরগঞ্জ", "মাদারীপুর", "মানিকগঞ্জ", 
+                "মুন্সিগঞ্জ", "ময়মনসিংহ", "নারায়ণগঞ্জ", "নরসিংদী", "নেত্রকোণা", "রাজবাড়ী", "শরীয়তপুর", 
+                "শেরপুর", "টাঙ্গাইল", "বগুড়া", "জয়পুরহাট", "নওগাঁ", "নাটোর", "নবাবগঞ্জ", "পাবনা", 
+                "রাজশাহী", "সিরাজগঞ্জ", "দিনাজপুর", "গাইবান্ধা", "কুড়িগ্রাম", "লালমনিরহাট", "নীলফামারী", 
+                "পঞ্চগড়", "রংপুর", "ঠাকুরগাঁও", "বাগেরহাট", "চুয়াডাঙ্গা", "যশোর", "ঝিনাইদহ", "খুলনা", 
+                "কুষ্টিয়া", "মাগুরা", "মেহেরপুর", "নড়াইল", "সাতক্ষীরা", "বরগুনা", "বরিশাল", "ভোলা", 
+                "ঝালকাঠি", "পটুয়াখালী", "পিরোজপুর", "বান্দরবান", "ব্রাহ্মণবাড়িয়া", "চাঁদপুর", "চট্টগ্রাম", 
+                "কুমিল্লা", "কক্সবাজার", "ফেনী", "খাগড়াছড়ি", "লক্ষ্মীপুর", "নোয়াখালী", "রাঙামাটি", 
+                "হবিগঞ্জ", "মৌলভীবাজার", "সুনামগঞ্জ", "সিলেট"
+            )
+            
+            val adapter = object : ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_spinner_item, districts) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getView(position, convertView, parent) as TextView
+                    view.setTextColor(Color.parseColor("#0369A1"))
+                    view.textSize = 15f
+                    view.typeface = Typeface.DEFAULT_BOLD
+                    return view
+                }
+                override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getDropDownView(position, convertView, parent) as TextView
+                    view.setTextColor(Color.BLACK)
+                    view.textSize = 14f
+                    view.setPadding(dp(10), dp(10), dp(10), dp(10))
+                    return view
+                }
+            }
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setAdapter(adapter)
+
+            val defaultIndex = districts.indexOf("সাতক্ষীরা")
+            if (defaultIndex >= 0) setSelection(defaultIndex)
+
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                    selectedDistrict = districts[position]
+                    loadOnlinePrayerTimes()
+                }
+                override fun onNothingSelected(parent: AdapterView<*>) {}
+            }
+        }
+        topBar.addView(spinnerLocation, LinearLayout.LayoutParams(0, -2, 1f))
+        content.addView(topBar)
+
+        val countdownCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(theme.cardBg)
+                setStroke(dp(1), theme.cardStroke)
+                cornerRadius = dp(16).toFloat()
+            }
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
+        }
+
+        tvHijriDate = TextView(this).apply {
+            text = "আরবি তারিখ লোড হচ্ছে..."
+            textSize = 14f
+            setTextColor(theme.textMain)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
-        })
-        dateCard.addView(TextView(this).apply {
-            text = "🌙 আরবি ও বাংলা সময়সূচী অনুযায়ী নিয়মিত আমল করুন"
-            textSize = 12f
-            setTextColor(textSub)
-            setPadding(0, dp(4), 0, 0)
-            gravity = Gravity.CENTER
-        })
-        content.addView(dateCard)
+            setPadding(0, 0, 0, dp(4))
+        }
+        countdownCard.addView(tvHijriDate)
 
-        // ================= ৫ ওয়াক্ত নামাজের সময়সূচী কার্ড =================
+        tvEnglishDate = TextView(this).apply {
+            text = "ইংরেজি তারিখ"
+            textSize = 12f
+            setTextColor(theme.textMain)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(2))
+        }
+        countdownCard.addView(tvEnglishDate)
+
+        tvBengaliDate = TextView(this).apply {
+            text = "বাংলা তারিখ"
+            textSize = 12f
+            setTextColor(theme.textSub)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(8))
+        }
+        countdownCard.addView(tvBengaliDate)
+
+        updateDynamicDates()
+
+        val cardDivider = View(this).apply {
+            background = GradientDrawable().apply { setColor(theme.cardStroke) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(0, dp(4), 0, dp(8)) }
+        }
+        countdownCard.addView(cardDivider)
+
+        tvWaqtCountdownHeader = TextView(this).apply {
+            text = "দুহা (ইশরাক ও চাশত) সময় শেষ হতে বাকি"
+            textSize = 15f
+            setTextColor(theme.textMain)
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(4), 0, dp(2))
+        }
+        countdownCard.addView(tvWaqtCountdownHeader)
+
+        tvRemainingCountdown = TextView(this).apply {
+            text = "০০:০০:০০"
+            textSize = 28f
+            setTextColor(theme.textMain)
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(10))
+        }
+        countdownCard.addView(tvRemainingCountdown)
+
+        val infoRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        infoRow.addView(TextView(this).apply { text = "📍 $selectedDistrict"; textSize = 12f; setTextColor(theme.textSub); setPadding(0, 0, dp(10), 0) })
+        
+        tvSunriseTime = TextView(this).apply { text = "🌅 সূর্যোদয়: --:--"; textSize = 11f; setTextColor(theme.textSub); setPadding(dp(4), 0, dp(4), 0) }
+        infoRow.addView(tvSunriseTime)
+
+        tvSunsetTime = TextView(this).apply { text = "🌇 সূর্যাস্ত: --:--"; textSize = 11f; setTextColor(theme.textSub); setPadding(dp(10), 0, 0, 0) }
+        infoRow.addView(tvSunsetTime)
+
+        countdownCard.addView(infoRow)
+        content.addView(countdownCard)
+
+        fun createUniformRow(key: String, name: String, timeTextView: TextView, isSwitchNeeded: Boolean, textColor: Int, subColor: Int): LinearLayout {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(8), dp(6), dp(8), dp(6))
+            }
+            val nameView = TextView(this).apply {
+                text = name
+                textSize = 14f
+                setTextColor(textColor)
+                setTypeface(null, Typeface.BOLD)
+            }
+            val rightLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            timeTextView.textSize = 12f
+            timeTextView.setTextColor(subColor)
+            timeTextView.setPadding(0, 0, if(isSwitchNeeded) dp(10) else 0, 0)
+
+            rightLayout.addView(timeTextView)
+            if (isSwitchNeeded) {
+                rightLayout.addView(Switch(this).apply { 
+                    isChecked = false
+                    setOnCheckedChangeListener { _, isChecked ->
+                        val status = if (isChecked) "চালু" else "বন্ধ"
+                        Toast.makeText(this@MainActivity, "$name অ্যালার্ম $status", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+
+            row.addView(nameView, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(rightLayout, LinearLayout.LayoutParams(-2, -2))
+
+            prayerRows[key] = row
+            prayerNameViews[key] = nameView
+            prayerTimeViews[key] = timeTextView
+            return row
+        }
+
+        fun createDivider(): View {
+            return View(this).apply {
+                background = GradientDrawable().apply { setColor(Color.parseColor("#CA8A04")) }
+                layoutParams = LinearLayout.LayoutParams(-1, dp(1)).apply { setMargins(dp(4), dp(2), dp(4), dp(2)) }
+            }
+        }
+
         val prayerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = getCardDrawable()
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#FACC15"))
+                setStroke(dp(1), Color.parseColor("#EAB308"))
+                cornerRadius = dp(16).toFloat()
+            }
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
+
         prayerCard.addView(TextView(this).apply {
-            text = "⏰ পাঁচ ওয়াক্ত নামাজের সময়সূচী"
-            textSize = 16f
-            setTextColor(textYellow)
+            text = "🕋 পাঁচ ওয়াক্ত নামাজের সময়সূচি (হানাফি)"
+            textSize = 15f
+            setTextColor(Color.parseColor("#78350F"))
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, 0, dp(10))
         })
 
-        val prayers = listOf(
-            Pair("ফজর", "০৫:০০ AM"),
-            Pair("যোহর", "০১:১৫ PM"),
-            Pair("আসর", "০৪:৩০ PM"),
-            Pair("মাগরিব", "০৬:২০ PM"),
-            Pair("এশা", "০৭:৪০ PM")
-        )
+        tvFajrTime = TextView(this)
+        tvZoharTime = TextView(this)
+        tvAsrTime = TextView(this)
+        tvMaghribTime = TextView(this)
+        tvIshaTime = TextView(this)
 
-        prayers.forEach { (name, time) ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dp(4), 0, dp(4))
-            }
-            row.addView(TextView(this).apply {
-                text = "• $name ওয়াক্ত"
-                textSize = 13f
-                setTextColor(textMain)
-            }, LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(TextView(this).apply {
-                text = time
-                textSize = 13f
-                setTextColor(textYellow)
-                setTypeface(null, Typeface.BOLD)
-            })
-            prayerCard.addView(row)
-        }
+        prayerCard.addView(createUniformRow("Fajr", "ফজর", tvFajrTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
+        prayerCard.addView(createUniformRow("Dhuhr", "যোহর", tvZoharTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
+        prayerCard.addView(createUniformRow("Asr", "আসর", tvAsrTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
+        prayerCard.addView(createUniformRow("Maghrib", "মাগরিব", tvMaghribTime, true, Color.BLACK, Color.parseColor("#334155")))
+        prayerCard.addView(createDivider())
+        prayerCard.addView(createUniformRow("Isha", "এশা", tvIshaTime, true, Color.BLACK, Color.parseColor("#334155")))
         content.addView(prayerCard)
 
-        // ================= কাবা শরীফের ছবি =================
-        val imageId = resources.getIdentifier("kaaba_img", "drawable", packageName)
-        if (imageId != 0) {
-            val kaabaCard = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                background = getCardDrawable()
-                setPadding(dp(4), dp(4), dp(4), dp(4))
-                layoutParams = LinearLayout.LayoutParams(-1, dp(170)).apply { bottomMargin = dp(14) }
-                gravity = Gravity.CENTER
+        val nafalCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#ECFDF5"))
+                setStroke(dp(1), Color.parseColor("#10B981"))
+                cornerRadius = dp(16).toFloat()
             }
-            val kaabaImageView = ImageView(this).apply {
-                setImageResource(imageId)
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                layoutParams = LinearLayout.LayoutParams(-1, -1)
-            }
-            kaabaCard.addView(kaabaImageView)
-            content.addView(kaabaCard)
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
 
-        // ================= তাসবিহ কাউন্টার কার্ড =================
-        val tasbihCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = getCardDrawable()
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
-        }
-        tasbihCard.addView(TextView(this).apply {
-            text = "📿 ডিজিটাল তাসবিহ কাউন্টার"
-            textSize = 16f
-            setTextColor(textYellow)
+        nafalCard.addView(TextView(this).apply {
+            text = "✨ নফল সালাতের সময়"
+            textSize = 15f
+            setTextColor(Color.parseColor("#065F46"))
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, 0, dp(8))
         })
-        tasbihCard.addView(TextView(this).apply {
-            text = "দৈনন্দিন জিকির ও তাসবিহ গণনা করুন সহজে।"
-            textSize = 13f
-            setTextColor(textSub)
-            setPadding(0, 0, 0, dp(12))
-        })
-        tasbihCard.addView(Button(this).apply {
-            text = "তাসবিহ খুলুন ➔"
-            isAllCaps = false
-            setTextColor(Color.BLACK)
-            background = getBtnDrawable(btnYellow)
-            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
-            setOnClickListener { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
-        })
-        content.addView(tasbihCard)
 
-        // ================= অন্যান্য ফিচার ও ইসলামিক সেকশনসমূহ =================
-        val features = listOf(
-            Triple("📚 ইসলামিক লাইব্রেরী ও কিতাব", "পবিত্র কুরআন ও সিহাহ সিত্তাহ হাদিস পড়ুন", LibraryActivity::class.java),
-            Triple("📖 মাসনুন আমল ও দোয়া", "সকাল-সন্ধ্যার জিকির ও মানযিল আয়াত", MasnunAmolActivity::class.java),
-            Triple("📝 কালার নোটপ্যাড", "আপনার প্রয়োজনীয় নোট ও ফতওয়া সংরক্ষণ করুন", NotepadActivity::class.java)
-        )
+        tvDohaTime = TextView(this)
+        tvJawalTime = TextView(this)
+        tvAwabinTime = TextView(this)
+        tvNafalTahajjud = TextView(this)
 
-        features.forEach { (title, desc, targetActivity) ->
-            val card = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                background = getCardDrawable()
-                setPadding(dp(16), dp(16), dp(16), dp(16))
-                layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
+        nafalCard.addView(createUniformRow("Doha", "☀️ দুহা (ইশরাক ও চাশত)", tvDohaTime, false, Color.BLACK, Color.parseColor("#047857")))
+        nafalCard.addView(createDivider())
+        nafalCard.addView(createUniformRow("Jawal", "🕌 জাওয়াল শুরু (দুপুর)", tvJawalTime, false, Color.BLACK, Color.parseColor("#047857")))
+        nafalCard.addView(createDivider())
+        nafalCard.addView(createUniformRow("Awabin", "⛅ আওয়াবিন", tvAwabinTime, false, Color.BLACK, Color.parseColor("#047857")))
+        nafalCard.addView(createDivider())
+        nafalCard.addView(createUniformRow("NafalTahajjud", "🌙 তাহাজ্জুদ", tvNafalTahajjud, false, Color.BLACK, Color.parseColor("#047857")))
+        content.addView(nafalCard)
+
+        val specialCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                setStroke(dp(1), Color.parseColor("#CBD5E1"))
+                cornerRadius = dp(16).toFloat()
             }
-            card.addView(TextView(this).apply {
-                text = title
-                textSize = 16f
-                setTextColor(textMain)
-                setTypeface(null, Typeface.BOLD)
-                setPadding(0, 0, 0, dp(4))
-            })
-            card.addView(TextView(this).apply {
-                text = desc
-                textSize = 13f
-                setTextColor(textSub)
-                setPadding(0, 0, 0, dp(10))
-            })
-            card.addView(Button(this).apply {
-                text = "প্রবেশ করুন ➔"
-                isAllCaps = false
-                setTextColor(Color.BLACK)
-                background = getBtnDrawable(btnYellow)
-                layoutParams = LinearLayout.LayoutParams(-1, dp(38))
-                setOnClickListener { startActivity(Intent(this@MainActivity, targetActivity)) }
-            })
-            content.addView(card)
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
+
+        specialCard.addView(TextView(this).apply {
+            text = "🌙 তাহাজ্জুদ, সেহরি ও ইফতার"
+            textSize = 15f
+            setTextColor(Color.parseColor("#0F172A"))
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(8))
+        })
+
+        tvTahajjudTime = TextView(this)
+        tvSehriTime = TextView(this)
+        tvIftarTime = TextView(this)
+
+        specialCard.addView(createUniformRow("Tahajjud", "তাহাজ্জুদ", tvTahajjudTime, false, Color.BLACK, Color.parseColor("#475569")))
+        specialCard.addView(createDivider())
+        specialCard.addView(createUniformRow("Sehri", "সেহরির শেষ সময়", tvSehriTime, false, Color.BLACK, Color.parseColor("#475569")))
+        specialCard.addView(createDivider())
+        specialCard.addView(createUniformRow("Iftar", "ইফতারের সময়", tvIftarTime, false, Color.BLACK, Color.parseColor("#475569")))
+        content.addView(specialCard)
+
+        val haramCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#EF4444"))
+                setStroke(dp(1), Color.parseColor("#DC2626"))
+                cornerRadius = dp(16).toFloat()
+            }
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
+        }
+
+        haramCard.addView(TextView(this).apply {
+            text = "⚠️ হারাম ওয়াক্ত (নামাজ নিষিদ্ধ সময়)"
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(8))
+        })
+
+        tvHaramSunrise = TextView(this)
+        tvHaramZohar = TextView(this)
+        tvHaramSunset = TextView(this)
+
+        haramCard.addView(createUniformRow("HaramSunrise", "সূর্যোদয় নিষিদ্ধ সময়", tvHaramSunrise, false, Color.WHITE, Color.parseColor("#FEE2E2")))
+        haramCard.addView(createDivider())
+        haramCard.addView(createUniformRow("HaramZohar", "দ্বিপ্রহর নিষিদ্ধ সময়", tvHaramZohar, false, Color.WHITE, Color.parseColor("#FEE2E2")))
+        haramCard.addView(createDivider())
+        haramCard.addView(createUniformRow("HaramSunset", "সূর্যাস্ত নিষিদ্ধ সময়", tvHaramSunset, false, Color.WHITE, Color.parseColor("#FEE2E2")))
+        content.addView(haramCard)
 
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
+        // ================= বটম নেভিগেশন বার (৭টি আইটেম: হোম থেকে প্রোফাইল, সিঙ্কের আগে নোটপ্যাড) =================
+        val bottomNav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#0F172A"))
+            setPadding(dp(2), dp(4), dp(2), dp(4))
+            elevation = dp(8).toFloat()
+        }
+
+        val navItems = listOf(
+            Pair("🏠\nহোম", MainActivity::class.java),
+            Pair("📿\nতাসবিহ", TasbihActivity::class.java),
+            Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
+            Pair("📖\nআমল", MasnunAmolActivity::class.java),
+            Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
+            Pair("🔄\nসিঙ্ক", null),
+            Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
+        )
+
+        navItems.forEach { (label, targetClass) ->
+            bottomNav.addView(Button(this).apply {
+                text = label
+                textSize = 10f
+                isAllCaps = false
+                minHeight = 0
+                minWidth = 0
+                setPadding(0, 0, 0, 0)
+                gravity = Gravity.CENTER
+                setTextColor(if (label.contains("হোম")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
+                background = GradientDrawable()
+                setOnClickListener {
+                    when {
+                        label.contains("হোম") -> { /* বর্তমান পেজ */ }
+                        label.contains("তাসবিহ") -> { startActivity(Intent(this@MainActivity, TasbihActivity::class.java)) }
+                        label.contains("লাইব্রেরী") -> { startActivity(Intent(this@MainActivity, LibraryActivity::class.java)) }
+                        label.contains("আমল") -> { startActivity(Intent(this@MainActivity, MasnunAmolActivity::class.java)) }
+                        label.contains("নোটপ্যাড") -> { startActivity(Intent(this@MainActivity, NotepadActivity::class.java)) }
+                        label.contains("সিঙ্ক") -> {
+                            loadOnlinePrayerTimes()
+                            Toast.makeText(this@MainActivity, "তথ্য আপডেট ও সিংক করা হয়েছে!", Toast.LENGTH_SHORT).show()
+                        }
+                        label.contains("প্রোফাইল") -> { startActivity(Intent(this@MainActivity, ProfileSettingsActivity::class.java)) }
+                    }
+                }
+            }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
+        }
+        root.addView(bottomNav, LinearLayout.LayoutParams(-1, dp(60)))
+
         setContentView(root)
+    }
+
+    private fun updateDynamicDates() {
+        val now = Calendar.getInstance()
+        val hour = now.get(Calendar.HOUR_OF_DAY)
+        if (hour >= 18) {
+            now.add(Calendar.DAY_OF_MONTH, 1)
+        }
+
+        val hijriDays = (now.timeInMillis / (1000 * 60 * 60 * 24) - 2).toInt()
+        val hijriMonthIndex = 2
+        val hijriDayNum = (hijriDays % 29) + 1
+        val monthNames = arrayOf(
+            "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
+            "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", 
+            "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"
+        )
+        val hijriStr = "${bn(hijriDayNum.toString().take(2))} ${monthNames[hijriMonthIndex]} ১৪৪৮ হি."
+
+        val engFormat = SimpleDateFormat("dd MMMM, yyyy (EEEE)", Locale("bn", "BD"))
+        val engStr = engFormat.format(Date())
+
+        val dayOfYear = now.get(Calendar.DAY_OF_YEAR)
+        val bDay = ((dayOfYear + 16) % 365) + 1
+        val bMonthIdx = ((dayOfYear + 16) / 30) % 12
+        val bMonths = arrayOf("বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন", "কার্তিক", "অগ্রহায়ণ", "পৌষ", "মাঘ", "ফাল্গুন", "চৈত্র")
+        val bengaliStr = "${bn(bDay.toString())} ${bMonths[bMonthIdx]}, ১৪৩৩ বঙ্গাব্দ"
+
+        tvHijriDate.text = "🌙 $hijriStr"
+        tvEnglishDate.text = "📅 $engStr"
+        tvBengaliDate.text = "🌾 $bengaliStr"
+    }
+
+    private fun loadCachedPrayerTimes() {
+        val prefs = getSharedPreferences("PrayerCache", Context.MODE_PRIVATE)
+        val keys = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Maghrib", "Isha")
+        keys.forEach { key ->
+            prefs.getString(key, null)?.let { timingsMap[key] = it }
+        }
+        applyTimingsToUI()
+    }
+
+    private fun saveTimingsToCache(times: Map<String, String>) {
+        val prefs = getSharedPreferences("PrayerCache", Context.MODE_PRIVATE).edit()
+        times.forEach { (k, v) -> prefs.putString(k, v) }
+        prefs.apply()
+    }
+
+    private fun convertTo12Hour(time24: String?): String {
+        if (time24.isNullOrEmpty()) return "--:--"
+        return try {
+            val parts = time24.trim().split(":")
+            var hour = parts[0].toInt()
+            val minute = parts[1]
+            val ampm = if (hour >= 12) "PM" else "AM"
+            if (hour > 12) hour -= 12
+            if (hour == 0) hour = 12
+            bn(String.format(Locale.ENGLISH, "%02d:%s %s", hour, minute, ampm))
+        } catch (e: Exception) {
+            time24
+        }
+    }
+
+    private fun adjustTime(time24: String?, minutesToAdd: Int): String {
+        if (time24.isNullOrEmpty()) return "--:--"
+        try {
+            val parts = time24.trim().split(":")
+            val totalMin = parts[0].toInt() * 60 + parts[1].toInt() + minutesToAdd
+            val newHour = (totalMin / 60) % 24
+            val newMin = totalMin % 60
+            return convertTo12Hour(String.format(Locale.ENGLISH, "%02d:%02d", newHour, newMin))
+        } catch (e: Exception) {
+            return convertTo12Hour(time24)
+        }
+    }
+
+    private fun applyTimingsToUI() {
+        val fajr = timingsMap["Fajr"] ?: "04:30"
+        val sunrise = timingsMap["Sunrise"] ?: "05:46"
+        val dhuhr = timingsMap["Dhuhr"] ?: "12:03"
+        val sunset = timingsMap["Sunset"] ?: timingsMap["Maghrib"] ?: "18:20"
+        val maghrib = timingsMap["Maghrib"] ?: "18:20"
+        val isha = timingsMap["Isha"] ?: "19:37"
+
+        tvFajrTime.text = "${convertTo12Hour(fajr)} - ${convertTo12Hour(sunrise)}"
+        tvZoharTime.text = "${convertTo12Hour(dhuhr)} - ০৪:৩৩ PM"
+        tvAsrTime.text = "০৪:৩৩ PM - ${convertTo12Hour(maghrib)}"
+        tvMaghribTime.text = "${convertTo12Hour(maghrib)} - ${convertTo12Hour(isha)}"
+        tvIshaTime.text = "${convertTo12Hour(isha)} - ${convertTo12Hour(fajr)}"
+
+        tvSunriseTime.text = "🌅 সূর্যোদয়: ${convertTo12Hour(sunrise)}"
+        tvSunsetTime.text = "🌇 সূর্যাস্ত: ${convertTo12Hour(sunset)}"
+
+        tvTahajjudTime.text = "১২:০০ AM - ${convertTo12Hour(fajr)}"
+        tvSehriTime.text = "${convertTo12Hour(fajr)} এর পূর্বে"
+        tvIftarTime.text = "${convertTo12Hour(maghrib)}"
+
+        val sunriseEnd = adjustTime(sunrise, 15)
+        val zoharForbiddenStart = adjustTime(dhuhr, -5)
+        val zoharForbiddenEnd = convertTo12Hour(dhuhr)
+        val sunsetStart = adjustTime(sunset, -15)
+
+        tvHaramSunrise.text = "${convertTo12Hour(sunrise)} - $sunriseEnd"
+        tvHaramZohar.text = "$zoharForbiddenStart - $zoharForbiddenEnd"
+        tvHaramSunset.text = "$sunsetStart - ${convertTo12Hour(sunset)}"
+
+        val dohaEnd = adjustTime(dhuhr, -10)
+        tvDohaTime.text = "${convertTo12Hour(sunrise)} - $dohaEnd"
+        tvJawalTime.text = "${convertTo12Hour(dhuhr)}"
+        tvAwabinTime.text = "মাগরিবের পর - ${convertTo12Hour(isha)}"
+        tvNafalTahajjud.text = "এশার পর - ${convertTo12Hour(fajr)}"
+
+        updateLiveCountdown()
+    }
+
+    private fun loadOnlinePrayerTimes() {
+        CoroutineScope(Dispatchers.Main).launch {
+            val onlineTimes = withContext(Dispatchers.IO) {
+                OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
+            }
+
+            if (onlineTimes != null) {
+                timingsMap.clear()
+                timingsMap.putAll(onlineTimes)
+                saveTimingsToCache(onlineTimes)
+                applyTimingsToUI()
+            }
+        }
+    }
+
+    private fun updateLiveCountdown() {
+        if (timingsMap.isEmpty()) return
+
+        val now = Calendar.getInstance()
+        val currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        val currentSeconds = now.get(Calendar.SECOND)
+
+        fun parseMinutes(timeStr: String?): Int {
+            if (timeStr.isNullOrEmpty()) return -1
+            val parts = timeStr.trim().split(":")
+            if (parts.size < 2) return -1
+            return (parts[0].toIntOrNull() ?: 0) * 60 + (parts[1].toIntOrNull() ?: 0)
+        }
+
+        val fajr = parseMinutes(timingsMap["Fajr"])
+        val sunrise = parseMinutes(timingsMap["Sunrise"])
+        val sunriseForbiddenEnd = sunrise + 15
+        val dhuhr = parseMinutes(timingsMap["Dhuhr"])
+        val zoharForbiddenStart = dhuhr - 5
+        val asr = 16 * 60 + 33
+        val sunset = parseMinutes(timingsMap["Sunset"])
+        val sunsetForbiddenStart = sunset - 15
+        val maghrib = parseMinutes(timingsMap["Maghrib"])
+        val isha = parseMinutes(timingsMap["Isha"])
+
+        var currentWaqtName = "তাহাজ্জুদ"
+        var waqtThumbnail = "🌙"
+        var targetEndMinutes = fajr
+        var activeKey = "Tahajjud"
+
+        when {
+            currentMinutes in fajr until sunrise -> {
+                currentWaqtName = "ফজর"
+                waqtThumbnail = "🌅"
+                targetEndMinutes = sunrise
+                activeKey = "Fajr"
+            }
+            currentMinutes in sunrise until sunriseForbiddenEnd -> {
+                currentWaqtName = "সূর্যোদয়ের নিষিদ্ধ সময় (হারাম)"
+                waqtThumbnail = "⚠️"
+                targetEndMinutes = sunriseForbiddenEnd
+                activeKey = "HaramSunrise"
+            }
+            currentMinutes in sunriseForbiddenEnd until zoharForbiddenStart -> {
+                currentWaqtName = "দুহা (ইশরাক ও চাশত)"
+                waqtThumbnail = "☀️"
+                targetEndMinutes = zoharForbiddenStart
+                activeKey = "Doha"
+            }
+            currentMinutes in zoharForbiddenStart until dhuhr -> {
+                currentWaqtName = "দ্বিপ্রহরের নিষিদ্ধ সময় (হারাম)"
+                waqtThumbnail = "⚠️"
+                targetEndMinutes = dhuhr
+                activeKey = "HaramZohar"
+            }
+            currentMinutes in dhuhr until asr -> {
+                currentWaqtName = "যোহর"
+                waqtThumbnail = "🌤️"
+                targetEndMinutes = asr
+                activeKey = "Dhuhr"
+            }
+            currentMinutes in asr until sunsetForbiddenStart -> {
+                currentWaqtName = "আসর"
+                waqtThumbnail = "⛅"
+                targetEndMinutes = sunsetForbiddenStart
+                activeKey = "Asr"
+            }
+            currentMinutes in sunsetForbiddenStart until sunset -> {
+                currentWaqtName = "সূর্যাস্তের নিষিদ্ধ সময় (হারাম)"
+                waqtThumbnail = "⚠️"
+                targetEndMinutes = sunset
+                activeKey = "HaramSunset"
+            }
+            currentMinutes in maghrib until isha -> {
+                currentWaqtName = "মাগরিব"
+                waqtThumbnail = "🌇"
+                targetEndMinutes = isha
+                activeKey = "Maghrib"
+            }
+            currentMinutes >= isha || currentMinutes < fajr -> {
+                currentWaqtName = "এশা"
+                waqtThumbnail = "🌃"
+                targetEndMinutes = if (currentMinutes >= isha) (24 * 60) + fajr else fajr
+                activeKey = "Isha"
+            }
+        }
+
+        if (activeKey == "Doha") {
+            tvWaqtCountdownHeader.text = "$waqtThumbnail দুহা (ইশরাক ও চাশত) সময় শেষ হতে বাকি"
+        } else {
+            tvWaqtCountdownHeader.text = "$waqtThumbnail $currentWaqtName শেষ হতে বাকি"
+        }
+
+        val currentTotalSec = (currentMinutes * 60) + currentSeconds
+        val targetTotalSec = targetEndMinutes * 60
+        var diffSec = targetTotalSec - currentTotalSec
+        if (diffSec < 0) diffSec += (24 * 60 * 60)
+
+        val h = diffSec / 3600
+        val m = (diffSec % 3600) / 60
+        val s = diffSec % 60
+
+        val countdownStr = String.format(Locale.ENGLISH, "%02d:%02d:%02d", h, m, s)
+        tvRemainingCountdown.text = bn(countdownStr)
+
+        highlightActiveWaqt(activeKey)
+    }
+
+    private fun highlightActiveWaqt(activeKey: String) {
+        prayerRows.forEach { (key, row) ->
+            if (key == activeKey) {
+                row.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#FEF08A"))
+                    cornerRadius = dp(8).toFloat()
+                }
+                prayerNameViews[key]?.setTextColor(Color.parseColor("#78350F"))
+                prayerTimeViews[key]?.setTextColor(Color.parseColor("#78350F"))
+            } else {
+                row.background = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                }
+                prayerNameViews[key]?.setTextColor(Color.BLACK)
+                prayerTimeViews[key]?.setTextColor(Color.parseColor("#334155"))
+            }
+        }
     }
 }
