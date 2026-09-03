@@ -113,23 +113,23 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(75))
         }
 
-        // স্পষ্ট দৃশ্যমান লোকেশন সিলেক্টর টপ বার
+        // আকর্ষণীয় আকাশী কালারের লোকেশন কার্ড (Sky Blue Theme)
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
-                setColor(theme.cardBg)
-                setStroke(dp(1), theme.cardStroke)
-                cornerRadius = dp(10).toFloat()
+                setColor(Color.parseColor("#E0F2FE")) // হালকা আকাশী ব্যাকগ্রাউন্ড
+                setStroke(dp(1), Color.parseColor("#38BDF8")) // ডিপ আকাশী বর্ডার
+                cornerRadius = dp(12).toFloat()
             }
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) }
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
 
         topBar.addView(TextView(this).apply {
-            text = "📍 জেলা নির্বাচন:"
+            text = "📍 জেলা:"
             textSize = 14f
-            setTextColor(theme.textAccent)
+            setTextColor(Color.parseColor("#0369A1")) // ডিপ স্কাই ব্লু টেক্সট
             setTypeface(null, Typeface.BOLD)
             setPadding(0, 0, dp(8), 0)
         })
@@ -150,8 +150,8 @@ class MainActivity : Activity() {
             val adapter = object : ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_spinner_item, districts) {
                 override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                     val view = super.getView(position, convertView, parent) as TextView
-                    view.setTextColor(theme.textMain)
-                    view.textSize = 14f
+                    view.setTextColor(Color.parseColor("#0369A1"))
+                    view.textSize = 15f
                     view.typeface = Typeface.DEFAULT_BOLD
                     return view
                 }
@@ -593,11 +593,7 @@ class MainActivity : Activity() {
         CoroutineScope(Dispatchers.Main).launch {
             val context = this@MainActivity
             val onlineTimes = withContext(Dispatchers.IO) {
-                if (OnlinePrayerFetcher.isNetworkAvailable(context)) {
-                    OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
-                } else {
-                    OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
-                }
+                OnlinePrayerFetcher.fetchTimingsForDistrict(selectedDistrict)
             }
 
             if (onlineTimes != null) {
