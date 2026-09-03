@@ -76,13 +76,13 @@ class TasbihActivity : ComponentActivity() {
         })
         root.addView(top)
 
-        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন (সাদা ব্যাকগ্রাউন্ড বক্স) =================
+        // ================= ২. কাউন্টার ও কাবার ইমেজ সেকশন =================
         val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
 
         val kaabaBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
             background = GradientDrawable().apply {
-                setColor(Color.WHITE) // ব্যাকগ্রাউন্ড সাদা
+                setColor(Color.WHITE) 
                 setStroke(dp(2), Color.parseColor("#FBBF24")) 
                 cornerRadius = dp(14).toFloat()
             }
@@ -90,7 +90,6 @@ class TasbihActivity : ComponentActivity() {
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
-        // ওপরে "আল্লাহু আকবার" লেখা
         kaabaBox.addView(TextView(this).apply {
             text = "الله أكبر"
             textSize = 16f
@@ -100,7 +99,6 @@ class TasbihActivity : ComponentActivity() {
             setPadding(0, 0, 0, dp(2))
         })
 
-        // কাবা শরীফের ছবি বা আইকন
         kaabaBox.addView(ImageView(this).apply {
             val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
             if (imgResId != 0) {
@@ -110,7 +108,6 @@ class TasbihActivity : ComponentActivity() {
             layoutParams = LinearLayout.LayoutParams(dp(110), dp(95)).apply { bottomMargin = dp(4) }
         })
 
-        // নিচে মূল কালিমা লেখা
         kaabaBox.addView(TextView(this).apply {
             text = "لا إله إلا الله محمد رسول الله"
             textSize = 13f
@@ -162,7 +159,7 @@ class TasbihActivity : ComponentActivity() {
         }
         root.addView(actionRow)
 
-        // ================= ৪. বটম মেনু (৭টি আইটেম: হোম থেকে প্রোফাইল, সিঙ্কের আগে নোটপ্যাড) =================
+        // ================= ৪. বটম মেনু (৭টি আইটেম ফিক্সড) =================
         val menu = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -172,13 +169,13 @@ class TasbihActivity : ComponentActivity() {
         }
 
         val navItems = listOf(
-            Triple("🏠\nহোম", MainActivity::class.java),
-            Triple("📿\nতাসবিহ", TasbihActivity::class.java),
-            Triple("📚\nলাইব্রেরী", LibraryActivity::class.java),
-            Triple("📖\nআমল", MasnunAmolActivity::class.java),
-            Triple("📝\nনোটপ্যাড", NotepadActivity::class.java),
-            Triple("🔄\nসিঙ্ক", null),
-            Triple("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
+            Pair("🏠\nহোম", MainActivity::class.java),
+            Pair("📿\nতাসবিহ", TasbihActivity::class.java),
+            Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
+            Pair("📖\nআমল", MasnunAmolActivity::class.java),
+            Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
+            Pair("🔄\nসিঙ্ক", null),
+            Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
         navItems.forEach { (label, targetClass) ->
@@ -190,7 +187,6 @@ class TasbihActivity : ComponentActivity() {
                 minWidth = 0
                 setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER
-                // তাসবিহ পেজে আছি তাই তাসবিহ আইকন সবুজ বা হাইলাইট থাকবে, বাকিগুলো গ্রে
                 setTextColor(if (label.contains("তাসবিহ")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
