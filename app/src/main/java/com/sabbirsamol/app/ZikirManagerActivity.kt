@@ -23,23 +23,30 @@ class ZikirManagerActivity : Activity() {
     private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
     private var bgMain: Int = Color.BLACK
-    private var cardBg: Int = Color.WHITE
     private var cardStroke: Int = Color.GRAY
     private var textMain: Int = Color.WHITE
     private var textSub: Int = Color.GRAY
 
     private lateinit var listContainer: LinearLayout
 
-    // ফায়ারবেস রিয়েলটাইম ডেটাবেজ ইনস্ট্যান্স
     private val databaseRef = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
+
+    // জিকির কার্ডের জন্য ভিন্ন ভিন্ন আকর্ষণীয় কালার কোড (লাল, সবুজ, হলুদ, নীল ইত্যাদি)
+    private val cardBgColors = listOf(
+        Color.parseColor("#1B4D3E"), // গাঢ় সবুজ
+        Color.parseColor("#1E3A8A"), // গাঢ় নীল
+        Color.parseColor("#7C2D12"), // গাঢ় লালচে/মরিচা
+        Color.parseColor("#78350F"), // গাঢ় হলুদ/গোল্ডেন
+        Color.parseColor("#581C87"), // গাঢ় বেগুনি
+        Color.parseColor("#1F2937")  // স্ল্যেট গ্রে
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         val themeColors = ThemeManager.getTheme(this)
         bgMain = themeColors.bgMain
-        cardBg = themeColors.cardBg
         cardStroke = themeColors.cardStroke
         textMain = themeColors.textMain
         textSub = themeColors.textSub
@@ -166,10 +173,13 @@ class ZikirManagerActivity : Activity() {
             val target = obj.getInt("target")
             val read = obj.getInt("read")
 
+            // প্রতিটা কার্ডের জন্য ভিন্ন ভিন্ন কালার সেট করা হলো
+            val uniqueCardBg = cardBgColors[i % cardBgColors.size]
+
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 background = GradientDrawable().apply {
-                    setColor(cardBg)
+                    setColor(uniqueCardBg)
                     setStroke(dp(1), cardStroke)
                     cornerRadius = dp(12).toFloat()
                 }
@@ -188,19 +198,24 @@ class ZikirManagerActivity : Activity() {
             card.addView(TextView(this).apply {
                 text = "পড়া হয়েছে: ${bn(read)} / ${bn(target)} বার"
                 textSize = 13f
-                setTextColor(textSub)
+                setTextColor(Color.parseColor("#E2E8F0"))
                 setPadding(0, 0, 0, dp(8))
             })
 
-            val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 3f }
+            // বাটনগুলোর সাইজ ঠিক করা: "পড়ুন" বাটন বড় (weight 2f) এবং "এডিট" ও "ডিলিট" ছোট (weight 1f করে)
+            val btnRow = LinearLayout(this).apply { 
+                orientation = LinearLayout.HORIZONTAL
+                weightSum = 4f 
+            }
 
+            // পড়ুন বাটন (বড় আকারের)
             btnRow.addView(Button(this).apply {
                 text = "পড়ুন"
                 isAllCaps = false
                 setTextColor(Color.WHITE)
-                textSize = 12f
+                textSize = 13f
                 background = GradientDrawable().apply { setColor(Color.parseColor("#047857")); cornerRadius = dp(6).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { rightMargin = dp(4) }
+                layoutParams = LinearLayout.LayoutParams(0, dp(38), 2f).apply { rightMargin = dp(6) }
                 setOnClickListener {
                     val intent = Intent(this@ZikirManagerActivity, TasbihActivity::class.java).apply {
                         putExtra("ZIKIR_ID", id)
@@ -213,23 +228,25 @@ class ZikirManagerActivity : Activity() {
                 }
             })
 
+            // এডিট বাটন (ছোট আকারের)
             btnRow.addView(Button(this).apply {
                 text = "এডিট"
                 isAllCaps = false
                 setTextColor(Color.WHITE)
-                textSize = 12f
+                textSize = 11f
                 background = GradientDrawable().apply { setColor(Color.parseColor("#2563EB")); cornerRadius = dp(6).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { setMargins(dp(2), 0, dp(2), 0) }
+                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { rightMargin = dp(4) }
                 setOnClickListener { showAddEditDialog(obj, i) }
             })
 
+            // ডিলিট বাটন (ছোট আকারের)
             btnRow.addView(Button(this).apply {
                 text = "ডিলিট"
                 isAllCaps = false
                 setTextColor(Color.WHITE)
-                textSize = 12f
+                textSize = 11f
                 background = GradientDrawable().apply { setColor(Color.parseColor("#DC2626")); cornerRadius = dp(6).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { leftMargin = dp(4) }
+                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { leftMargin = dp(2) }
                 setOnClickListener { deleteZikir(i) }
             })
 
@@ -319,7 +336,6 @@ class ZikirManagerActivity : Activity() {
 
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
 
-        // ফায়ারবেস রিয়েলটাইম ডেটাবেজে জিকির লিস্ট ব্যাকআপ করা
         val userId = auth.currentUser?.uid ?: "default_user"
         databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
     }
@@ -334,7 +350,6 @@ class ZikirManagerActivity : Activity() {
         prefs.edit().putString("zikir_list", newArray.toString()).apply()
         loadZikirList()
 
-        // ডিলিট করার পরেও ফায়ারবেস ডেটাবেজ আপডেট করা
         val userId = auth.currentUser?.uid ?: "default_user"
         databaseRef.child("users").child(userId).child("zikir_list_data").setValue(newArray.toString())
     }
