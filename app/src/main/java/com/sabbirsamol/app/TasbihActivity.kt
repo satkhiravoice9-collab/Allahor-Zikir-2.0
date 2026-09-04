@@ -23,9 +23,7 @@ class TasbihActivity : ComponentActivity() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    private var bgMain: Int = Color.BLACK
-    private var textMain: Int = Color.WHITE
-    private var btnBg: Int = Color.GRAY
+    private val themeColors by lazy { ThemeManager.getTheme(this) }
 
     private var currentCount = 0
     private var isCustomMode = false
@@ -45,11 +43,6 @@ class TasbihActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        val themeColors = ThemeManager.getTheme(this)
-        bgMain = themeColors.bgMain
-        textMain = themeColors.textMain
-        btnBg = themeColors.btnBg
 
         customZikirId = intent.getStringExtra("ZIKIR_ID") ?: ""
         if (customZikirId.isNotEmpty()) {
@@ -79,19 +72,19 @@ class TasbihActivity : ComponentActivity() {
 
     private fun buildUI() {
         val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain)
+            orientation = LinearLayout.VERTICAL; setBackgroundColor(themeColors.bgMain)
             setOnClickListener { incrementCount() }
         }
 
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)) }
         top.addView(TextView(this).apply { 
             text = if (isCustomMode) "🕋 $customZikirName" else "🕋 সাধারণ তাসবিহ কাউন্টার"
-            textSize = 18f; setTextColor(textMain); setTypeface(null, Typeface.BOLD) 
+            textSize = 18f; setTextColor(themeColors.textMain); setTypeface(null, Typeface.BOLD) 
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(0, -2, 1f))
         
         top.addView(Button(this).apply {
-            text = "রিসেট (০)"; isAllCaps = false; textSize = 13f; setTextColor(textMain)
+            text = "রিসেট (০)"; isAllCaps = false; textSize = 13f; setTextColor(themeColors.textMain)
             background = getBtnDrawable(Color.parseColor("#475569"), 4)
             layoutParams = LinearLayout.LayoutParams(dp(85), dp(38))
             setOnClickListener { 
@@ -118,23 +111,21 @@ class TasbihActivity : ComponentActivity() {
         })
         centerLayout.addView(kaabaBox)
 
-        val savedTheme = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("app_theme", "")
-        val isLightMode = savedTheme?.contains("সাদা") == true
-
+        // থিমের সাথে মিলিয়ে কাউন্টারের কালার ডাইনামিক করা হলো
         countTextView = TextView(this).apply {
             textSize = 85f
-            setTextColor(if (isLightMode) Color.BLACK else Color.WHITE)
+            setTextColor(themeColors.textMain)
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
         centerLayout.addView(countTextView)
 
         if (isCustomMode) {
-            centerLayout.addView(TextView(this).apply { text = "টার্গেট: ${bn(customTarget)} বার"; textSize = 16f; setTextColor(if(isLightMode) Color.parseColor("#047857") else Color.parseColor("#FBBF24")); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
+            centerLayout.addView(TextView(this).apply { text = "টার্গেট: ${bn(customTarget)} বার"; textSize = 16f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
         } else {
-            centerLayout.addView(TextView(this).apply { text = "মুক্ত গণনা (প্রতি ১০০ পূর্ণে ভাইব্রেশন)"; textSize = 15f; setTextColor(if(isLightMode) Color.parseColor("#047857") else Color.parseColor("#FBBF24")); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
+            centerLayout.addView(TextView(this).apply { text = "মুক্ত গণনা (প্রতি ১০০ পূর্ণে ভাইব্রেশন)"; textSize = 15f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
         }
-        centerLayout.addView(TextView(this).apply { text = "👇 স্ক্রিনের যেকোনো জায়গায় ট্যাপ করে গণনা করুন"; textSize = 13f; setTextColor(textMain) })
+        centerLayout.addView(TextView(this).apply { text = "👇 স্ক্রিনের যেকোনো জায়গায় ট্যাপ করে গণনা করুন"; textSize = 13f; setTextColor(themeColors.textMain) })
 
         root.addView(centerLayout, LinearLayout.LayoutParams(-1, 0, 1f))
 
@@ -261,9 +252,9 @@ class TasbihActivity : ComponentActivity() {
     }
 
     private fun showTargetPopup() {
-        val dialogLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain); setPadding(dp(20), dp(20), dp(20), dp(20)) }
-        dialogLayout.addView(TextView(this).apply { text = "মাশাআল্লাহ!"; textSize = 22f; setTextColor(textMain); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(10)) })
-        dialogLayout.addView(TextView(this).apply { text = "আপনার নির্ধারিত টার্গেট (${bn(customTarget)} বার) পূর্ণ হয়েছে। নতুন করে শুরু করতে রিসেট করুন।"; textSize = 15f; setTextColor(textMain); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(20)) })
+        val dialogLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(themeColors.bgMain); setPadding(dp(20), dp(20), dp(20), dp(20)) }
+        dialogLayout.addView(TextView(this).apply { text = "মাশাআল্লাহ!"; textSize = 22f; setTextColor(themeColors.textMain); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(10)) })
+        dialogLayout.addView(TextView(this).apply { text = "আপনার নির্ধারিত টার্গেট (${bn(customTarget)} বার) পূর্ণ হয়েছে। নতুন করে শুরু করতে রিসেট করুন।"; textSize = 15f; setTextColor(themeColors.textMain); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(20)) })
         
         val dialog = AlertDialog.Builder(this).setView(dialogLayout).setCancelable(false).create()
         
