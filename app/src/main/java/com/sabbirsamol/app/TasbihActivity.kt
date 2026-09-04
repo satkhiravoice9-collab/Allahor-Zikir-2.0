@@ -13,7 +13,6 @@ import android.os.Vibrator
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -33,9 +32,7 @@ class TasbihActivity : ComponentActivity() {
     private var hasShownPopup = false
 
     private lateinit var countTextView: TextView
-
     private val databaseRef = FirebaseDatabase.getInstance().reference
-    private val auth = FirebaseAuth.getInstance()
 
     private fun getBtnDrawable(color: Int, radius: Int = 6) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
@@ -58,9 +55,15 @@ class TasbihActivity : ComponentActivity() {
         fetchTasbihFromFirebase()
     }
 
+    private fun getSafeUserId(): String {
+        val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        val activeEmail = sharedPrefs.getString("user_email", "default_user") ?: "default_user"
+        return activeEmail.replace(".", "_").replace("@", "_")
+    }
+
     private fun fetchTasbihFromFirebase() {
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        val safeUserId = getSafeUserId()
+        databaseRef.child("users").child(safeUserId).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudCount = snapshot.value as? Long
             if (cloudCount != null && !isCustomMode) {
                 currentCount = cloudCount.toInt()
@@ -111,7 +114,6 @@ class TasbihActivity : ComponentActivity() {
         })
         centerLayout.addView(kaabaBox)
 
-        // থিমের সাথে মিলিয়ে কাউন্টারের কালার ডাইনামিক করা হলো
         countTextView = TextView(this).apply {
             textSize = 85f
             setTextColor(themeColors.textMain)
@@ -233,7 +235,7 @@ class TasbihActivity : ComponentActivity() {
     private fun updateDisplay() { countTextView.text = bn(currentCount) }
 
     private fun saveProgress() {
-        val userId = auth.currentUser?.uid ?: "default_user"
+        val safeUserId = getSafeUserId()
         if (isCustomMode) {
             val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
             val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
@@ -243,11 +245,11 @@ class TasbihActivity : ComponentActivity() {
             }
             prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
 
-            databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
+            databaseRef.child("users").child(safeUserId).child("zikir_list_data").setValue(jsonArray.toString())
         } else {
             getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
 
-            databaseRef.child("users").child(userId).child("main_count").setValue(currentCount)
+            databaseRef.child("users").child(safeUserId).child("main_count").setValue(currentCount)
         }
     }
 
