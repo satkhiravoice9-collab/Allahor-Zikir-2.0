@@ -11,8 +11,8 @@ android {
         applicationId = "com.sabbirsamol.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,11 +27,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
     }
 }
 
@@ -41,7 +41,9 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.activity:activity-ktx:1.8.2")
     
-    // যে জেসন ডিপেন্ডেন্সি নিয়ে এরর হচ্ছিল, সেটির সঠিক ও স্ট্যাবল ভার্সন এখানে ব্যবহার করা হয়েছে
+    // পিডিএফ ভিউয়ারের জন্য প্রয়োজনীয় ডিপেন্ডেন্সি (যা Unresolved reference: github এবং PDFView দূর করবে)
+    implementation("com.github.barteksc:android-pdf-viewer:2.8.2")
+    
     implementation("org.json:json:20210307")
     
     testImplementation("junit:junit:4.13.2")
