@@ -28,7 +28,7 @@ class NotepadActivity : ComponentActivity() {
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
 
-    // এনক্রিপশনের জন্য একটি ফিক্সড সিক্রেট কি (১৬ বাইট)
+    // এনক্রিপশনের জন্য ফিক্সড সিক্রেট কি (ফায়ারবেস ডেটা লিক রোধ করতে)
     private val encryptionKey = "SabbirSamolAppKey"
 
     private fun getCardDrawable() = GradientDrawable().apply {
@@ -41,10 +41,9 @@ class NotepadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        checkPinLock {
-            buildUI()
-            fetchNotesFromFirebase()
-        }
+        // পিন লক ছাড়া সরাসরি ইউআই লোড এবং ফায়ারবেস থেকে ডেটা ফেচ করা হবে
+        buildUI()
+        fetchNotesFromFirebase()
     }
 
     private fun getSafeUserId(): String {
@@ -53,7 +52,7 @@ class NotepadActivity : ComponentActivity() {
         return activeEmail.replace(".", "_").replace("@", "_")
     }
 
-    // AES এনক্রিপশন ফাংশন
+    // AES এনক্রিপশন ফাংশন (ফায়ারবেস সুরক্ষার জন্য)
     private fun encrypt(data: String): String {
         return try {
             val keySpec = SecretKeySpec(encryptionKey.toByteArray(Charsets.UTF_8), "AES")
@@ -78,127 +77,6 @@ class NotepadActivity : ComponentActivity() {
         } catch (e: Exception) {
             encryptedData
         }
-    }
-
-    private fun checkPinLock(onSuccess: () -> Unit) {
-        val prefs = getSharedPreferences("NotepadSecurity", Context.MODE_PRIVATE)
-        val savedPin = prefs.getString("notepad_pin", null)
-
-        if (savedPin == null) {
-            showSetPinDialog { onSuccess() }
-        } else {
-            showUnlockDialog(savedPin) { onSuccess() }
-        }
-    }
-
-    private fun showSetPinDialog(onSuccess: () -> Unit) {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(themeColors.bgMain)
-            setPadding(dp(24), dp(24), dp(24), dp(24))
-        }
-
-        layout.addView(TextView(this).apply {
-            text = "🔒 নোটপ্যাড সিকিউরিটি পিন সেট করুন"
-            textSize = 18f
-            setTextColor(themeColors.textMain)
-            setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(12))
-        })
-
-        layout.addView(TextView(this).apply {
-            text = "আপনার নোট সুরক্ষিত রাখতে ৪ বা তার বেশি সংখ্যার একটি পিন দিন।"
-            textSize = 13f
-            setTextColor(themeColors.textSub)
-            setPadding(0, 0, 0, dp(16))
-        })
-
-        val inputPin = EditText(this).apply {
-            hint = "নতুন পিন দিন (যেমন: 1234)"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            setTextColor(themeColors.textMain)
-            setHintTextColor(Color.GRAY)
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = GradientDrawable().apply { setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(6).toFloat(); setColor(themeColors.cardBg) }
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(20) }
-        }
-        layout.addView(inputPin)
-
-        val dialog = AlertDialog.Builder(this).setView(layout).setCancelable(false).create()
-
-        val saveBtn = Button(this).apply {
-            text = "পিন সেট করুন"
-            setTextColor(Color.WHITE)
-            background = getBtnDrawable(Color.parseColor("#047857"))
-            layoutParams = LinearLayout.LayoutParams(-1, dp(45))
-            setOnClickListener {
-                val pin = inputPin.text.toString().trim()
-                if (pin.length >= 4) {
-                    getSharedPreferences("NotepadSecurity", Context.MODE_PRIVATE).edit().putString("notepad_pin", pin).apply()
-                    Toast.makeText(this@NotepadActivity, "পিন সফলভাবে সেট হয়েছে", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                    onSuccess()
-                } else {
-                    Toast.makeText(this@NotepadActivity, "কমপক্ষে ৪ সংখ্যার পিন দিন", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-        layout.addView(saveBtn)
-        dialog.show()
-    }
-
-    private fun showUnlockDialog(savedPin: String, onSuccess: () -> Unit) {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(themeColors.bgMain)
-            setPadding(dp(24), dp(24), dp(24), dp(24))
-        }
-
-        layout.addView(TextView(this).apply {
-            text = "🔐 নোটপ্যাড লক করা আছে"
-            textSize = 18f
-            setTextColor(themeColors.textMain)
-            setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(12))
-        })
-
-        layout.addView(TextView(this).apply {
-            text = "নোট দেখতে আপনার সিকিউরিটি পিনটি লিখুন।"
-            textSize = 13f
-            setTextColor(themeColors.textSub)
-            setPadding(0, 0, 0, dp(16))
-        })
-
-        val inputPin = EditText(this).apply {
-            hint = "পিন কোড লিখুন"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            setTextColor(themeColors.textMain)
-            setHintTextColor(Color.GRAY)
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = GradientDrawable().apply { setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(6).toFloat(); setColor(themeColors.cardBg) }
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(20) }
-        }
-        layout.addView(inputPin)
-
-        val dialog = AlertDialog.Builder(this).setView(layout).setCancelable(false).create()
-
-        val unlockBtn = Button(this).apply {
-            text = "আনলক করুন"
-            setTextColor(Color.WHITE)
-            background = getBtnDrawable(Color.parseColor("#047857"))
-            layoutParams = LinearLayout.LayoutParams(-1, dp(45))
-            setOnClickListener {
-                val enteredPin = inputPin.text.toString().trim()
-                if (enteredPin == savedPin) {
-                    dialog.dismiss()
-                    onSuccess()
-                } else {
-                    Toast.makeText(this@NotepadActivity, "ভুল পিন! আবার চেষ্টা করুন।", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-        layout.addView(unlockBtn)
-        dialog.show()
     }
 
     private fun fetchNotesFromFirebase() {
@@ -299,8 +177,6 @@ class NotepadActivity : ComponentActivity() {
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
             val id = obj.getString("id")
-            
-            // ফায়ারবেস বা লোকাল থেকে আনা এনক্রিপ্টেড ডেটা ডিক্রিপ্ট করে স্ক্রিনে দেখানো হচ্ছে
             val title = decrypt(obj.getString("title"))
             val content = decrypt(obj.getString("content"))
 
@@ -354,7 +230,6 @@ class NotepadActivity : ComponentActivity() {
     }
 
     private fun showAddEditDialog(existingObj: JSONObject?, index: Int) {
-        // এডিট করার সময় এনক্রিপ্টেড ডেটা ডিক্রিপ্ট করে বক্সে দেখানো হবে
         val rawTitle = if (existingObj != null) decrypt(existingObj.optString("title")) else ""
         val rawContent = if (existingObj != null) decrypt(existingObj.optString("content")) else ""
 
@@ -424,7 +299,6 @@ class NotepadActivity : ComponentActivity() {
         val prefs = getSharedPreferences("NotepadPrefs", Context.MODE_PRIVATE)
         val jsonArray = JSONArray(prefs.getString("notes_list", "[]") ?: "[]")
 
-        // ফায়ারবেসে পাঠানোর আগে শিরোনাম ও বিবরণ এনক্রিপ্ট করা হচ্ছে
         val encryptedTitle = encrypt(title)
         val encryptedContent = encrypt(content)
 
