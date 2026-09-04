@@ -49,7 +49,7 @@ dependencies {
     // --- Firebase BoM ---
     implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
 
-    // --- Firebase Firestore & Auth ---
-    implementation("com.google.firebase:firebase-firestore-ktx")
+    // --- Firebase Realtime Database & Auth ---
+    implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
 }
