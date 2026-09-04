@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "Allahor.Zikir"
+    namespace = "com.sabbirsamol.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "Allahor.Zikir"
+        applicationId = "com.sabbirsamol.app"
         minSdk = 23
         targetSdk = 35
         versionCode = 2
