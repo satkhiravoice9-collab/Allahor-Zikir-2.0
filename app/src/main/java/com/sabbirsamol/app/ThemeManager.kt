@@ -31,8 +31,8 @@ object ThemeManager {
                 Color.parseColor("#451A03"), Color.parseColor("#78350F"), Color.parseColor("#92400E"),
                 Color.parseColor("#FDE047"), Color.parseColor("#FACC15"), Color.WHITE, Color.parseColor("#FEF3C7")
             )
-            else -> ThemeColors( // মদিনা থিম (এমরেল্ড গ্রিন ব্যাকগ্রাউন্ড ফিক্সড)
-                Color.parseColor("#022C22"), Color.parseColor("#114D3C"), Color.parseColor("#1B785B"),
+            else -> ThemeColors( // মদিনা থিম (উজ্জ্বল এমরেল্ড গ্রিন ব্যাকগ্রাউন্ড)
+                Color.parseColor("#064E3B"), Color.parseColor("#0A3629"), Color.parseColor("#1B785B"),
                 Color.parseColor("#FBBF24"), Color.parseColor("#FACC15"), Color.WHITE, Color.parseColor("#D1D5DB")
             )
         }
