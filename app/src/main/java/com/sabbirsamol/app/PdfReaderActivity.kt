@@ -2,6 +2,7 @@ package com.sabbirsamol.app
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -143,7 +144,7 @@ class PdfReaderActivity : ComponentActivity() {
                 withContext(Dispatchers.Main) { loadingLayout.visibility = View.GONE; openPdf(file) }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    statusText.text = "❌ ডাউনলোডে সমস্যা হয়েছে। ইন্টারনেট চেক করে আবার চেষ্টা করুন।"
+                    statusText.text = "❌ ডাউনলোডে সমস্যা হয়েছে। ইন্টারনেট চেক করে আবার চেষ্টা করুন."
                     progressBar.visibility = View.GONE
                     if (file.exists()) file.delete()
                 }
@@ -186,7 +187,7 @@ class PdfReaderActivity : ComponentActivity() {
                     val obj = JSONObject().apply {
                         put("id", System.currentTimeMillis().toString())
                         put("title", title)
-                        put("page", currentPage)
+                        put("page", currentPage as Any) // ওভারলোড অ্যাম্বিগুইটি দূর করার জন্য কাস্ট করা হয়েছে
                     }
                     array.put(obj)
                     saveBookmarks(array)
@@ -210,7 +211,6 @@ class PdfReaderActivity : ComponentActivity() {
                 val obj = array.getJSONObject(i)
                 val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
                 
-                // বুকমার্ক টাইটেল (ক্লিক করলে পেজে চলে যাবে)
                 row.addView(TextView(this).apply {
                     text = "🔖 ${obj.getString("title")}"
                     textSize = 16f; setTextColor(Color.parseColor("#114D3C")); setTypeface(null, Typeface.BOLD)
@@ -218,20 +218,18 @@ class PdfReaderActivity : ComponentActivity() {
                     setOnClickListener { pdfView.jumpTo(obj.getInt("page")); dialog.dismiss() }
                 })
                 
-                // এডিট বাটন
                 row.addView(Button(this).apply {
                     text = "✏️"
                     layoutParams = LinearLayout.LayoutParams(dp(45), dp(40)).apply { rightMargin = dp(4) }
                     setOnClickListener { dialog.dismiss(); editBookmarkDialog(obj, i) }
                 })
                 
-                // ডিলিট বাটন
                 row.addView(Button(this).apply {
                     text = "🗑️"
                     layoutParams = LinearLayout.LayoutParams(dp(45), dp(40))
                     setOnClickListener {
                         array.remove(i); saveBookmarks(array)
-                        dialog.dismiss(); showBookmarksDialog() // রিফ্রেশ
+                        dialog.dismiss(); showBookmarksDialog()
                     }
                 })
                 list.addView(row)
@@ -252,7 +250,7 @@ class PdfReaderActivity : ComponentActivity() {
                     val array = getBookmarks()
                     array.getJSONObject(index).put("title", newTitle)
                     saveBookmarks(array)
-                    showBookmarksDialog() // রিফ্রেশ
+                    showBookmarksDialog()
                 }
             }.setNegativeButton("বাতিল") { _, _ -> showBookmarksDialog() }.show()
     }
