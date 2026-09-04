@@ -10,7 +10,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -30,7 +29,6 @@ class ZikirManagerActivity : Activity() {
     private lateinit var listContainer: LinearLayout
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
-    private val auth = FirebaseAuth.getInstance()
 
     // জিকির কার্ডের জন্য ভিন্ন ভিন্ন আকর্ষণীয় কালার কোড (লাল, সবুজ, হলুদ, নীল ইত্যাদি)
     private val cardBgColors = listOf(
@@ -55,9 +53,15 @@ class ZikirManagerActivity : Activity() {
         fetchZikirFromFirebase()
     }
 
+    private fun getSafeUserId(): String {
+        val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        val activeEmail = sharedPrefs.getString("user_email", "default_user") ?: "default_user"
+        return activeEmail.replace(".", "_").replace("@", "_")
+    }
+
     private fun fetchZikirFromFirebase() {
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        val safeUserId = getSafeUserId()
+        databaseRef.child("users").child(safeUserId).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudZikir = snapshot.value as? String
             if (!cloudZikir.isNullOrEmpty()) {
                 getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
@@ -173,7 +177,6 @@ class ZikirManagerActivity : Activity() {
             val target = obj.getInt("target")
             val read = obj.getInt("read")
 
-            // প্রতিটা কার্ডের জন্য ভিন্ন ভিন্ন কালার সেট করা হলো
             val uniqueCardBg = cardBgColors[i % cardBgColors.size]
 
             val card = LinearLayout(this).apply {
@@ -202,7 +205,6 @@ class ZikirManagerActivity : Activity() {
                 setPadding(0, 0, 0, dp(8))
             })
 
-            // বাটনগুলোর সাইজ ঠিক করা: "পড়ুন" বাটন বড় (weight 2f) এবং "এডিট" ও "ডিলিট" ছোট (weight 1f করে)
             val btnRow = LinearLayout(this).apply { 
                 orientation = LinearLayout.HORIZONTAL
                 weightSum = 4f 
@@ -336,8 +338,8 @@ class ZikirManagerActivity : Activity() {
 
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
 
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
+        val safeUserId = getSafeUserId()
+        databaseRef.child("users").child(safeUserId).child("zikir_list_data").setValue(jsonArray.toString())
     }
 
     private fun deleteZikir(index: Int) {
@@ -350,7 +352,7 @@ class ZikirManagerActivity : Activity() {
         prefs.edit().putString("zikir_list", newArray.toString()).apply()
         loadZikirList()
 
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("zikir_list_data").setValue(newArray.toString())
+        val safeUserId = getSafeUserId()
+        databaseRef.child("users").child(safeUserId).child("zikir_list_data").setValue(newArray.toString())
     }
 }
