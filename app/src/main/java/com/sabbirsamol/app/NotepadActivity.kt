@@ -19,7 +19,10 @@ import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -42,7 +45,6 @@ class NotepadActivity : ComponentActivity() {
     private val noteBgColors = arrayOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2", "#114D3C", "#1F2937")
     private val textColors = arrayOf(Color.RED, Color.parseColor("#10B981"), Color.parseColor("#3B82F6"), Color.parseColor("#F59E0B"), Color.parseColor("#8B5CF6"), Color.BLACK, Color.WHITE)
 
-    // Firebase Realtime Database ইনস্ট্যান্স
     private val databaseRef = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
 
@@ -92,17 +94,15 @@ class NotepadActivity : ComponentActivity() {
     }
 
     private fun saveNotes(array: JSONArray) {
-        // ১. লোকাল সেভ
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
-        // ২. Realtime Database এ ক্লাউড সিঙ্ক
         val userId = auth.currentUser?.uid ?: "default_user"
         databaseRef.child("users").child(userId).child("notes_data").setValue(array.toString())
     }
 
     private fun fetchNotesFromFirebase() {
         val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("notes_data").get().addOnSuccessListener { snapshot ->
+        databaseRef.child("users").child(userId).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudNotes = snapshot.value as? String
             if (!cloudNotes.isNullOrEmpty()) {
                 getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
@@ -163,11 +163,8 @@ class NotepadActivity : ComponentActivity() {
         root.addView(bottomBar)
 
         val bottomNav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-            elevation = dp(8).toFloat()
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#0F172A")); setPadding(dp(2), dp(4), dp(2), dp(4)); elevation = dp(8).toFloat()
         }
 
         val navItems = listOf(
