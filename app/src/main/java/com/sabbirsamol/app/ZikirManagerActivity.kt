@@ -10,6 +10,9 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -27,6 +30,10 @@ class ZikirManagerActivity : Activity() {
 
     private lateinit var listContainer: LinearLayout
 
+    // ফায়ারবেস রিয়েলটাইম ডেটাবেজ ইনস্ট্যান্স
+    private val databaseRef = FirebaseDatabase.getInstance().reference
+    private val auth = FirebaseAuth.getInstance()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -38,6 +45,18 @@ class ZikirManagerActivity : Activity() {
         textSub = themeColors.textSub
 
         buildUI()
+        fetchZikirFromFirebase()
+    }
+
+    private fun fetchZikirFromFirebase() {
+        val userId = auth.currentUser?.uid ?: "default_user"
+        databaseRef.child("users").child(userId).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+            val cloudZikir = snapshot.value as? String
+            if (!cloudZikir.isNullOrEmpty()) {
+                getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
+                loadZikirList()
+            }
+        }
     }
 
     private fun buildUI() {
@@ -112,7 +131,7 @@ class ZikirManagerActivity : Activity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@ZikirManagerActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@ZikirManagerActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@ZikirManagerActivity, NotepadActivity::class.java)); finish() }
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@ZikirManagerActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { fetchZikirFromFirebase(); Toast.makeText(this@ZikirManagerActivity, "ক্লাউড থেকে জিকির লিস্ট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@ZikirManagerActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -299,6 +318,10 @@ class ZikirManagerActivity : Activity() {
         }
 
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
+
+        // ফায়ারবেস রিয়েলটাইম ডেটাবেজে জিকির লিস্ট ব্যাকআপ করা
+        val userId = auth.currentUser?.uid ?: "default_user"
+        databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
     }
 
     private fun deleteZikir(index: Int) {
@@ -310,5 +333,9 @@ class ZikirManagerActivity : Activity() {
         }
         prefs.edit().putString("zikir_list", newArray.toString()).apply()
         loadZikirList()
+
+        // ডিলিট করার পরেও ফায়ারবেস ডেটাবেজ আপডেট করা
+        val userId = auth.currentUser?.uid ?: "default_user"
+        databaseRef.child("users").child(userId).child("zikir_list_data").setValue(newArray.toString())
     }
 }
