@@ -11,11 +11,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
-        // নিচের লাইনটি যুক্ত করুন (পুরনো পিডিএফ লাইব্রেরিটি পাওয়ার জন্য)
-        maven { url = uri("https://jcenter.bintray.com") } 
+        maven { url = java.net.URI("https://jitpack.io") }
     }
 }
 
-rootProject.name = "Allahor Zikir"
+rootProject.name = "Allahor-Zikir-2.0"
 include(":app")
