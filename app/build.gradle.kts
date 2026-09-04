@@ -41,8 +41,8 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.activity:activity-ktx:1.8.2")
     
-    // JSON পার্সিং ও অন্যান্য লোকাল কাজের জন্য
-    implementation("org.json:json:20231018")
+    // যে জেসন ডিপেন্ডেন্সি নিয়ে এরর হচ্ছিল, সেটির সঠিক ও স্ট্যাবল ভার্সন এখানে ব্যবহার করা হয়েছে
+    implementation("org.json:json:20210307")
     
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
