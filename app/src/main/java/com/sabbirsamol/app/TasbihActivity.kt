@@ -14,7 +14,8 @@ import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
 
 class TasbihActivity : ComponentActivity() {
@@ -35,8 +36,7 @@ class TasbihActivity : ComponentActivity() {
 
     private lateinit var countTextView: TextView
 
-    // ফায়ারবেস ইনস্ট্যান্স
-    private val db = FirebaseFirestore.getInstance()
+    private val databaseRef = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
 
     private fun getBtnDrawable(color: Int, radius: Int = 6) = GradientDrawable().apply {
@@ -66,15 +66,13 @@ class TasbihActivity : ComponentActivity() {
     }
 
     private fun fetchTasbihFromFirebase() {
-        val userId = auth.currentUser?.uid ?: "anonymous_user"
-        db.collection("users_tasbih").document(userId).get().addOnSuccessListener { document ->
-            if (document != null && document.exists()) {
-                if (!isCustomMode) {
-                    val cloudCount = document.getLong("main_count")?.toInt() ?: currentCount
-                    currentCount = cloudCount
-                    getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
-                    updateDisplay()
-                }
+        val userId = auth.currentUser?.uid ?: "default_user"
+        databaseRef.child("users").child(userId).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
+            val cloudCount = snapshot.value as? Long
+            if (cloudCount != null && !isCustomMode) {
+                currentCount = cloudCount.toInt()
+                getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+                updateDisplay()
             }
         }
     }
@@ -162,11 +160,8 @@ class TasbihActivity : ComponentActivity() {
         root.addView(actionRow)
 
         val menu = LinearLayout(this).apply { 
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-            elevation = dp(8).toFloat()
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#0F172A")); setPadding(dp(2), dp(4), dp(2), dp(4)); elevation = dp(8).toFloat()
         }
 
         val navItems = listOf(
@@ -181,12 +176,8 @@ class TasbihActivity : ComponentActivity() {
 
         navItems.forEach { (label, _) ->
             menu.addView(Button(this).apply {
-                text = label
-                textSize = 10f
-                isAllCaps = false
-                minHeight = 0; minWidth = 0
-                setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0
+                setPadding(0, 0, 0, 0); gravity = Gravity.CENTER
                 setTextColor(if (label.contains("তাসবিহ")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
@@ -251,7 +242,7 @@ class TasbihActivity : ComponentActivity() {
     private fun updateDisplay() { countTextView.text = bn(currentCount) }
 
     private fun saveProgress() {
-        val userId = auth.currentUser?.uid ?: "anonymous_user"
+        val userId = auth.currentUser?.uid ?: "default_user"
         if (isCustomMode) {
             val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
             val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
@@ -261,15 +252,11 @@ class TasbihActivity : ComponentActivity() {
             }
             prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
 
-            // ফায়ারবেসে কাস্টম জিকির সেভ
-            val zikirMap = mapOf("zikir_list_data" to jsonArray.toString())
-            db.collection("users_zikir_manager").document(userId).set(zikirMap)
+            databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
         } else {
             getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
 
-            // ফায়ারবেসে সাধারণ কাউন্ট সেভ
-            val tasbihMap = mapOf("main_count" to currentCount)
-            db.collection("users_tasbih").document(userId).set(tasbihMap)
+            databaseRef.child("users").child(userId).child("main_count").setValue(currentCount)
         }
     }
 
@@ -284,11 +271,7 @@ class TasbihActivity : ComponentActivity() {
             text = "রিসেট করে আবার শুরু করুন"; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#047857"), 6)
             layoutParams = LinearLayout.LayoutParams(-1, dp(45)).apply { bottomMargin = dp(8) }
             setOnClickListener { 
-                currentCount = 0
-                hasShownPopup = false
-                updateDisplay()
-                saveProgress()
-                dialog.dismiss()
+                currentCount = 0; hasShownPopup = false; updateDisplay(); saveProgress(); dialog.dismiss()
             }
         })
 
