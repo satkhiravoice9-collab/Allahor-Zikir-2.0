@@ -15,6 +15,9 @@ import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import android.util.Base64
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
 
 class NotepadActivity : ComponentActivity() {
 
@@ -25,6 +28,9 @@ class NotepadActivity : ComponentActivity() {
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
 
+    // এনক্রিপশনের জন্য একটি ফিক্সড সিক্রেট কি (১৬ বাইট)
+    private val encryptionKey = "SabbirSamolAppKey"
+
     private fun getCardDrawable() = GradientDrawable().apply {
         setColor(themeColors.cardBg); setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(10).toFloat()
     }
@@ -34,14 +40,165 @@ class NotepadActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        buildUI()
-        fetchNotesFromFirebase()
+        
+        checkPinLock {
+            buildUI()
+            fetchNotesFromFirebase()
+        }
     }
 
     private fun getSafeUserId(): String {
         val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
         val activeEmail = sharedPrefs.getString("user_email", "default_user") ?: "default_user"
         return activeEmail.replace(".", "_").replace("@", "_")
+    }
+
+    // AES এনক্রিপশন ফাংশন
+    private fun encrypt(data: String): String {
+        return try {
+            val keySpec = SecretKeySpec(encryptionKey.toByteArray(Charsets.UTF_8), "AES")
+            val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec)
+            val encryptedBytes = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
+            Base64.encodeToString(encryptedBytes, Base64.DEFAULT)
+        } catch (e: Exception) {
+            data
+        }
+    }
+
+    // AES ডিক্রিপশন ফাংশন
+    private fun decrypt(encryptedData: String): String {
+        return try {
+            val keySpec = SecretKeySpec(encryptionKey.toByteArray(Charsets.UTF_8), "AES")
+            val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+            cipher.init(Cipher.DECRYPT_MODE, keySpec)
+            val decodedBytes = Base64.decode(encryptedData, Base64.DEFAULT)
+            val decryptedBytes = cipher.doFinal(decodedBytes)
+            String(decryptedBytes, Charsets.UTF_8)
+        } catch (e: Exception) {
+            encryptedData
+        }
+    }
+
+    private fun checkPinLock(onSuccess: () -> Unit) {
+        val prefs = getSharedPreferences("NotepadSecurity", Context.MODE_PRIVATE)
+        val savedPin = prefs.getString("notepad_pin", null)
+
+        if (savedPin == null) {
+            showSetPinDialog { onSuccess() }
+        } else {
+            showUnlockDialog(savedPin) { onSuccess() }
+        }
+    }
+
+    private fun showSetPinDialog(onSuccess: () -> Unit) {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(themeColors.bgMain)
+            setPadding(dp(24), dp(24), dp(24), dp(24))
+        }
+
+        layout.addView(TextView(this).apply {
+            text = "🔒 নোটপ্যাড সিকিউরিটি পিন সেট করুন"
+            textSize = 18f
+            setTextColor(themeColors.textMain)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(12))
+        })
+
+        layout.addView(TextView(this).apply {
+            text = "আপনার নোট সুরক্ষিত রাখতে ৪ বা তার বেশি সংখ্যার একটি পিন দিন।"
+            textSize = 13f
+            setTextColor(themeColors.textSub)
+            setPadding(0, 0, 0, dp(16))
+        })
+
+        val inputPin = EditText(this).apply {
+            hint = "নতুন পিন দিন (যেমন: 1234)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            setTextColor(themeColors.textMain)
+            setHintTextColor(Color.GRAY)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = GradientDrawable().apply { setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(6).toFloat(); setColor(themeColors.cardBg) }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(20) }
+        }
+        layout.addView(inputPin)
+
+        val dialog = AlertDialog.Builder(this).setView(layout).setCancelable(false).create()
+
+        val saveBtn = Button(this).apply {
+            text = "পিন সেট করুন"
+            setTextColor(Color.WHITE)
+            background = getBtnDrawable(Color.parseColor("#047857"))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(45))
+            setOnClickListener {
+                val pin = inputPin.text.toString().trim()
+                if (pin.length >= 4) {
+                    getSharedPreferences("NotepadSecurity", Context.MODE_PRIVATE).edit().putString("notepad_pin", pin).apply()
+                    Toast.makeText(this@NotepadActivity, "পিন সফলভাবে সেট হয়েছে", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    onSuccess()
+                } else {
+                    Toast.makeText(this@NotepadActivity, "কমপক্ষে ৪ সংখ্যার পিন দিন", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        layout.addView(saveBtn)
+        dialog.show()
+    }
+
+    private fun showUnlockDialog(savedPin: String, onSuccess: () -> Unit) {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(themeColors.bgMain)
+            setPadding(dp(24), dp(24), dp(24), dp(24))
+        }
+
+        layout.addView(TextView(this).apply {
+            text = "🔐 নোটপ্যাড লক করা আছে"
+            textSize = 18f
+            setTextColor(themeColors.textMain)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(12))
+        })
+
+        layout.addView(TextView(this).apply {
+            text = "নোট দেখতে আপনার সিকিউরিটি পিনটি লিখুন।"
+            textSize = 13f
+            setTextColor(themeColors.textSub)
+            setPadding(0, 0, 0, dp(16))
+        })
+
+        val inputPin = EditText(this).apply {
+            hint = "পিন কোড লিখুন"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            setTextColor(themeColors.textMain)
+            setHintTextColor(Color.GRAY)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = GradientDrawable().apply { setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(6).toFloat(); setColor(themeColors.cardBg) }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(20) }
+        }
+        layout.addView(inputPin)
+
+        val dialog = AlertDialog.Builder(this).setView(layout).setCancelable(false).create()
+
+        val unlockBtn = Button(this).apply {
+            text = "আনলক করুন"
+            setTextColor(Color.WHITE)
+            background = getBtnDrawable(Color.parseColor("#047857"))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(45))
+            setOnClickListener {
+                val enteredPin = inputPin.text.toString().trim()
+                if (enteredPin == savedPin) {
+                    dialog.dismiss()
+                    onSuccess()
+                } else {
+                    Toast.makeText(this@NotepadActivity, "ভুল পিন! আবার চেষ্টা করুন।", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        layout.addView(unlockBtn)
+        dialog.show()
     }
 
     private fun fetchNotesFromFirebase() {
@@ -75,7 +232,6 @@ class NotepadActivity : ComponentActivity() {
         scroll.addView(notesContainer)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // বটম নেভিগেশন বার
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -143,8 +299,10 @@ class NotepadActivity : ComponentActivity() {
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
             val id = obj.getString("id")
-            val title = obj.getString("title")
-            val content = obj.getString("content")
+            
+            // ফায়ারবেস বা লোকাল থেকে আনা এনক্রিপ্টেড ডেটা ডিক্রিপ্ট করে স্ক্রিনে দেখানো হচ্ছে
+            val title = decrypt(obj.getString("title"))
+            val content = decrypt(obj.getString("content"))
 
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -196,6 +354,10 @@ class NotepadActivity : ComponentActivity() {
     }
 
     private fun showAddEditDialog(existingObj: JSONObject?, index: Int) {
+        // এডিট করার সময় এনক্রিপ্টেড ডেটা ডিক্রিপ্ট করে বক্সে দেখানো হবে
+        val rawTitle = if (existingObj != null) decrypt(existingObj.optString("title")) else ""
+        val rawContent = if (existingObj != null) decrypt(existingObj.optString("content")) else ""
+
         val dialogLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(themeColors.bgMain)
@@ -212,7 +374,7 @@ class NotepadActivity : ComponentActivity() {
 
         val inputTitle = EditText(this).apply {
             hint = "নোটের শিরোনাম"
-            setText(existingObj?.optString("title") ?: "")
+            setText(rawTitle)
             setTextColor(themeColors.textMain)
             setHintTextColor(Color.GRAY)
             setPadding(dp(10), dp(10), dp(10), dp(10))
@@ -223,7 +385,7 @@ class NotepadActivity : ComponentActivity() {
 
         val inputContent = EditText(this).apply {
             hint = "নোটের বিস্তারিত বিবরণ..."
-            setText(existingObj?.optString("content") ?: "")
+            setText(rawContent)
             setTextColor(themeColors.textMain)
             setHintTextColor(Color.GRAY)
             gravity = Gravity.TOP
@@ -261,10 +423,15 @@ class NotepadActivity : ComponentActivity() {
     private fun saveNoteToPrefs(id: String, title: String, content: String, index: Int) {
         val prefs = getSharedPreferences("NotepadPrefs", Context.MODE_PRIVATE)
         val jsonArray = JSONArray(prefs.getString("notes_list", "[]") ?: "[]")
+
+        // ফায়ারবেসে পাঠানোর আগে শিরোনাম ও বিবরণ এনক্রিপ্ট করা হচ্ছে
+        val encryptedTitle = encrypt(title)
+        val encryptedContent = encrypt(content)
+
         val obj = JSONObject().apply {
             put("id", id)
-            put("title", title)
-            put("content", content)
+            put("title", encryptedTitle)
+            put("content", encryptedContent)
         }
 
         if (index >= 0 && index < jsonArray.length()) {
