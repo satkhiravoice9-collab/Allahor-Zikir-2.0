@@ -1,141 +1,167 @@
 package com.sabbirsamol.app
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.FirebaseDatabase
+import org.json.JSONArray
 
 class TasbihActivity : ComponentActivity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private val themeColors by lazy { ThemeManager.getTheme(this) }
-    
-    private var count = 0
-    private lateinit var countText: TextView
+    private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
 
-    private fun getCardDrawable() = GradientDrawable().apply {
-        setColor(themeColors.cardBg); setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(12).toFloat()
-    }
-    private fun getBtnDrawable(color: Int) = GradientDrawable().apply {
-        setColor(color); cornerRadius = dp(10).toFloat()
+    private var bgMain: Int = Color.BLACK
+    private var textMain: Int = Color.WHITE
+    private var btnBg: Int = Color.GRAY
+
+    private var currentCount = 0
+    private var isCustomMode = false
+    private var customZikirId = ""
+    private var customZikirName = ""
+    private var customTarget = 0
+    private var hasShownPopup = false
+
+    private lateinit var countTextView: TextView
+
+    private val databaseRef = FirebaseDatabase.getInstance().reference
+    private val auth = FirebaseAuth.getInstance()
+
+    private fun getBtnDrawable(color: Int, radius: Int = 6) = GradientDrawable().apply {
+        setColor(color); cornerRadius = dp(radius).toFloat()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        val prefs = getSharedPreferences("TasbihPrefs", Context.MODE_PRIVATE)
-        count = prefs.getInt("tasbih_count", 0)
+        val themeColors = ThemeManager.getTheme(this)
+        bgMain = themeColors.bgMain
+        textMain = themeColors.textMain
+        btnBg = themeColors.btnBg
+
+        customZikirId = intent.getStringExtra("ZIKIR_ID") ?: ""
+        if (customZikirId.isNotEmpty()) {
+            isCustomMode = true
+            customZikirName = intent.getStringExtra("ZIKIR_NAME") ?: ""
+            customTarget = intent.getIntExtra("ZIKIR_TARGET", 0)
+            currentCount = intent.getIntExtra("ZIKIR_READ", 0)
+        } else {
+            currentCount = getSharedPreferences("TasbihData", Context.MODE_PRIVATE).getInt("main_count", 0)
+        }
 
         buildUI()
+        fetchTasbihFromFirebase()
+    }
+
+    private fun fetchTasbihFromFirebase() {
+        val userId = auth.currentUser?.uid ?: "default_user"
+        databaseRef.child("users").child(userId).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
+            val cloudCount = snapshot.value as? Long
+            if (cloudCount != null && !isCustomMode) {
+                currentCount = cloudCount.toInt()
+                getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+                updateDisplay()
+            }
+        }
     }
 
     private fun buildUI() {
-        val root = LinearLayout(this).apply { 
-            orientation = LinearLayout.VERTICAL; 
-            setBackgroundColor(themeColors.bgMain) 
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain)
+            setOnClickListener { incrementCount() }
         }
 
-        // টপ বার
-        val top = LinearLayout(this).apply { 
-            gravity = Gravity.CENTER_VERTICAL; 
-            setPadding(dp(12), dp(12), dp(12), dp(12)); 
-            background = getCardDrawable() 
-        }
+        val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)) }
         top.addView(TextView(this).apply { 
-            text = "← হোম"; textSize = 16f; setTextColor(themeColors.textMain); setPadding(0, 0, dp(12), 0); 
-            setOnClickListener { startActivity(Intent(this@TasbihActivity, MainActivity::class.java)); finish() } 
-        })
-        top.addView(TextView(this).apply { 
-            text = "📿 ডিজিটাল তাসবিহ"; textSize = 17f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD) 
+            text = if (isCustomMode) "🕋 $customZikirName" else "🕋 সাধারণ তাসবিহ কাউন্টার"
+            textSize = 18f; setTextColor(textMain); setTypeface(null, Typeface.BOLD) 
+            setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(0, -2, 1f))
+        
+        top.addView(Button(this).apply {
+            text = "রিসেট (০)"; isAllCaps = false; textSize = 13f; setTextColor(textMain)
+            background = getBtnDrawable(Color.parseColor("#475569"), 4)
+            layoutParams = LinearLayout.LayoutParams(dp(85), dp(38))
+            setOnClickListener { 
+                currentCount = 0; hasShownPopup = false; updateDisplay(); saveProgress() 
+                Toast.makeText(this@TasbihActivity, "গণনা রিসেট করা হয়েছে", Toast.LENGTH_SHORT).show()
+            }
+        })
         root.addView(top)
 
-        // স্ক્રોલ ভিউ ও মেইন বডি
-        val scroll = ScrollView(this).apply { isFillViewport = true }
-        val body = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(20), dp(30), dp(20), dp(30))
+        val centerLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20), dp(10), dp(20), dp(10)) }
+
+        val kaabaBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
+            background = null
+            layoutParams = LinearLayout.LayoutParams(dp(220), dp(220)).apply { bottomMargin = dp(15) }
+            setPadding(0, 0, 0, 0)
         }
 
-        // তাসবিহ কাউন্ট কার্ড ডিজাইন
-        val counterCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            background = getCardDrawable()
-            setPadding(dp(24), dp(30), dp(24), dp(30))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { 
-                bottomMargin = dp(24) 
-            }
-        }
-
-        counterCard.addView(TextView(this).apply {
-            text = "সুবহানাল্লাহ, আলহামদুলিল্লাহ, আল্লাহু আকবার"
-            textSize = 13f
-            setTextColor(themeColors.textSub)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(15))
+        kaabaBox.addView(ImageView(this).apply {
+            val imgResId = resources.getIdentifier("kaaba_img", "drawable", packageName)
+            if (imgResId != 0) setImageResource(imgResId)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            layoutParams = LinearLayout.LayoutParams(-1, -1)
         })
+        centerLayout.addView(kaabaBox)
 
-        countText = TextView(this).apply {
-            text = count.toString()
-            textSize = 75f
-            setTextColor(themeColors.textMain)
+        val savedTheme = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("app_theme", "")
+        val isLightMode = savedTheme?.contains("সাদা") == true
+
+        countTextView = TextView(this).apply {
+            textSize = 85f
+            setTextColor(if (isLightMode) Color.BLACK else Color.WHITE)
             setTypeface(null, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(10))
+            gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) }
         }
-        counterCard.addView(countText)
-        body.addView(counterCard)
+        centerLayout.addView(countTextView)
 
-        // গণনা করুন (Click) বড় বাটন
-        val countBtn = Button(this).apply {
-            text = "🤲 গণনা করুন (Tap Here)"
-            setTextColor(Color.BLACK)
-            textSize = 16f
-            setTypeface(null, Typeface.BOLD)
-            background = getBtnDrawable(themeColors.btnBg)
-            layoutParams = LinearLayout.LayoutParams(-1, dp(60)).apply { 
-                bottomMargin = dp(16) 
-            }
-            setOnClickListener {
-                count++
-                countText.text = count.toString()
-                saveCount()
-            }
+        if (isCustomMode) {
+            centerLayout.addView(TextView(this).apply { text = "টার্গেট: ${bn(customTarget)} বার"; textSize = 16f; setTextColor(if(isLightMode) Color.parseColor("#047857") else Color.parseColor("#FBBF24")); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
+        } else {
+            centerLayout.addView(TextView(this).apply { text = "মুক্ত গণনা (প্রতি ১০০ পূর্ণে ভাইব্রেশন)"; textSize = 15f; setTextColor(if(isLightMode) Color.parseColor("#047857") else Color.parseColor("#FBBF24")); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
         }
-        body.addView(countBtn)
+        centerLayout.addView(TextView(this).apply { text = "👇 স্ক্রিনের যেকোনো জায়গায় ট্যাপ করে গণনা করুন"; textSize = 13f; setTextColor(textMain) })
 
-        // রিসেট বাটন
-        val resetBtn = Button(this).apply {
-            text = "🔄 রিসেট করুন"
-            setTextColor(Color.WHITE)
-            textSize = 14f
-            background = getBtnDrawable(Color.parseColor("#DC2626"))
-            layoutParams = LinearLayout.LayoutParams(dp(160), dp(45))
-            setOnClickListener {
-                count = 0
-                countText.text = count.toString()
-                saveCount()
-            }
+        root.addView(centerLayout, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        val actionRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f; setPadding(dp(16), dp(8), dp(16), dp(8)) }
+        if (isCustomMode) {
+            actionRow.addView(Button(this).apply {
+                text = "সাধারণ তাসবিহে ফিরে যান"; isAllCaps = false; setTextColor(Color.WHITE); textSize = 12f; background = getBtnDrawable(Color.parseColor("#374151"))
+                layoutParams = LinearLayout.LayoutParams(0, dp(45), 1f).apply { rightMargin = dp(5) }
+                setOnClickListener { startActivity(Intent(this@TasbihActivity, TasbihActivity::class.java)); finish() }
+            })
+            actionRow.addView(Button(this).apply {
+                text = "📋 জিকির তালিকা ও টার্গেট"; isAllCaps = false; setTextColor(Color.WHITE); textSize = 12f; background = getBtnDrawable(Color.parseColor("#274E3E"))
+                layoutParams = LinearLayout.LayoutParams(0, dp(45), 1f).apply { leftMargin = dp(5) }
+                setOnClickListener { startActivity(Intent(this@TasbihActivity, ZikirManagerActivity::class.java)); finish() }
+            })
+        } else {
+            actionRow.addView(Button(this).apply {
+                text = "📋 জিকির তালিকা ও টার্গেট"; isAllCaps = false; setTextColor(Color.WHITE); textSize = 14f; background = getBtnDrawable(Color.parseColor("#274E3E"), 8)
+                layoutParams = LinearLayout.LayoutParams(-1, dp(45))
+                setOnClickListener { startActivity(Intent(this@TasbihActivity, ZikirManagerActivity::class.java)) }
+            })
         }
-        body.addView(resetBtn)
+        root.addView(actionRow)
 
-        scroll.addView(body)
-        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-
-        // নিচের ফিক্সড ন্যাভিগেশন বার
-        val bottomNav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-            elevation = dp(8).toFloat()
+        val menu = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
+            setBackgroundColor(Color.parseColor("#0F172A")); setPadding(dp(2), dp(4), dp(2), dp(4)); elevation = dp(8).toFloat()
         }
 
         val navItems = listOf(
@@ -144,34 +170,117 @@ class TasbihActivity : ComponentActivity() {
             Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
             Pair("📖\nআমল", MasnunAmolActivity::class.java),
             Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
+            Pair("🔄\nসিঙ্ক", null),
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetClass) ->
-            bottomNav.addView(Button(this).apply {
-                text = label
-                textSize = 10f
-                isAllCaps = false
-                minHeight = 0
-                minWidth = 0
-                setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER
+        navItems.forEach { (label, _) ->
+            menu.addView(Button(this).apply {
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0
+                setPadding(0, 0, 0, 0); gravity = Gravity.CENTER
                 setTextColor(if (label.contains("তাসবিহ")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
-                    if (targetClass != null && !label.contains("তাসবিহ")) {
-                        startActivity(Intent(this@TasbihActivity, targetClass))
-                        finish()
+                    when {
+                        label.contains("হোম") -> { startActivity(Intent(this@TasbihActivity, MainActivity::class.java)); finish() }
+                        label.contains("তাসবিহ") -> {}
+                        label.contains("লাইব্রেরী") -> { startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java)); finish() }
+                        label.contains("আমল") -> { startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java)); finish() }
+                        label.contains("নোটপ্যাড") -> { startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java)); finish() }
+                        label.contains("সিঙ্ক") -> { fetchTasbihFromFirebase(); Toast.makeText(this@TasbihActivity, "তাসবিহ ডেটা সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("প্রোফাইল") -> { startActivity(Intent(this@TasbihActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
             }, LinearLayout.LayoutParams(0, dp(52), 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
         }
-        root.addView(bottomNav, LinearLayout.LayoutParams(-1, dp(60)))
+        root.addView(menu, LinearLayout.LayoutParams(-1, dp(60)))
 
         setContentView(root)
+        updateDisplay()
     }
 
-    private fun saveCount() {
-        getSharedPreferences("TasbihPrefs", Context.MODE_PRIVATE).edit().putInt("tasbih_count", count).apply()
+    private fun incrementCount() {
+        val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
+        if (isCustomMode) {
+            if (currentCount >= customTarget) {
+                if (!hasShownPopup) {
+                    vibratePhone(v, 500)
+                    showTargetPopup()
+                    hasShownPopup = true
+                }
+                return
+            }
+            currentCount++
+            updateDisplay()
+            saveProgress()
+
+            if (currentCount == customTarget) {
+                vibratePhone(v, 500)
+                showTargetPopup()
+                hasShownPopup = true
+            }
+        } else {
+            currentCount++
+            updateDisplay()
+            saveProgress()
+
+            if (currentCount > 0 && currentCount % 100 == 0) {
+                vibratePhone(v, 500)
+            }
+        }
+    }
+
+    private fun vibratePhone(vibrator: Vibrator, duration: Long) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else { @Suppress("DEPRECATION") vibrator.vibrate(duration) }
+        } catch (e: Exception) {}
+    }
+
+    private fun updateDisplay() { countTextView.text = bn(currentCount) }
+
+    private fun saveProgress() {
+        val userId = auth.currentUser?.uid ?: "default_user"
+        if (isCustomMode) {
+            val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
+            val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                if (obj.getString("id") == customZikirId) { obj.put("read", currentCount); break }
+            }
+            prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
+
+            databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
+        } else {
+            getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+
+            databaseRef.child("users").child(userId).child("main_count").setValue(currentCount)
+        }
+    }
+
+    private fun showTargetPopup() {
+        val dialogLayout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain); setPadding(dp(20), dp(20), dp(20), dp(20)) }
+        dialogLayout.addView(TextView(this).apply { text = "মাশাআল্লাহ!"; textSize = 22f; setTextColor(textMain); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(10)) })
+        dialogLayout.addView(TextView(this).apply { text = "আপনার নির্ধারিত টার্গেট (${bn(customTarget)} বার) পূর্ণ হয়েছে। নতুন করে শুরু করতে রিসেট করুন।"; textSize = 15f; setTextColor(textMain); gravity = Gravity.CENTER; setPadding(0, 0, 0, dp(20)) })
+        
+        val dialog = AlertDialog.Builder(this).setView(dialogLayout).setCancelable(false).create()
+        
+        dialogLayout.addView(Button(this).apply {
+            text = "রিসেট করে আবার শুরু করুন"; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#047857"), 6)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(45)).apply { bottomMargin = dp(8) }
+            setOnClickListener { 
+                currentCount = 0; hasShownPopup = false; updateDisplay(); saveProgress(); dialog.dismiss()
+            }
+        })
+
+        dialogLayout.addView(Button(this).apply {
+            text = "বন্ধ করুন"; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#475569"), 6)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(45))
+            setOnClickListener { dialog.dismiss() }
+        })
+
+        dialog.show()
     }
 }
