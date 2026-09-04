@@ -14,6 +14,7 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
+import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -25,6 +26,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
 
 class NotepadActivity : ComponentActivity() {
 
@@ -43,6 +46,7 @@ class NotepadActivity : ComponentActivity() {
     private val noteBgColors = arrayOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2", "#114D3C", "#1F2937")
     private val textColors = arrayOf(Color.RED, Color.parseColor("#10B981"), Color.parseColor("#3B82F6"), Color.parseColor("#F59E0B"), Color.parseColor("#8B5CF6"), Color.BLACK, Color.WHITE)
 
+    private val encryptionKey = "SabbirSamolAppKey"
     private val databaseRef = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
 
@@ -54,6 +58,27 @@ class NotepadActivity : ComponentActivity() {
     }
     private fun getCircleColorDrawable(color: Int) = GradientDrawable().apply {
         shape = GradientDrawable.OVAL; setColor(color); setStroke(dp(1), Color.GRAY)
+    }
+
+    private fun encrypt(data: String): String {
+        return try {
+            val keySpec = SecretKeySpec(encryptionKey.toByteArray(Charsets.UTF_8), "AES")
+            val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec)
+            val encryptedBytes = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
+            Base64.encodeToString(encryptedBytes, Base64.DEFAULT).trim()
+        } catch (e: Exception) { data }
+    }
+
+    private fun decrypt(encryptedData: String): String {
+        return try {
+            val keySpec = SecretKeySpec(encryptionKey.toByteArray(Charsets.UTF_8), "AES")
+            val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+            cipher.init(Cipher.DECRYPT_MODE, keySpec)
+            val decodedBytes = Base64.decode(encryptedData, Base64.DEFAULT)
+            val decryptedBytes = cipher.doFinal(decodedBytes)
+            String(decryptedBytes, Charsets.UTF_8)
+        } catch (e: Exception) { encryptedData }
     }
 
     private fun toHtmlSafe(spanned: Spanned): String {
@@ -116,7 +141,7 @@ class NotepadActivity : ComponentActivity() {
 
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
         top.addView(TextView(this).apply { text = "← হোম"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { finish() } })
-        top.addView(TextView(this).apply { text = "📝 কালার নোটপ্যাড"; textSize = 18f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
+        top.addView(TextView(this).apply { text = "📝 কালার নোটপ্যাড (AES Secured)"; textSize = 18f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
         root.addView(top)
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
@@ -129,7 +154,8 @@ class NotepadActivity : ComponentActivity() {
             for (i in 0 until notes.length()) {
                 try {
                     val obj = notes.getJSONObject(i)
-                    val title = obj.optString("title", "শিরোনামহীন")
+                    val encryptedTitle = obj.optString("title", "শিরোনামহীন")
+                    val title = decrypt(encryptedTitle)
                     val date = obj.optString("date", "")
                     val bgColorStr = obj.optString("bgColor", "#114D3C")
                     val bgColor = parseColorSafe(bgColorStr, Color.parseColor("#114D3C"))
@@ -205,15 +231,18 @@ class NotepadActivity : ComponentActivity() {
         
         var currentBgColor = existingObj?.optString("bgColor", "#FFFFFF") ?: "#FFFFFF"
 
+        val rawTitle = if (existingObj != null) decrypt(existingObj.optString("title", "")) else ""
+        val rawContent = if (existingObj != null) decrypt(existingObj.optString("content", "")) else ""
+
         val titleInput = EditText(this).apply {
             hint = "নোটের শিরোনাম লিখুন"; setHintTextColor(Color.GRAY); setTextColor(Color.BLACK)
-            setBackgroundColor(Color.WHITE); setPadding(dp(10), dp(10), dp(10), dp(10)); setText(existingObj?.optString("title") ?: "")
+            setBackgroundColor(Color.WHITE); setPadding(dp(10), dp(10), dp(10), dp(10)); setText(rawTitle)
         }
         
         val contentInput = EditText(this).apply {
             hint = "নোটের বিবরণ লিখুন..."; setHintTextColor(Color.GRAY); setTextColor(Color.BLACK)
             setBackgroundColor(parseColorSafe(currentBgColor, Color.WHITE)); minLines = 8; gravity = Gravity.TOP; setPadding(dp(10), dp(10), dp(10), dp(10))
-            if (existingObj != null) setText(fromHtmlSafe(existingObj.optString("content", "")))
+            if (rawContent.isNotEmpty()) setText(fromHtmlSafe(rawContent))
         }
 
         val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -233,7 +262,7 @@ class NotepadActivity : ComponentActivity() {
         val dialog = AlertDialog.Builder(this).setView(dialogScrollContainer.apply { addView(dialogView) }).create()
 
         val btnLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f; setPadding(0, dp(10), 0, 0) }
-        btnLayout.addView(Button(this).apply { text = "সংরক্ষণ"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow); layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(5) }; setOnClickListener { val t = titleInput.text.toString().trim(); val htmlContent = toHtmlSafe(contentInput.text).trim(); if (t.isNotEmpty() && contentInput.text.toString().trim().isNotEmpty()) { val notes = getNotes(); val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()); val obj = JSONObject().apply { put("title", t); put("content", htmlContent); put("date", sdf.format(Date())); put("bgColor", currentBgColor) }; if (index == -1) notes.put(obj) else notes.put(index, obj); saveNotes(notes); dialog.dismiss(); showNotesList() } else Toast.makeText(this@NotepadActivity, "শিরোনাম ও বিবরণ লিখুন", Toast.LENGTH_SHORT).show() } })
+        btnLayout.addView(Button(this).apply { text = "সংরক্ষণ"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow); layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(5) }; setOnClickListener { val t = titleInput.text.toString().trim(); val htmlContent = toHtmlSafe(contentInput.text).trim(); if (t.isNotEmpty() && contentInput.text.toString().trim().isNotEmpty()) { val notes = getNotes(); val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()); val obj = JSONObject().apply { put("title", encrypt(t)); put("content", encrypt(htmlContent)); put("date", sdf.format(Date())); put("bgColor", currentBgColor) }; if (index == -1) notes.put(obj) else notes.put(index, obj); saveNotes(notes); dialog.dismiss(); showNotesList() } else Toast.makeText(this@NotepadActivity, "শিরোনাম ও বিবরণ লিখুন", Toast.LENGTH_SHORT).show() } })
         btnLayout.addView(Button(this).apply { text = "বাতিল"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#E5E7EB")); layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { leftMargin = dp(5) }; setOnClickListener { dialog.dismiss() } })
         dialogView.addView(btnLayout)
         dialog.show()
@@ -243,9 +272,12 @@ class NotepadActivity : ComponentActivity() {
         isInsideNote = true 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
 
+        val decryptedTitle = decrypt(obj.optString("title", ""))
+        val decryptedContent = decrypt(obj.optString("content", ""))
+
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
         top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { showNotesList() } })
-        top.addView(TextView(this).apply { text = obj.optString("title", ""); textSize = 17f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD); isSingleLine = true }, LinearLayout.LayoutParams(0, -2, 1f))
+        top.addView(TextView(this).apply { text = decryptedTitle; textSize = 17f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD); isSingleLine = true }, LinearLayout.LayoutParams(0, -2, 1f))
         top.addView(TextView(this).apply { text = "✏️"; textSize = 18f; setPadding(dp(8), 0, dp(8), 0); setOnClickListener { showAddEditNoteDialog(index, obj) } })
         top.addView(TextView(this).apply { text = "🗑️"; textSize = 18f; setPadding(dp(8), 0, 0, 0); setOnClickListener { val notes = getNotes(); notes.remove(index); saveNotes(notes); showNotesList() } })
         root.addView(top)
@@ -255,7 +287,7 @@ class NotepadActivity : ComponentActivity() {
         contentBox.addView(TextView(this).apply { text = "তারিখ: ${obj.optString("date", "")}"; setTextColor(Color.parseColor("#9CA3AF")); textSize = 12f; setPadding(0, 0, 0, dp(12)) })
         
         val isLight = obj.optString("bgColor", "#114D3C") in listOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2")
-        contentBox.addView(TextView(this).apply { text = fromHtmlSafe(obj.optString("content", "")); setTextColor(if (isLight) Color.BLACK else Color.WHITE); textSize = 16f })
+        contentBox.addView(TextView(this).apply { text = fromHtmlSafe(decryptedContent); setTextColor(if (isLight) Color.BLACK else Color.WHITE); textSize = 16f })
         
         contentScroll.addView(contentBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
