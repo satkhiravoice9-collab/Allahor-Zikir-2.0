@@ -10,11 +10,11 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 import android.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
@@ -26,9 +26,8 @@ class NotepadActivity : ComponentActivity() {
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private lateinit var notesContainer: LinearLayout
 
-    private val databaseRef = FirebaseDatabase.getInstance().reference
-
-    // এনক্রিপশনের জন্য ফিক্সড সিক্রেট কি (ফায়ারবেস ডেটা লিক রোধ করতে)
+    // আপনার ফায়ারবেস রিয়েলটাইম ডেটাবেজের মূল লিংক এখানে বসাবেন (যেমন: https://your-app-default-rtdb.firebaseio.com/)
+    private val firebaseDatabaseUrl = "YOUR_FIREBASE_DATABASE_URL_HERE"
     private val encryptionKey = "SabbirSamolAppKey"
 
     private fun getCardDrawable() = GradientDrawable().apply {
@@ -40,10 +39,9 @@ class NotepadActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // পিন লক ছাড়া সরাসরি ইউআই লোড এবং ফায়ারবেস থেকে ডেটা ফেচ করা হবে
         buildUI()
-        fetchNotesFromFirebase()
+        loadNotesList()
+        fetchNotesFromCloudDirect()
     }
 
     private fun getSafeUserId(): String {
@@ -52,7 +50,6 @@ class NotepadActivity : ComponentActivity() {
         return activeEmail.replace(".", "_").replace("@", "_")
     }
 
-    // AES এনক্রিপশন ফাংশন (ফায়ারবেস সুরক্ষার জন্য)
     private fun encrypt(data: String): String {
         return try {
             val keySpec = SecretKeySpec(encryptionKey.toByteArray(Charsets.UTF_8), "AES")
@@ -60,12 +57,9 @@ class NotepadActivity : ComponentActivity() {
             cipher.init(Cipher.ENCRYPT_MODE, keySpec)
             val encryptedBytes = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
             Base64.encodeToString(encryptedBytes, Base64.DEFAULT)
-        } catch (e: Exception) {
-            data
-        }
+        } catch (e: Exception) { data }
     }
 
-    // AES ডিক্রিপশন ফাংশন
     private fun decrypt(encryptedData: String): String {
         return try {
             val keySpec = SecretKeySpec(encryptionKey.toByteArray(Charsets.UTF_8), "AES")
@@ -74,20 +68,57 @@ class NotepadActivity : ComponentActivity() {
             val decodedBytes = Base64.decode(encryptedData, Base64.DEFAULT)
             val decryptedBytes = cipher.doFinal(decodedBytes)
             String(decryptedBytes, Charsets.UTF_8)
-        } catch (e: Exception) {
-            encryptedData
-        }
+        } catch (e: Exception) { encryptedData }
     }
 
-    private fun fetchNotesFromFirebase() {
-        val safeUserId = getSafeUserId()
-        databaseRef.child("users").child(safeUserId).child("notepad_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
-            val cloudNotes = snapshot.value as? String
-            if (!cloudNotes.isNullOrEmpty()) {
-                getSharedPreferences("NotepadPrefs", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
-                loadNotesList()
-            }
-        }
+    // সরাসরি লিংক দিয়ে ক্লাউড থেকে রিয়েল-টাইম ডেটা নামানোর ফাংশন
+    private fun fetchNotesFromCloudDirect() {
+        if (firebaseDatabaseUrl.contains("YOUR_FIREBASE")) return
+        Thread {
+            try {
+                val safeUserId = getSafeUserId()
+                val url = URL("$firebaseDatabaseUrl/users/$safeUserId/notepad_data.json")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.requestMethod = "GET"
+                
+                if (connection.responseCode == 200) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    if (response != "null" && response.isNotEmpty()) {
+                        val cleanData = if (response.startsWith("\"") && response.endsWith("\"")) {
+                            response.substring(1, response.length - 1).replace("\\\"", "\"")
+                        } else {
+                            response
+                        }
+                        
+                        runOnUiThread {
+                            getSharedPreferences("NotepadPrefs", Context.MODE_PRIVATE).edit().putString("notes_list", cleanData).apply()
+                            loadNotesList()
+                        }
+                    }
+                }
+                connection.disconnect()
+            } catch (e: Exception) { e.printStackTrace() }
+        }.start()
+    }
+
+    // সরাসরি লিংক দিয়ে ক্লাউডে ডেটা পাঠানোর ফাংশন
+    private fun saveNotesToCloudDirect(jsonString: String) {
+        if (firebaseDatabaseUrl.contains("YOUR_FIREBASE")) return
+        Thread {
+            try {
+                val safeUserId = getSafeUserId()
+                val url = URL("$firebaseDatabaseUrl/users/$safeUserId/notepad_data.json")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.requestMethod = "PUT"
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+
+                val escapedJson = JSONObject.quote(jsonString)
+                connection.outputStream.write(escapedJson.toByteArray(Charsets.UTF_8))
+                connection.responseCode
+                connection.disconnect()
+            } catch (e: Exception) { e.printStackTrace() }
+        }.start()
     }
 
     private fun buildUI() {
@@ -124,7 +155,6 @@ class NotepadActivity : ComponentActivity() {
             Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
             Pair("📖\nআমল", MasnunAmolActivity::class.java),
             Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
-            Pair("🔄\nসিঙ্ক", null),
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
@@ -146,7 +176,6 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@NotepadActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> {}
-                        label.contains("সিঙ্ক") -> { fetchNotesFromFirebase(); Toast.makeText(this@NotepadActivity, "নোটপ্যাড ডেটা সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -155,7 +184,6 @@ class NotepadActivity : ComponentActivity() {
         root.addView(bottomNav, LinearLayout.LayoutParams(-1, dp(60)))
 
         setContentView(root)
-        loadNotesList()
     }
 
     private fun loadNotesList() {
@@ -176,7 +204,6 @@ class NotepadActivity : ComponentActivity() {
 
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
-            val id = obj.getString("id")
             val title = decrypt(obj.getString("title"))
             val content = decrypt(obj.getString("content"))
 
@@ -314,10 +341,11 @@ class NotepadActivity : ComponentActivity() {
             jsonArray.put(obj)
         }
 
-        prefs.edit().putString("notes_list", jsonArray.toString()).apply()
+        val jsonString = jsonArray.toString()
+        prefs.edit().putString("notes_list", jsonString).apply()
+        loadNotesList()
 
-        val safeUserId = getSafeUserId()
-        databaseRef.child("users").child(safeUserId).child("notepad_data").setValue(jsonArray.toString())
+        saveNotesToCloudDirect(jsonString)
     }
 
     private fun deleteNote(index: Int) {
@@ -327,10 +355,10 @@ class NotepadActivity : ComponentActivity() {
         for (i in 0 until jsonArray.length()) {
             if (i != index) newArray.put(jsonArray.get(i))
         }
-        prefs.edit().putString("notes_list", newArray.toString()).apply()
+        val jsonString = newArray.toString()
+        prefs.edit().putString("notes_list", jsonString).apply()
         loadNotesList()
 
-        val safeUserId = getSafeUserId()
-        databaseRef.child("users").child(safeUserId).child("notepad_data").setValue(newArray.toString())
+        saveNotesToCloudDirect(jsonString)
     }
 }
