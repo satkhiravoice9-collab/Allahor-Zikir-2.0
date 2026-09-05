@@ -1,5 +1,6 @@
 package com.sabbirsamol.app
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
@@ -11,7 +12,13 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 
 class ProfileSettingsActivity : ComponentActivity() {
 
@@ -19,6 +26,8 @@ class ProfileSettingsActivity : ComponentActivity() {
 
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private val mAuth = FirebaseAuth.getInstance()
+    private lateinit var googleSignInClient: GoogleSignInClient
+    private var loadingDialog: AlertDialog? = null
 
     private fun getCardDrawable() = GradientDrawable().apply {
         setColor(themeColors.cardBg); setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(10).toFloat()
@@ -27,17 +36,39 @@ class ProfileSettingsActivity : ComponentActivity() {
         setColor(color); cornerRadius = dp(6).toFloat()
     }
 
+    // গুগল সাইন-ইন রেজাল্ট ধরার জন্য লঞ্চার
+    private val signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                // গুগলের টোকেন দিয়ে ফায়ারবেসে লগইন
+                firebaseAuthWithGoogle(account.idToken!!)
+            } catch (e: ApiException) {
+                hideLoading()
+                Toast.makeText(this, "গুগল সাইন-ইন ব্যর্থ হয়েছে (Error: ${e.statusCode})", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            hideLoading()
+            Toast.makeText(this, "লগইন প্রক্রিয়া বাতিল করা হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // ফায়ারবেসে ইউজার সাইন-ইন না থাকলে স্বয়ংক্রিয়ভাবে অ্যানোনিমাস বা নিরাপদ সেশন তৈরি করা যাতে ডেটা লস্ট না হয়
+        // ফায়ারবেসে ইউজার সাইন-ইন না থাকলে স্বয়ংক্রিয়ভাবে অ্যানোনিমাস বা নিরাপদ সেশন তৈরি করা
         if (mAuth.currentUser == null) {
-            mAuth.signInAnonymously().addOnCompleteListener { task ->
-                if (!task.isSuccessful) {
-                    // ফেইল করলে লোকাল ফলব্যাক হ্যান্ডেল করা হবে
-                }
-            }
+            mAuth.signInAnonymously()
         }
+
+        // গুগল সাইন-ইন কনফিগারেশন
+        val webClientId = getString(resources.getIdentifier("default_web_client_id", "string", packageName))
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(webClientId)
+            .requestEmail()
+            .build()
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
         
         showSettingsPage()
     }
@@ -82,7 +113,7 @@ class ProfileSettingsActivity : ComponentActivity() {
         cloudCard.addView(Button(this).apply {
             text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA"))
             layoutParams = LinearLayout.LayoutParams(-1, dp(42))
-            setOnClickListener { showGoogleSignInDialog() }
+            setOnClickListener { startRealGoogleSignIn() }
         })
         content.addView(cloudCard)
 
@@ -116,7 +147,7 @@ class ProfileSettingsActivity : ComponentActivity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার (৭টি আইটেম ফিক্সড) =================
+        // ================= বটম নেভিগেশন বার =================
         val bottomNav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -164,44 +195,53 @@ class ProfileSettingsActivity : ComponentActivity() {
         setContentView(root)
     }
 
-    private fun showGoogleSignInDialog() {
-        val emails = listOf("sabbirnumber@gmail.com", "satkhiravoice9@gmail.com", "sabbirahmadblog@gmail.com", "muhammadsabbirahmad@gmail.com", "Add account")
-        
-        val dialogView = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(20), dp(20), dp(20)); setBackgroundColor(Color.WHITE) }
-        dialogView.addView(TextView(this).apply { text = "Choose an account"; textSize = 20f; setTypeface(null, Typeface.BOLD); setTextColor(Color.BLACK); setPadding(0, 0, 0, dp(15)) })
-
-        val radioGroup = RadioGroup(this)
-        emails.forEachIndexed { i, email ->
-            val rb = RadioButton(this).apply { text = email; textSize = 16f; setTextColor(Color.BLACK); setPadding(0, dp(10), 0, dp(10)) }
-            radioGroup.addView(rb)
-            if (i == 0) rb.isChecked = true
+    private fun startRealGoogleSignIn() {
+        showLoading()
+        // আগের সেশন থাকলে ক্লিয়ার করে নতুন করে জিমেইল পপ-আপ আনা
+        googleSignInClient.signOut().addOnCompleteListener {
+            val signInIntent = googleSignInClient.signInIntent
+            signInLauncher.launch(signInIntent)
         }
-        dialogView.addView(ScrollView(this).apply { addView(radioGroup) }, LinearLayout.LayoutParams(-1, dp(200), 1f))
+    }
 
-        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END; setPadding(0, dp(10), 0, 0) }
-        val dialog = AlertDialog.Builder(this).setView(dialogView).create()
-
-        btnRow.addView(Button(this).apply { text = "Cancel"; setTextColor(Color.parseColor("#059669")); setBackgroundColor(Color.TRANSPARENT); setOnClickListener { dialog.dismiss() } })
-        btnRow.addView(Button(this).apply { 
-            text = "OK"; setTextColor(Color.parseColor("#059669")); setBackgroundColor(Color.TRANSPARENT)
-            setOnClickListener {
-                val selectedId = radioGroup.checkedRadioButtonId
-                if (selectedId != -1) {
-                    val selectedText = radioGroup.findViewById<RadioButton>(selectedId).text.toString()
-                    getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", selectedText).apply()
-                    
-                    // ফায়ারবেস অথেন্টিকেশন সেশন এনশিওর করতে অ্যানোনিমাস বা সাইন-ইন ট্রিগার করা
-                    if (mAuth.currentUser == null) {
-                        mAuth.signInAnonymously()
-                    }
-
-                    Toast.makeText(this@ProfileSettingsActivity, "একাউন্ট যুক্ত হয়েছে!", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                    showSettingsPage()
+    private fun firebaseAuthWithGoogle(idToken: String) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        mAuth.signInWithCredential(credential)
+            .addOnCompleteListener(this) { task ->
+                hideLoading()
+                if (task.isSuccessful) {
+                    val user = mAuth.currentUser
+                    val email = user?.email ?: "অজ্ঞাত ইমেইল"
+                    getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", email).apply()
+                    Toast.makeText(this, "সফলভাবে ফায়ারবেসে লগইন হয়েছে!", Toast.LENGTH_SHORT).show()
+                    showSettingsPage() // UI রিফ্রেশ করার জন্য
+                } else {
+                    Toast.makeText(this, "ফায়ারবেস কানেকশন ব্যর্থ: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                 }
             }
-        })
-        dialogView.addView(btnRow)
-        dialog.show()
+    }
+
+    private fun showLoading() {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+            gravity = Gravity.CENTER_VERTICAL
+            addView(ProgressBar(this@ProfileSettingsActivity))
+            addView(TextView(this@ProfileSettingsActivity).apply {
+                text = "গুগল একাউন্ট কানেক্ট করা হচ্ছে..."
+                textSize = 16f
+                setTextColor(Color.BLACK)
+                setPadding(dp(15), 0, 0, 0)
+            })
+        }
+        loadingDialog = AlertDialog.Builder(this)
+            .setCancelable(false)
+            .setView(layout)
+            .create()
+        loadingDialog?.show()
+    }
+
+    private fun hideLoading() {
+        loadingDialog?.dismiss()
     }
 }
