@@ -11,12 +11,14 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import com.google.firebase.auth.FirebaseAuth
 
 class ProfileSettingsActivity : ComponentActivity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     private val themeColors by lazy { ThemeManager.getTheme(this) }
+    private val mAuth = FirebaseAuth.getInstance()
 
     private fun getCardDrawable() = GradientDrawable().apply {
         setColor(themeColors.cardBg); setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(10).toFloat()
@@ -27,6 +29,16 @@ class ProfileSettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // ফায়ারবেসে ইউজার সাইন-ইন না থাকলে স্বয়ংক্রিয়ভাবে অ্যানোনিমাস বা নিরাপদ সেশন তৈরি করা যাতে ডেটা লস্ট না হয়
+        if (mAuth.currentUser == null) {
+            mAuth.signInAnonymously().addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    // ফেইল করলে লোকাল ফলব্যাক হ্যান্ডেল করা হবে
+                }
+            }
+        }
+        
         showSettingsPage()
     }
 
@@ -174,11 +186,19 @@ class ProfileSettingsActivity : ComponentActivity() {
             text = "OK"; setTextColor(Color.parseColor("#059669")); setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener {
                 val selectedId = radioGroup.checkedRadioButtonId
-                val selectedText = radioGroup.findViewById<RadioButton>(selectedId).text.toString()
-                getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", selectedText).apply()
-                Toast.makeText(this@ProfileSettingsActivity, "একাউন্ট যুক্ত হয়েছে!", Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-                showSettingsPage()
+                if (selectedId != -1) {
+                    val selectedText = radioGroup.findViewById<RadioButton>(selectedId).text.toString()
+                    getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", selectedText).apply()
+                    
+                    // ফায়ারবেস অথেন্টিকেশন সেশন এনশিওর করতে অ্যানোনিমাস বা সাইন-ইন ট্রিগার করা
+                    if (mAuth.currentUser == null) {
+                        mAuth.signInAnonymously()
+                    }
+
+                    Toast.makeText(this@ProfileSettingsActivity, "একাউন্ট যুক্ত হয়েছে!", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    showSettingsPage()
+                }
             }
         })
         dialogView.addView(btnRow)
