@@ -119,24 +119,39 @@ class NotepadActivity : ComponentActivity() {
     private fun saveNotes(array: JSONArray) {
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("notes_data").setValue(array.toString())
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            databaseRef.child("users").child(currentUser.uid).child("notes_data").setValue(array.toString())
+        } else {
+            auth.signInAnonymously().addOnSuccessListener { authResult ->
+                val userId = authResult.user?.uid
+                if (userId != null) {
+                    databaseRef.child("users").child(userId).child("notes_data").setValue(array.toString())
+                }
+            }
+        }
     }
 
     private fun fetchNotesFromFirebase() {
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
-            val cloudNotes = snapshot.value as? String
-            if (!cloudNotes.isNullOrEmpty()) {
-                getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
-                showNotesList()
-            } else if (userId != "default_user") {
-                databaseRef.child("users").child("default_user").child("notes_data").get().addOnSuccessListener { defaultSnapshot ->
-                    val defaultNotes = defaultSnapshot.value as? String
-                    if (!defaultNotes.isNullOrEmpty()) {
-                        getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", defaultNotes).apply()
-                        databaseRef.child("users").child(userId).child("notes_data").setValue(defaultNotes)
-                        showNotesList()
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            databaseRef.child("users").child(currentUser.uid).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+                val cloudNotes = snapshot.value as? String
+                if (!cloudNotes.isNullOrEmpty()) {
+                    getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
+                    showNotesList()
+                }
+            }
+        } else {
+            auth.signInAnonymously().addOnSuccessListener { authResult ->
+                val userId = authResult.user?.uid
+                if (userId != null) {
+                    databaseRef.child("users").child(userId).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+                        val cloudNotes = snapshot.value as? String
+                        if (!cloudNotes.isNullOrEmpty()) {
+                            getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
+                            showNotesList()
+                        }
                     }
                 }
             }
@@ -223,7 +238,12 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@NotepadActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> {}
-                        label.contains("সিঙ্ক") -> { fetchNotesFromFirebase(); Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { 
+                            fetchNotesFromFirebase() 
+                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                            toast.setGravity(Gravity.CENTER, 0, 0)
+                            toast.show() 
+                        }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -328,7 +348,12 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@NotepadActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { showNotesList() }
-                        label.contains("সিঙ্ক") -> { fetchNotesFromFirebase(); Toast.makeText(this@NotepadActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { 
+                            fetchNotesFromFirebase() 
+                            val toast = Toast.makeText(this@NotepadActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                            toast.setGravity(Gravity.CENTER, 0, 0)
+                            toast.show() 
+                        }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
