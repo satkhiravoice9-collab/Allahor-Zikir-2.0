@@ -495,7 +495,6 @@ class MainActivity : Activity() {
     }
 
     private fun updateDynamicDates() {
-        // প্রথমে লোকাল ক্যাশ থেকে শেষ হিজরী তারিখ দেখাবে (অফলাইন মোডের জন্য)
         val cachedHijri = getSharedPreferences("HijriCache", Context.MODE_PRIVATE).getString("cached_hijri", null)
         if (!cachedHijri.isNullOrEmpty()) {
             tvHijriDate.text = "🌙 $cachedHijri"
@@ -503,7 +502,6 @@ class MainActivity : Activity() {
             tvHijriDate.text = "🌙 হিজরী তারিখ লোড হচ্ছে..."
         }
 
-        // ইন্টারনেট থেকে ১০০% নিখুঁত হিজরী তারিখ ফেচ করার ফাংশন কল
         loadOnlineHijriDate()
 
         val engFormat = SimpleDateFormat("dd MMMM, yyyy (EEEE)", Locale("bn", "BD"))
@@ -526,8 +524,7 @@ class MainActivity : Activity() {
     private fun loadOnlineHijriDate() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // AlAdhan Free Islamic Calendar API for Gregorian to Hijri conversion
-                val url = URL("https://api.aladhan.com/v1/gToH")
+                val url = URL("https://api.aladhan.com/v1/gToH?adjustment=-1")
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
@@ -561,7 +558,6 @@ class MainActivity : Activity() {
                     val monthBn = monthMap[monthEn] ?: monthEn
                     val formattedHijri = "${bn(dayStr)} $monthBn ${bn(yearStr)} হি."
 
-                    // লোকাল ক্যাশে সংরক্ষণ করা হলো
                     getSharedPreferences("HijriCache", Context.MODE_PRIVATE).edit()
                         .putString("cached_hijri", formattedHijri)
                         .apply()
