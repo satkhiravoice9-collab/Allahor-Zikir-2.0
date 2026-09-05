@@ -17,6 +17,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -492,34 +495,86 @@ class MainActivity : Activity() {
     }
 
     private fun updateDynamicDates() {
+        // প্রথমে লোকাল ক্যাশ থেকে শেষ হিজরী তারিখ দেখাবে (অফলাইন মোডের জন্য)
+        val cachedHijri = getSharedPreferences("HijriCache", Context.MODE_PRIVATE).getString("cached_hijri", null)
+        if (!cachedHijri.isNullOrEmpty()) {
+            tvHijriDate.text = "🌙 $cachedHijri"
+        } else {
+            tvHijriDate.text = "🌙 হিজরী তারিখ লোড হচ্ছে..."
+        }
+
+        // ইন্টারনেট থেকে ১০০% নিখুঁত হিজরী তারিখ ফেচ করার ফাংশন কল
+        loadOnlineHijriDate()
+
+        val engFormat = SimpleDateFormat("dd MMMM, yyyy (EEEE)", Locale("bn", "BD"))
+        val engStr = engFormat.format(Date())
+        tvEnglishDate.text = "📅 $engStr"
+
         val now = Calendar.getInstance()
         val hour = now.get(Calendar.HOUR_OF_DAY)
         if (hour >= 18) {
             now.add(Calendar.DAY_OF_MONTH, 1)
         }
-
-        val hijriDays = (now.timeInMillis / (1000 * 60 * 60 * 24) - 2).toInt()
-        val hijriMonthIndex = 2
-        val hijriDayNum = (hijriDays % 29) + 1
-        val monthNames = arrayOf(
-            "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
-            "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", 
-            "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"
-        )
-        val hijriStr = "${bn(hijriDayNum.toString().take(2))} ${monthNames[hijriMonthIndex]} ১৪৪৮ হি."
-
-        val engFormat = SimpleDateFormat("dd MMMM, yyyy (EEEE)", Locale("bn", "BD"))
-        val engStr = engFormat.format(Date())
-
         val dayOfYear = now.get(Calendar.DAY_OF_YEAR)
         val bDay = ((dayOfYear + 16) % 365) + 1
         val bMonthIdx = ((dayOfYear + 16) / 30) % 12
         val bMonths = arrayOf("বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন", "কার্তিক", "অগ্রহায়ণ", "পৌষ", "মাঘ", "ফাল্গুন", "চৈত্র")
         val bengaliStr = "${bn(bDay.toString())} ${bMonths[bMonthIdx]}, ১৪৩৩ বঙ্গাব্দ"
-
-        tvHijriDate.text = "🌙 $hijriStr"
-        tvEnglishDate.text = "📅 $engStr"
         tvBengaliDate.text = "🌾 $bengaliStr"
+    }
+
+    private fun loadOnlineHijriDate() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // AlAdhan Free Islamic Calendar API for Gregorian to Hijri conversion
+                val url = URL("https://api.aladhan.com/v1/gToH")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                if (connection.responseCode == 200) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(response)
+                    val data = json.getJSONObject("data")
+                    val hijri = data.getJSONObject("hijri")
+                    val dayStr = hijri.getString("day")
+                    val monthObj = hijri.getJSONObject("month")
+                    val monthEn = monthObj.getString("en").trim()
+                    val yearStr = hijri.getString("year")
+
+                    val monthMap = mapOf(
+                        "Muharram" to "মুহাররম",
+                        "Safar" to "সফর",
+                        "Rabi' al-awwal" to "রবিউল আউয়াল",
+                        "Rabi' al-thani" to "রবিউস সানি",
+                        "Jumada al-awwal" to "জমাদিউল আউয়াল",
+                        "Jumada al-akhira" to "জমাদিউস সানি",
+                        "Rajab" to "রজব",
+                        "Sha'ban" to "শাবান",
+                        "Ramadan" to "রমজান",
+                        "Shawwal" to "শাওয়াল",
+                        "Dhu al-Qi'dah" to "জিলকদ",
+                        "Dhu al-Hijjah" to "জিলহজ"
+                    )
+
+                    val monthBn = monthMap[monthEn] ?: monthEn
+                    val formattedHijri = "${bn(dayStr)} $monthBn ${bn(yearStr)} হি."
+
+                    // লোকাল ক্যাশে সংরক্ষণ করা হলো
+                    getSharedPreferences("HijriCache", Context.MODE_PRIVATE).edit()
+                        .putString("cached_hijri", formattedHijri)
+                        .apply()
+
+                    withContext(Dispatchers.Main) {
+                        tvHijriDate.text = "🌙 $formattedHijri"
+                    }
+                }
+                connection.disconnect()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun loadCachedPrayerTimes() {
