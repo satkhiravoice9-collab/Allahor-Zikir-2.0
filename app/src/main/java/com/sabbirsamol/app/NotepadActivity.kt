@@ -117,17 +117,34 @@ class NotepadActivity : ComponentActivity() {
     }
 
     private fun saveNotes(array: JSONArray) {
+        // লোকাল স্টোরেজে সেভ করা হচ্ছে
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
         val currentUser = auth.currentUser
         if (currentUser != null) {
+            // ইউজারের নিজস্ব ফোল্ডারে ক্লাউড ব্যাকআপ
             databaseRef.child("users").child(currentUser.uid).child("notes_data").setValue(array.toString())
+                .addOnSuccessListener {
+                    Toast.makeText(this, "ক্লাউডে ব্যাকআপ সফল হয়েছে!", Toast.LENGTH_SHORT).show()
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
+                }
         } else {
+            // সেশন না থাকলে নতুন সেশন তৈরি করে ব্যাকআপ
             auth.signInAnonymously().addOnSuccessListener { authResult ->
                 val userId = authResult.user?.uid
                 if (userId != null) {
                     databaseRef.child("users").child(userId).child("notes_data").setValue(array.toString())
+                        .addOnSuccessListener {
+                            Toast.makeText(this, "নতুন সেশনে ব্যাকআপ সফল!", Toast.LENGTH_SHORT).show()
+                        }
+                        .addOnFailureListener { e ->
+                            Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
                 }
+            }.addOnFailureListener { e ->
+                Toast.makeText(this, "অথেন্টিকেশন সমস্যা: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -141,6 +158,8 @@ class NotepadActivity : ComponentActivity() {
                     getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
                     showNotesList()
                 }
+            }.addOnFailureListener { e ->
+                Toast.makeText(this, "সিঙ্ক ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
             }
         } else {
             auth.signInAnonymously().addOnSuccessListener { authResult ->
@@ -350,7 +369,7 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("নোটপ্যাড") -> { showNotesList() }
                         label.contains("সিঙ্ক") -> { 
                             fetchNotesFromFirebase() 
-                            val toast = Toast.makeText(this@NotepadActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
                             toast.setGravity(Gravity.CENTER, 0, 0)
                             toast.show() 
                         }
