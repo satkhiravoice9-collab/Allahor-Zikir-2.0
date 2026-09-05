@@ -26,7 +26,9 @@ class ProfileSettingsActivity : ComponentActivity() {
 
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private val mAuth = FirebaseAuth.getInstance()
-    private lateinit var googleSignInClient: GoogleSignInClient
+    
+    // অ্যাপ যাতে ক্র্যাশ না করে সেজন্য এটিকে Nullable (?) করা হয়েছে
+    private var googleSignInClient: GoogleSignInClient? = null 
     private var loadingDialog: AlertDialog? = null
 
     private fun getCardDrawable() = GradientDrawable().apply {
@@ -36,13 +38,11 @@ class ProfileSettingsActivity : ComponentActivity() {
         setColor(color); cornerRadius = dp(6).toFloat()
     }
 
-    // গুগল সাইন-ইন রেজাল্ট ধরার জন্য লঞ্চার
     private val signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                // গুগলের টোকেন দিয়ে ফায়ারবেসে লগইন
                 firebaseAuthWithGoogle(account.idToken!!)
             } catch (e: ApiException) {
                 hideLoading()
@@ -57,18 +57,24 @@ class ProfileSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // ফায়ারবেসে ইউজার সাইন-ইন না থাকলে স্বয়ংক্রিয়ভাবে অ্যানোনিমাস বা নিরাপদ সেশন তৈরি করা
         if (mAuth.currentUser == null) {
             mAuth.signInAnonymously()
         }
 
-        // গুগল সাইন-ইন কনফিগারেশন
-        val webClientId = getString(resources.getIdentifier("default_web_client_id", "string", packageName))
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(webClientId)
-            .requestEmail()
-            .build()
-        googleSignInClient = GoogleSignIn.getClient(this, gso)
+        // CRASH PREVENTION: ট্রাই-ক্যাচ ব্লক ব্যবহার করা হয়েছে যেন কনফিগারেশন মিসিং হলেও অ্যাপ বন্ধ না হয়
+        try {
+            val resId = resources.getIdentifier("default_web_client_id", "string", packageName)
+            if (resId != 0) {
+                val webClientId = getString(resId)
+                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken(webClientId)
+                    .requestEmail()
+                    .build()
+                googleSignInClient = GoogleSignIn.getClient(this, gso)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         
         showSettingsPage()
     }
@@ -84,49 +90,25 @@ class ProfileSettingsActivity : ComponentActivity() {
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(80)) }
 
-        // ================= উদ্যোক্তা কার্ড =================
         val devCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
         devCard.addView(TextView(this).apply { text = "⭐ অ্যাপ উদ্যোক্তা ও পরিচালক"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD) })
         devCard.addView(TextView(this).apply { text = "নাম: সাব্বির আহমাদ\nমোবাইল: ০১৭২৫-২২৮৬২২"; setTextColor(themeColors.textMain); textSize = 15f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(4).toFloat(), 1f) })
-        
-        devCard.addView(Button(this).apply {
-            text = "📞 সরাসরি কল করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(themeColors.btnBg)
-            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }
-            setOnClickListener { startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:01725228622"))) }
-        })
-        devCard.addView(Button(this).apply {
-            text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8"))
-            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
-            setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) }
-        })
+        devCard.addView(Button(this).apply { text = "📞 সরাসরি কল করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(themeColors.btnBg); layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }; setOnClickListener { startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:01725228622"))) } })
+        devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
         content.addView(devCard)
 
-        // ================= গুগল ক্লাউড সাইন ইন কার্ড =================
         val cloudCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
         cloudCard.addView(TextView(this).apply { text = "☁️ গুগল ক্লাউড সাইন ইন ও সিঙ্ক"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD) })
-        
         val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
         val savedEmail = sharedPrefs.getString("user_email", "কোনো অ্যাকাউন্ট যুক্ত নেই")
-        
         cloudCard.addView(TextView(this).apply { text = "সংযুক্ত ক্লাউড জিমেইল:\n$savedEmail\n(১০০% গুগল ক্লাউডে ডাটা সংরক্ষণ হবে)"; setTextColor(themeColors.textMain); textSize = 14f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(2).toFloat(), 1f) })
-        
-        cloudCard.addView(Button(this).apply {
-            text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA"))
-            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
-            setOnClickListener { startRealGoogleSignIn() }
-        })
+        cloudCard.addView(Button(this).apply { text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startRealGoogleSignIn() } })
         content.addView(cloudCard)
 
-        // ================= অ্যাপ থিম নির্বাচন =================
         val themeCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)) }
         themeCard.addView(TextView(this).apply { text = "🎨 অ্যাপ থিম নির্বাচন করুন:"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
-
         val savedTheme = sharedPrefs.getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)")
-        val themes = listOf(
-            Pair("⚪ সাদা থিম (লাইট)", "#F3F4F6"), Pair("⬛ কাবা থিম (ডার্ক গোল্ড)", "#1F2937"), 
-            Pair("🟩 মদিনা থিম (এমরেল্ড গ্রিন)", "#064E3B"), Pair("🟡 সুবহে-সাদিক থিম (রয়্যাল গোল্ড)", "#B45309")
-        )
-
+        val themes = listOf(Pair("⚪ সাদা থিম (লাইট)", "#F3F4F6"), Pair("⬛ কাবা থিম (ডার্ক গোল্ড)", "#1F2937"), Pair("🟩 মদিনা থিম (এমরেল্ড গ্রিন)", "#064E3B"), Pair("🟡 সুবহে-সাদিক থিম (রয়্যাল গোল্ড)", "#B45309"))
         themes.forEach { (tName, tColor) ->
             val isSelected = savedTheme == tName
             themeCard.addView(Button(this).apply {
@@ -134,12 +116,7 @@ class ProfileSettingsActivity : ComponentActivity() {
                 isAllCaps = false; setTextColor(if(tName.contains("সাদা")) Color.BLACK else Color.WHITE)
                 background = GradientDrawable().apply { setColor(Color.parseColor(tColor)); cornerRadius = dp(8).toFloat(); if (isSelected) setStroke(dp(3), themeColors.btnBg) else setStroke(dp(1), Color.GRAY) }
                 layoutParams = LinearLayout.LayoutParams(-1, dp(45)).apply { bottomMargin = dp(10) }
-                
-                setOnClickListener {
-                    sharedPrefs.edit().putString("app_theme", tName).apply()
-                    Toast.makeText(this@ProfileSettingsActivity, "থিম আপডেট হয়েছে!", Toast.LENGTH_SHORT).show()
-                    startActivity(intent); finish(); overridePendingTransition(0, 0)
-                }
+                setOnClickListener { sharedPrefs.edit().putString("app_theme", tName).apply(); Toast.makeText(this@ProfileSettingsActivity, "থিম আপডেট হয়েছে!", Toast.LENGTH_SHORT).show(); startActivity(intent); finish(); overridePendingTransition(0, 0) }
             })
         }
         content.addView(themeCard)
@@ -147,34 +124,11 @@ class ProfileSettingsActivity : ComponentActivity() {
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // ================= বটম নেভিগেশন বার =================
-        val bottomNav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-            elevation = dp(8).toFloat()
-        }
-
-        val navItems = listOf(
-            Pair("🏠\nহোম", MainActivity::class.java),
-            Pair("📿\nতাসবিহ", TasbihActivity::class.java),
-            Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
-            Pair("📖\nআমল", MasnunAmolActivity::class.java),
-            Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
-            Pair("🔄\nসিঙ্ক", null),
-            Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
-        )
-
+        val bottomNav = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setBackgroundColor(Color.parseColor("#0F172A")); setPadding(dp(2), dp(4), dp(2), dp(4)); elevation = dp(8).toFloat() }
+        val navItems = listOf(Pair("🏠\nহোম", MainActivity::class.java), Pair("📿\nতাসবিহ", TasbihActivity::class.java), Pair("📚\nলাইব্রেরী", LibraryActivity::class.java), Pair("📖\nআমল", MasnunAmolActivity::class.java), Pair("📝\nনোটপ্যাড", NotepadActivity::class.java), Pair("🔄\nসিঙ্ক", null), Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java))
         navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
-                text = label
-                textSize = 10f
-                isAllCaps = false
-                minHeight = 0
-                minWidth = 0
-                setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0); gravity = Gravity.CENTER
                 setTextColor(if (label.contains("প্রোফাইল")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
@@ -196,11 +150,19 @@ class ProfileSettingsActivity : ComponentActivity() {
     }
 
     private fun startRealGoogleSignIn() {
+        if (googleSignInClient == null) {
+            Toast.makeText(this, "⚠️ Error: ফায়ারবেস থেকে নতুন google-services.json ফাইলটি নামিয়ে app ফোল্ডারে পেস্ট করুন!", Toast.LENGTH_LONG).show()
+            return
+        }
+        
         showLoading()
-        // আগের সেশন থাকলে ক্লিয়ার করে নতুন করে জিমেইল পপ-আপ আনা
-        googleSignInClient.signOut().addOnCompleteListener {
-            val signInIntent = googleSignInClient.signInIntent
-            signInLauncher.launch(signInIntent)
+        googleSignInClient?.signOut()?.addOnCompleteListener {
+            val signInIntent = googleSignInClient?.signInIntent
+            if (signInIntent != null) {
+                signInLauncher.launch(signInIntent)
+            } else {
+                hideLoading()
+            }
         }
     }
 
@@ -214,7 +176,7 @@ class ProfileSettingsActivity : ComponentActivity() {
                     val email = user?.email ?: "অজ্ঞাত ইমেইল"
                     getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", email).apply()
                     Toast.makeText(this, "সফলভাবে ফায়ারবেসে লগইন হয়েছে!", Toast.LENGTH_SHORT).show()
-                    showSettingsPage() // UI রিফ্রেশ করার জন্য
+                    showSettingsPage() 
                 } else {
                     Toast.makeText(this, "ফায়ারবেস কানেকশন ব্যর্থ: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                 }
@@ -227,17 +189,9 @@ class ProfileSettingsActivity : ComponentActivity() {
             setPadding(dp(20), dp(20), dp(20), dp(20))
             gravity = Gravity.CENTER_VERTICAL
             addView(ProgressBar(this@ProfileSettingsActivity))
-            addView(TextView(this@ProfileSettingsActivity).apply {
-                text = "গুগল একাউন্ট কানেক্ট করা হচ্ছে..."
-                textSize = 16f
-                setTextColor(Color.BLACK)
-                setPadding(dp(15), 0, 0, 0)
-            })
+            addView(TextView(this@ProfileSettingsActivity).apply { text = "গুগল একাউন্ট কানেক্ট করা হচ্ছে..."; textSize = 16f; setTextColor(Color.BLACK); setPadding(dp(15), 0, 0, 0) })
         }
-        loadingDialog = AlertDialog.Builder(this)
-            .setCancelable(false)
-            .setView(layout)
-            .create()
+        loadingDialog = AlertDialog.Builder(this).setCancelable(false).setView(layout).create()
         loadingDialog?.show()
     }
 
