@@ -130,6 +130,15 @@ class NotepadActivity : ComponentActivity() {
             if (!cloudNotes.isNullOrEmpty()) {
                 getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
                 showNotesList()
+            } else if (userId != "default_user") {
+                databaseRef.child("users").child("default_user").child("notes_data").get().addOnSuccessListener { defaultSnapshot ->
+                    val defaultNotes = defaultSnapshot.value as? String
+                    if (!defaultNotes.isNullOrEmpty()) {
+                        getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", defaultNotes).apply()
+                        databaseRef.child("users").child(userId).child("notes_data").setValue(defaultNotes)
+                        showNotesList()
+                    }
+                }
             }
         }
     }
