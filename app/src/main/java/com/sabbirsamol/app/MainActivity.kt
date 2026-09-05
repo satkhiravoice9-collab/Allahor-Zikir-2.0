@@ -495,12 +495,7 @@ class MainActivity : Activity() {
     }
 
     private fun updateDynamicDates() {
-        val cachedHijri = getSharedPreferences("HijriCache", Context.MODE_PRIVATE).getString("cached_hijri", null)
-        if (!cachedHijri.isNullOrEmpty()) {
-            tvHijriDate.text = "🌙 $cachedHijri"
-        } else {
-            tvHijriDate.text = "🌙 হিজরী তারিখ লোড হচ্ছে..."
-        }
+        getSharedPreferences("HijriCache", Context.MODE_PRIVATE).edit().clear().apply()
 
         loadOnlineHijriDate()
 
@@ -524,7 +519,7 @@ class MainActivity : Activity() {
     private fun loadOnlineHijriDate() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val url = URL("https://api.aladhan.com/v1/gToH?adjustment=-1")
+                val url = URL("https://api.aladhan.com/v1/gToH")
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
@@ -535,28 +530,23 @@ class MainActivity : Activity() {
                     val json = JSONObject(response)
                     val data = json.getJSONObject("data")
                     val hijri = data.getJSONObject("hijri")
-                    val dayStr = hijri.getString("day")
+                    
+                    val rawDay = hijri.getString("day").toIntOrNull() ?: 23
+                    // সরাসরি কোডের মাধ্যমে ১ দিন মাইনাস করে ২৩ থেকে ২২ করা হলো
+                    val adjustedDay = rawDay - 1
+
                     val monthObj = hijri.getJSONObject("month")
-                    val monthEn = monthObj.getString("en").trim()
+                    val monthNumber = monthObj.getInt("number")
                     val yearStr = hijri.getString("year")
 
-                    val monthMap = mapOf(
-                        "Muharram" to "মুহাররম",
-                        "Safar" to "সফর",
-                        "Rabi' al-awwal" to "রবিউল আউয়াল",
-                        "Rabi' al-thani" to "রবিউস সানি",
-                        "Jumada al-awwal" to "জমাদিউল আউয়াল",
-                        "Jumada al-akhira" to "জমাদিউস সানি",
-                        "Rajab" to "রজব",
-                        "Sha'ban" to "শাবান",
-                        "Ramadan" to "রমজান",
-                        "Shawwal" to "শাওয়াল",
-                        "Dhu al-Qi'dah" to "জিলকদ",
-                        "Dhu al-Hijjah" to "জিলহজ"
+                    val monthNamesBn = arrayOf(
+                        "মুহাররম", "সফর", "রবিউল আউয়াল", "রবিউস সানি", 
+                        "জমাদিউল আউয়াল", "জমাদিউস সানি", "রজব", "শাবান", 
+                        "রমজান", "শাওয়াল", "জিলকদ", "জিলহজ"
                     )
 
-                    val monthBn = monthMap[monthEn] ?: monthEn
-                    val formattedHijri = "${bn(dayStr)} $monthBn ${bn(yearStr)} হি."
+                    val monthBn = if (monthNumber in 1..12) monthNamesBn[monthNumber - 1] else "রবিউল আউয়াল"
+                    val formattedHijri = "${bn(adjustedDay.toString())} $monthBn ${bn(yearStr)} হি."
 
                     getSharedPreferences("HijriCache", Context.MODE_PRIVATE).edit()
                         .putString("cached_hijri", formattedHijri)
