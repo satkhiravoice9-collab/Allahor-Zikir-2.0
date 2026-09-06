@@ -17,8 +17,9 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.FirebaseException
+import com.google.firebase.auth.*
+import java.util.concurrent.TimeUnit
 
 class ProfileSettingsActivity : ComponentActivity() {
 
@@ -29,6 +30,10 @@ class ProfileSettingsActivity : ComponentActivity() {
     
     private var googleSignInClient: GoogleSignInClient? = null 
     private var loadingDialog: AlertDialog? = null
+
+    // Phone Auth variables
+    private var verificationId: String? = null
+    private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
 
     private fun getCardDrawable() = GradientDrawable().apply {
         setColor(themeColors.cardBg); setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(10).toFloat()
@@ -60,11 +65,8 @@ class ProfileSettingsActivity : ComponentActivity() {
             mAuth.signInAnonymously()
         }
 
-        // CRASH PREVENTION: ডাইরেক্ট Web Client ID ব্যবহার করা হয়েছে
         try {
-            // আপনার google-services.json থেকে নেওয়া সঠিক ক্লায়েন্ট আইডি
             val webClientId = "87832154927-ihigonb4tvml9qaulms5bbipt8lkoaqj.apps.googleusercontent.com" 
-            
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(webClientId)
                 .requestEmail()
@@ -95,14 +97,77 @@ class ProfileSettingsActivity : ComponentActivity() {
         devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
         content.addView(devCard)
 
+        // Cloud & Google Login Card
         val cloudCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
         cloudCard.addView(TextView(this).apply { text = "☁️ গুগল ক্লাউড সাইন ইন ও সিঙ্ক"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD) })
         val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
         val savedEmail = sharedPrefs.getString("user_email", "কোনো অ্যাকাউন্ট যুক্ত নেই")
-        cloudCard.addView(TextView(this).apply { text = "সংযুক্ত ক্লাউড জিমেইল:\n$savedEmail\n(১০০% গুগল ক্লাউডে ডাটা সংরক্ষণ হবে)"; setTextColor(themeColors.textMain); textSize = 14f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(2).toFloat(), 1f) })
-        cloudCard.addView(Button(this).apply { text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startRealGoogleSignIn() } })
+        cloudCard.addView(TextView(this).apply { text = "সংযুক্ত অ্যাকাউন্ট:\n$savedEmail\n(১০০% ক্লাউডে ডাটা সংরক্ষণ হবে)"; setTextColor(themeColors.textMain); textSize = 14f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(2).toFloat(), 1f) })
+        cloudCard.addView(Button(this).apply { text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }; setOnClickListener { startRealGoogleSignIn() } })
+        
+        // Phone Number Login Section inside Cloud Card
+        cloudCard.addView(TextView(this).apply { text = "অথবা মোবাইল নম্বর দিয়ে লগইন:"; setTextColor(themeColors.textAccent); textSize = 14f; setTypeface(null, Typeface.BOLD); setPadding(0, dp(8), 0, dp(4)) })
+        
+        val phoneInput = EditText(this).apply {
+            hint = "মোবাইল নম্বর (যেমন: +88017XXXXXXXX)"
+            textSize = 14f
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(8) }
+        }
+        cloudCard.addView(phoneInput)
+
+        val otpInput = EditText(this).apply {
+            hint = "ওটিপি (OTP) কোড লিখুন"
+            textSize = 14f
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(8) }
+            visibility = android.view.View.GONE
+        }
+        cloudCard.addView(otpInput)
+
+        val btnSendOtp = Button(this).apply {
+            text = "📩 ওটিপি কোড পাঠান"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = getBtnDrawable(Color.parseColor("#059669"))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(8) }
+            setOnClickListener {
+                val phoneNo = phoneInput.text.toString().trim()
+                if (phoneNo.isNotEmpty()) {
+                    showLoading("ওটিপি পাঠানো হচ্ছে...")
+                    startPhoneVerification(phoneNo, otpInput, this)
+                } else {
+                    Toast.makeText(this@ProfileSettingsActivity, "দয়া করে সঠিক মোবাইল নম্বর দিন", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        cloudCard.addView(btnSendOtp)
+
+        val btnVerifyOtp = Button(this).apply {
+            text = "✔️ কোড যাচাই করে লগইন করুন"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = getBtnDrawable(Color.parseColor("#D97706"))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
+            visibility = android.view.View.GONE
+            setOnClickListener {
+                val code = otpInput.text.toString().trim()
+                if (code.isNotEmpty() && verificationId != null) {
+                    showLoading("লগইন যাচাই করা হচ্ছে...")
+                    verifyCode(code)
+                } else {
+                    Toast.makeText(this@ProfileSettingsActivity, "দয়া করে সঠিক ওটিপি কোডটি লিখুন", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        cloudCard.addView(btnVerifyOtp)
         content.addView(cloudCard)
 
+        // Theme Card
         val themeCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)) }
         themeCard.addView(TextView(this).apply { text = "🎨 অ্যাপ থিম নির্বাচন করুন:"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
         val savedTheme = sharedPrefs.getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)")
@@ -147,13 +212,65 @@ class ProfileSettingsActivity : ComponentActivity() {
         setContentView(root)
     }
 
+    private fun startPhoneVerification(phoneNumber: String, otpInput: EditText, btnVerifyOtpTrigger: Button) {
+        val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                hideLoading()
+                signInWithPhoneCredential(credential)
+            }
+
+            override fun onVerificationFailed(e: FirebaseException) {
+                hideLoading()
+                Toast.makeText(baseContext, "ভেরিফিকেশন ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+
+            override fun onCodeSent(valId: String, token: PhoneAuthProvider.ForceResendingToken) {
+                hideLoading()
+                verificationId = valId
+                resendToken = token
+                otpInput.visibility = android.view.View.VISIBLE
+                btnVerifyOtpTrigger.visibility = android.view.View.GONE
+                // Find and show verify button next to otp input if needed, or activate it
+                Toast.makeText(baseContext, "ওটিপি কোড পাঠানো হয়েছে!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        val options = PhoneAuthOptions.newBuilder(mAuth)
+            .setPhoneNumber(phoneNumber)
+            .setTimeout(60L, TimeUnit.SECONDS)
+            .setActivity(this)
+            .setCallbacks(callbacks)
+            .build()
+        PhoneAuthProvider.verifyPhoneNumber(options)
+    }
+
+    private fun verifyCode(code: String) {
+        val cred = PhoneAuthProvider.getCredential(verificationId!!, code)
+        signInWithPhoneCredential(cred)
+    }
+
+    private fun signInWithPhoneCredential(credential: PhoneAuthCredential) {
+        mAuth.signInWithCredential(credential)
+            .addOnCompleteListener(this) { task ->
+                hideLoading()
+                if (task.isSuccessful) {
+                    val user = mAuth.currentUser
+                    val phoneNo = user?.phoneNumber ?: "মোবাইল ব্যবহারকারী"
+                    getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", phoneNo).apply()
+                    Toast.makeText(this, "সফলভাবে ফোন নম্বর দিয়ে লগইন হয়েছে!", Toast.LENGTH_SHORT).show()
+                    showSettingsPage()
+                } else {
+                    Toast.makeText(this, "লগইন ব্যর্থ: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+    }
+
     private fun startRealGoogleSignIn() {
         if (googleSignInClient == null) {
-            Toast.makeText(this, "⚠️ Error: ফায়ারবেস থেকে নতুন google-services.json ফাইলটি নামিয়ে app ফোল্ডারে পেস্ট করুন!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "⚠️ Error: ফায়ারবেস কনফিগারেশন চেক করুন!", Toast.LENGTH_LONG).show()
             return
         }
-        
-        showLoading()
+        showLoading("গুগল অ্যাকাউন্ট কানেক্ট করা হচ্ছে...")
         googleSignInClient?.signOut()?.addOnCompleteListener {
             val signInIntent = googleSignInClient?.signInIntent
             if (signInIntent != null) {
@@ -181,13 +298,13 @@ class ProfileSettingsActivity : ComponentActivity() {
             }
     }
 
-    private fun showLoading() {
+    private fun showLoading(message: String = "লোড হচ্ছে...") {
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(20), dp(20), dp(20), dp(20))
             gravity = Gravity.CENTER_VERTICAL
             addView(ProgressBar(this@ProfileSettingsActivity))
-            addView(TextView(this@ProfileSettingsActivity).apply { text = "গুগল একাউন্ট কানেক্ট করা হচ্ছে..."; textSize = 16f; setTextColor(Color.BLACK); setPadding(dp(15), 0, 0, 0) })
+            addView(TextView(this@ProfileSettingsActivity).apply { text = message; textSize = 16f; setTextColor(Color.BLACK); setPadding(dp(15), 0, 0, 0) })
         }
         loadingDialog = AlertDialog.Builder(this).setCancelable(false).setView(layout).create()
         loadingDialog?.show()
