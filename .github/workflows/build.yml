@@ -1,4 +1,4 @@
-name: Build Allahr Poth APK
+name: Build Muslim Time APK
 
 on:
   push:
@@ -33,5 +33,5 @@ jobs:
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Allahor-Poth-APK
+        name: Build-Muslim-Time
         path: app/build/outputs/apk/debug/app-debug.apk
