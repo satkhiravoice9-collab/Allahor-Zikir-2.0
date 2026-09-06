@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "87832154927",
+    "firebase_url": "https://allahor-zikir-e7ff8-default-rtdb.firebaseio.com",
+    "project_id": "allahor-zikir-e7ff8",
+    "storage_bucket": "allahor-zikir-e7ff8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87832154927:android:8542081a40509c784fc7da",
+        "android_client_info": {
+          "package_name": "com.sabbirsamol.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "87832154927-dr9om2p33p6r2s3di5b8r85vsluv2vrv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sabbirsamol.app",
+            "certificate_hash": "521e186a55f7254893d5ef725536c9ec18c9b590"
+          }
+        },
+        {
+          "client_id": "87832154927-ihigonb4tvml9qaulms5bbipt8lkoaqj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC95_UWz9SFEhh16tqocAVhsn4_mvIA4vY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "87832154927-ihigonb4tvml9qaulms5bbipt8lkoaqj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
