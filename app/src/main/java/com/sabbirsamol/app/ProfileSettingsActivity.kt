@@ -27,7 +27,6 @@ class ProfileSettingsActivity : ComponentActivity() {
     private val themeColors by lazy { ThemeManager.getTheme(this) }
     private val mAuth = FirebaseAuth.getInstance()
     
-    // অ্যাপ যাতে ক্র্যাশ না করে সেজন্য এটিকে Nullable (?) করা হয়েছে
     private var googleSignInClient: GoogleSignInClient? = null 
     private var loadingDialog: AlertDialog? = null
 
@@ -61,17 +60,16 @@ class ProfileSettingsActivity : ComponentActivity() {
             mAuth.signInAnonymously()
         }
 
-        // CRASH PREVENTION: ট্রাই-ক্যাচ ব্লক ব্যবহার করা হয়েছে যেন কনফিগারেশন মিসিং হলেও অ্যাপ বন্ধ না হয়
+        // CRASH PREVENTION: ডাইরেক্ট Web Client ID ব্যবহার করা হয়েছে
         try {
-            val resId = resources.getIdentifier("default_web_client_id", "string", packageName)
-            if (resId != 0) {
-                val webClientId = getString(resId)
-                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken(webClientId)
-                    .requestEmail()
-                    .build()
-                googleSignInClient = GoogleSignIn.getClient(this, gso)
-            }
+            // আপনার google-services.json থেকে নেওয়া সঠিক ক্লায়েন্ট আইডি
+            val webClientId = "87832154927-ihigonb4tvml9qaulms5bbipt8lkoaqj.apps.googleusercontent.com" 
+            
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
+                .requestEmail()
+                .build()
+            googleSignInClient = GoogleSignIn.getClient(this, gso)
         } catch (e: Exception) {
             e.printStackTrace()
         }
