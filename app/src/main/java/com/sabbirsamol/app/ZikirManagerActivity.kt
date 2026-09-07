@@ -30,7 +30,6 @@ class ZikirManagerActivity : Activity() {
 
     private lateinit var listContainer: LinearLayout
 
-    // ফায়ারবেস রিয়েলটাইম ডেটাবেজ ইনস্ট্যান্স
     private val databaseRef = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
 
@@ -44,17 +43,37 @@ class ZikirManagerActivity : Activity() {
         textMain = themeColors.textMain
         textSub = themeColors.textSub
 
-        buildUI()
-        fetchZikirFromFirebase()
+        ensureUserAuthenticated {
+            buildUI()
+            fetchZikirFromFirebase()
+        }
+    }
+
+    private fun ensureUserAuthenticated(onReady: () -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            auth.signInAnonymously().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    onReady()
+                } else {
+                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
+                    onReady()
+                }
+            }
+        } else {
+            onReady()
+        }
     }
 
     private fun fetchZikirFromFirebase() {
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
-            val cloudZikir = snapshot.value as? String
-            if (!cloudZikir.isNullOrEmpty()) {
-                getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
-                loadZikirList()
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            databaseRef.child("users").child(currentUser.uid).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+                val cloudZikir = snapshot.value as? String
+                if (!cloudZikir.isNullOrEmpty()) {
+                    getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
+                    loadZikirList()
+                }
             }
         }
     }
@@ -319,9 +338,17 @@ class ZikirManagerActivity : Activity() {
 
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
 
-        // ফায়ারবেস রিয়েলটাইম ডেটাবেজে জিকির লিস্ট ব্যাকআপ করা
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            databaseRef.child("users").child(currentUser.uid).child("zikir_list_data").setValue(jsonArray.toString())
+        } else {
+            auth.signInAnonymously().addOnSuccessListener { authResult ->
+                val userId = authResult.user?.uid
+                if (userId != null) {
+                    databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
+                }
+            }
+        }
     }
 
     private fun deleteZikir(index: Int) {
@@ -334,8 +361,16 @@ class ZikirManagerActivity : Activity() {
         prefs.edit().putString("zikir_list", newArray.toString()).apply()
         loadZikirList()
 
-        // ডিলিট করার পরেও ফায়ারবেস ডেটাবেজ আপডেট করা
-        val userId = auth.currentUser?.uid ?: "default_user"
-        databaseRef.child("users").child(userId).child("zikir_list_data").setValue(newArray.toString())
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            databaseRef.child("users").child(currentUser.uid).child("zikir_list_data").setValue(newArray.toString())
+        } else {
+            auth.signInAnonymously().addOnSuccessListener { authResult ->
+                val userId = authResult.user?.uid
+                if (userId != null) {
+                    databaseRef.child("users").child(userId).child("zikir_list_data").setValue(newArray.toString())
+                }
+            }
+        }
     }
 }
