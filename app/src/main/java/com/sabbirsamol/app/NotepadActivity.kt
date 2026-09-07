@@ -99,11 +99,38 @@ class NotepadActivity : ComponentActivity() {
         return try { Color.parseColor(colorStr) } catch (e: Exception) { defaultColor }
     }
 
+    private fun showLoadingDialog(): AlertDialog {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(Color.WHITE)
+        }
+        val progressBar = ProgressBar(this).apply {
+            isIndeterminate = true
+            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(16) }
+        }
+        val textView = TextView(this).apply {
+            text = "ক্লাউড থেকে ডেটা সিঙ্ক হচ্ছে..."
+            textSize = 15f
+            setTextColor(Color.BLACK)
+        }
+        layout.addView(progressBar)
+        layout.addView(textView)
+        return AlertDialog.Builder(this).setView(layout).setCancelable(false).create()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        val loadingDialog = showLoadingDialog()
+        loadingDialog.show()
+
         ensureUserAuthenticated {
-            showNotesList()
-            fetchNotesFromFirebase()
+            fetchNotesFromFirebase {
+                loadingDialog.dismiss()
+                showNotesList()
+            }
         }
     }
     
@@ -146,36 +173,23 @@ class NotepadActivity : ComponentActivity() {
                 .addOnFailureListener { e ->
                     Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
                 }
-        } else {
-            auth.signInAnonymously().addOnSuccessListener { authResult ->
-                val userId = authResult.user?.uid
-                if (userId != null) {
-                    databaseRef.child("users").child(userId).child("notes_data").setValue(array.toString())
-                        .addOnSuccessListener {
-                            Toast.makeText(this, "নতুন সেশনে ব্যাকআপ সফল!", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener { e ->
-                            Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                }
-            }.addOnFailureListener { e ->
-                Toast.makeText(this, "অথেন্টিকেশন সমস্যা: ${e.message}", Toast.LENGTH_LONG).show()
-            }
         }
     }
 
-    private fun fetchNotesFromFirebase() {
+    private fun fetchNotesFromFirebase(onComplete: () -> Unit) {
         val currentUser = auth.currentUser
         if (currentUser != null) {
             databaseRef.child("users").child(currentUser.uid).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
                 val cloudNotes = snapshot.value as? String
                 if (!cloudNotes.isNullOrEmpty()) {
                     getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
-                    showNotesList()
                 }
-            }.addOnFailureListener { e ->
-                Toast.makeText(this, "সিঙ্ক ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
+                onComplete()
+            }.addOnFailureListener {
+                onComplete()
             }
+        } else {
+            onComplete()
         }
     }
 
@@ -260,10 +274,14 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> {}
                         label.contains("সিঙ্ক") -> { 
-                            fetchNotesFromFirebase() 
-                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
-                            toast.setGravity(Gravity.CENTER, 0, 0)
-                            toast.show() 
+                            val dialog = showLoadingDialog()
+                            dialog.show()
+                            fetchNotesFromFirebase {
+                                dialog.dismiss()
+                                val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                                toast.setGravity(Gravity.CENTER, 0, 0)
+                                toast.show() 
+                            }
                         }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
@@ -370,10 +388,14 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { showNotesList() }
                         label.contains("সিঙ্ক") -> { 
-                            fetchNotesFromFirebase() 
-                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
-                            toast.setGravity(Gravity.CENTER, 0, 0)
-                            toast.show() 
+                            val dialog = showLoadingDialog()
+                            dialog.show()
+                            fetchNotesFromFirebase {
+                                dialog.dismiss()
+                                val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                                toast.setGravity(Gravity.CENTER, 0, 0)
+                                toast.show() 
+                            }
                         }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
