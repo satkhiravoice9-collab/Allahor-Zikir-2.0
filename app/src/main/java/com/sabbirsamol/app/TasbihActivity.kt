@@ -13,7 +13,6 @@ import android.os.Vibrator
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -37,7 +36,6 @@ class TasbihActivity : ComponentActivity() {
     private lateinit var countTextView: TextView
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
-    private val auth = FirebaseAuth.getInstance()
 
     private fun getBtnDrawable(color: Int, radius: Int = 6) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
@@ -51,7 +49,7 @@ class TasbihActivity : ComponentActivity() {
         textMain = themeColors.textMain
         btnBg = themeColors.btnBg
 
-        customZikirId = intent.getStringExtra("ZIKIR_ID") ?: ""
+        customZikirId = intent.getStringExtra("ZIKIR_ID"] ?: ""
         if (customZikirId.isNotEmpty()) {
             isCustomMode = true
             customZikirName = intent.getStringExtra("ZIKIR_NAME") ?: ""
@@ -61,38 +59,17 @@ class TasbihActivity : ComponentActivity() {
             currentCount = getSharedPreferences("TasbihData", Context.MODE_PRIVATE).getInt("main_count", 0)
         }
 
-        ensureUserAuthenticated {
-            buildUI()
-            fetchTasbihFromFirebase()
-        }
-    }
-
-    private fun ensureUserAuthenticated(onReady: () -> Unit) {
-        val currentUser = auth.currentUser
-        if (currentUser == null) {
-            auth.signInAnonymously().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    onReady()
-                } else {
-                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
-                    onReady()
-                }
-            }
-        } else {
-            onReady()
-        }
+        buildUI()
+        fetchTasbihFromFirebase()
     }
 
     private fun fetchTasbihFromFirebase() {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            databaseRef.child("users").child(currentUser.uid).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
-                val cloudCount = snapshot.value as? Long
-                if (cloudCount != null && !isCustomMode) {
-                    currentCount = cloudCount.toInt()
-                    getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
-                    updateDisplay()
-                }
+        databaseRef.child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
+            val cloudCount = snapshot.value as? Long
+            if (cloudCount != null && !isCustomMode) {
+                currentCount = cloudCount.toInt()
+                getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+                updateDisplay()
             }
         }
     }
@@ -262,43 +239,20 @@ class TasbihActivity : ComponentActivity() {
     private fun updateDisplay() { countTextView.text = bn(currentCount) }
 
     private fun saveProgress() {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            val userId = currentUser.uid
-            if (isCustomMode) {
-                val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
-                val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    if (obj.getString("id") == customZikirId) { obj.put("read", currentCount); break }
-                }
-                prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
-
-                databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
-            } else {
-                getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
-
-                databaseRef.child("users").child(userId).child("main_count").setValue(currentCount)
+        if (isCustomMode) {
+            val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
+            val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                if (obj.getString("id") == customZikirId) { obj.put("read", currentCount); break }
             }
+            prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
+
+            databaseRef.child("zikir_list_data").setValue(jsonArray.toString())
         } else {
-            auth.signInAnonymously().addOnSuccessListener { authResult ->
-                val userId = authResult.user?.uid
-                if (userId != null) {
-                    if (isCustomMode) {
-                        val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
-                        val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
-                        for (i in 0 until jsonArray.length()) {
-                            val obj = jsonArray.getJSONObject(i)
-                            if (obj.getString("id") == customZikirId) { obj.put("read", currentCount); break }
-                        }
-                        prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
-                        databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
-                    } else {
-                        getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
-                        databaseRef.child("users").child(userId).child("main_count").setValue(currentCount)
-                    }
-                }
-            }
+            getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+
+            databaseRef.child("main_count").setValue(currentCount)
         }
     }
 
