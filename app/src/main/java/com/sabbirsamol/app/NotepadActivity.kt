@@ -101,12 +101,30 @@ class NotepadActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        showNotesList()
-        fetchNotesFromFirebase()
+        ensureUserAuthenticated {
+            showNotesList()
+            fetchNotesFromFirebase()
+        }
     }
     
     override fun onBackPressed() {
         if (isInsideNote) showNotesList() else super.onBackPressed()
+    }
+
+    private fun ensureUserAuthenticated(onReady: () -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            auth.signInAnonymously().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    onReady()
+                } else {
+                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
+                    onReady()
+                }
+            }
+        } else {
+            onReady()
+        }
     }
 
     private fun getNotes(): JSONArray {
@@ -117,12 +135,10 @@ class NotepadActivity : ComponentActivity() {
     }
 
     private fun saveNotes(array: JSONArray) {
-        // লোকাল স্টোরেজে সেভ করা হচ্ছে
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
         val currentUser = auth.currentUser
         if (currentUser != null) {
-            // ইউজারের নিজস্ব ফোল্ডারে ক্লাউড ব্যাকআপ
             databaseRef.child("users").child(currentUser.uid).child("notes_data").setValue(array.toString())
                 .addOnSuccessListener {
                     Toast.makeText(this, "ক্লাউডে ব্যাকআপ সফল হয়েছে!", Toast.LENGTH_SHORT).show()
@@ -131,7 +147,6 @@ class NotepadActivity : ComponentActivity() {
                     Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
                 }
         } else {
-            // সেশন না থাকলে নতুন সেশন তৈরি করে ব্যাকআপ
             auth.signInAnonymously().addOnSuccessListener { authResult ->
                 val userId = authResult.user?.uid
                 if (userId != null) {
@@ -160,19 +175,6 @@ class NotepadActivity : ComponentActivity() {
                 }
             }.addOnFailureListener { e ->
                 Toast.makeText(this, "সিঙ্ক ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        } else {
-            auth.signInAnonymously().addOnSuccessListener { authResult ->
-                val userId = authResult.user?.uid
-                if (userId != null) {
-                    databaseRef.child("users").child(userId).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
-                        val cloudNotes = snapshot.value as? String
-                        if (!cloudNotes.isNullOrEmpty()) {
-                            getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
-                            showNotesList()
-                        }
-                    }
-                }
             }
         }
     }
