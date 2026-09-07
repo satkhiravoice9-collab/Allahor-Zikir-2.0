@@ -13,6 +13,7 @@ import android.os.Vibrator
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -36,6 +37,7 @@ class TasbihActivity : ComponentActivity() {
     private lateinit var countTextView: TextView
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
+    private val auth = FirebaseAuth.getInstance()
 
     private fun getBtnDrawable(color: Int, radius: Int = 6) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
@@ -49,7 +51,7 @@ class TasbihActivity : ComponentActivity() {
         textMain = themeColors.textMain
         btnBg = themeColors.btnBg
 
-        customZikirId = intent.getStringExtra("ZIKIR_ID"] ?: ""
+        customZikirId = intent.getStringExtra("ZIKIR_ID") ?: ""
         if (customZikirId.isNotEmpty()) {
             isCustomMode = true
             customZikirName = intent.getStringExtra("ZIKIR_NAME") ?: ""
@@ -59,12 +61,34 @@ class TasbihActivity : ComponentActivity() {
             currentCount = getSharedPreferences("TasbihData", Context.MODE_PRIVATE).getInt("main_count", 0)
         }
 
-        buildUI()
-        fetchTasbihFromFirebase()
+        ensureUserAuthenticated { uid ->
+            buildUI()
+            fetchTasbihFromFirebase(uid)
+        }
     }
 
-    private fun fetchTasbihFromFirebase() {
-        databaseRef.child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
+    private fun ensureUserAuthenticated(onReady: (String) -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            onReady(currentUser.uid)
+        } else {
+            auth.signInAnonymously().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val uid = auth.currentUser?.uid
+                    if (uid != null) {
+                        onReady(uid)
+                    } else {
+                        Toast.makeText(this, "ইউজার আইডি পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun fetchTasbihFromFirebase(uid: String) {
+        databaseRef.child("users").child(uid).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudCount = snapshot.value as? Long
             if (cloudCount != null && !isCustomMode) {
                 currentCount = cloudCount.toInt()
@@ -184,7 +208,7 @@ class TasbihActivity : ComponentActivity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@TasbihActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@TasbihActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@TasbihActivity, NotepadActivity::class.java)); finish() }
-                        label.contains("সিঙ্ক") -> { fetchTasbihFromFirebase(); Toast.makeText(this@TasbihActivity, "তাসবিহ ডেটা সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { ensureUserAuthenticated { uid -> fetchTasbihFromFirebase(uid) }; Toast.makeText(this@TasbihActivity, "তাসবিহ ডেটা সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@TasbihActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -239,20 +263,22 @@ class TasbihActivity : ComponentActivity() {
     private fun updateDisplay() { countTextView.text = bn(currentCount) }
 
     private fun saveProgress() {
-        if (isCustomMode) {
-            val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
-            val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
-            for (i in 0 until jsonArray.length()) {
-                val obj = jsonArray.getJSONObject(i)
-                if (obj.getString("id") == customZikirId) { obj.put("read", currentCount); break }
+        ensureUserAuthenticated { uid ->
+            if (isCustomMode) {
+                val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
+                val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    if (obj.getString("id") == customZikirId) { obj.put("read", currentCount); break }
+                }
+                prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
+
+                databaseRef.child("users").child(uid).child("zikir_list_data").setValue(jsonArray.toString())
+            } else {
+                getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
+
+                databaseRef.child("users").child(uid).child("main_count").setValue(currentCount)
             }
-            prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
-
-            databaseRef.child("zikir_list_data").setValue(jsonArray.toString())
-        } else {
-            getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
-
-            databaseRef.child("main_count").setValue(currentCount)
         }
     }
 
