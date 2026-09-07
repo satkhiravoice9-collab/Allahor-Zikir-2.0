@@ -19,7 +19,6 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -48,7 +47,6 @@ class NotepadActivity : ComponentActivity() {
 
     private val encryptionKey = "SabbirSamolAppKey"
     private val databaseRef = FirebaseDatabase.getInstance().reference
-    private val auth = FirebaseAuth.getInstance()
 
     private fun getCardDrawable(bgColor: Int = cardBg) = GradientDrawable().apply {
         setColor(bgColor); setStroke(dp(1), cardStroke); cornerRadius = dp(10).toFloat()
@@ -99,59 +97,14 @@ class NotepadActivity : ComponentActivity() {
         return try { Color.parseColor(colorStr) } catch (e: Exception) { defaultColor }
     }
 
-    private fun showLoadingDialog(): AlertDialog {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(20), dp(20), dp(20), dp(20))
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.WHITE)
-        }
-        val progressBar = ProgressBar(this).apply {
-            isIndeterminate = true
-            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(16) }
-        }
-        val textView = TextView(this).apply {
-            text = "ক্লাউড থেকে ডেটা সিঙ্ক হচ্ছে..."
-            textSize = 15f
-            setTextColor(Color.BLACK)
-        }
-        layout.addView(progressBar)
-        layout.addView(textView)
-        return AlertDialog.Builder(this).setView(layout).setCancelable(false).create()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        val loadingDialog = showLoadingDialog()
-        loadingDialog.show()
-
-        ensureUserAuthenticated {
-            fetchNotesFromFirebase {
-                loadingDialog.dismiss()
-                showNotesList()
-            }
-        }
+        showNotesList()
+        fetchNotesFromFirebase()
     }
     
     override fun onBackPressed() {
         if (isInsideNote) showNotesList() else super.onBackPressed()
-    }
-
-    private fun ensureUserAuthenticated(onReady: () -> Unit) {
-        val currentUser = auth.currentUser
-        if (currentUser == null) {
-            auth.signInAnonymously().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    onReady()
-                } else {
-                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
-                    onReady()
-                }
-            }
-        } else {
-            onReady()
-        }
     }
 
     private fun getNotes(): JSONArray {
@@ -164,32 +117,24 @@ class NotepadActivity : ComponentActivity() {
     private fun saveNotes(array: JSONArray) {
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            databaseRef.child("users").child(currentUser.uid).child("notes_data").setValue(array.toString())
-                .addOnSuccessListener {
-                    Toast.makeText(this, "ক্লাউডে ব্যাকআপ সফল হয়েছে!", Toast.LENGTH_SHORT).show()
-                }
-                .addOnFailureListener { e ->
-                    Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-        }
+        databaseRef.child("notes_data").setValue(array.toString())
+            .addOnSuccessListener {
+                Toast.makeText(this, "ক্লাউডে ব্যাকআপ সফল হয়েছে!", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
+            }
     }
 
-    private fun fetchNotesFromFirebase(onComplete: () -> Unit) {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            databaseRef.child("users").child(currentUser.uid).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
-                val cloudNotes = snapshot.value as? String
-                if (!cloudNotes.isNullOrEmpty()) {
-                    getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
-                }
-                onComplete()
-            }.addOnFailureListener {
-                onComplete()
+    private fun fetchNotesFromFirebase() {
+        databaseRef.child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+            val cloudNotes = snapshot.value as? String
+            if (!cloudNotes.isNullOrEmpty()) {
+                getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
+                showNotesList()
             }
-        } else {
-            onComplete()
+        }.addOnFailureListener { e ->
+            Toast.makeText(this, "সিঙ্ক ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -274,14 +219,10 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> {}
                         label.contains("সিঙ্ক") -> { 
-                            val dialog = showLoadingDialog()
-                            dialog.show()
-                            fetchNotesFromFirebase {
-                                dialog.dismiss()
-                                val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
-                                toast.setGravity(Gravity.CENTER, 0, 0)
-                                toast.show() 
-                            }
+                            fetchNotesFromFirebase() 
+                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                            toast.setGravity(Gravity.CENTER, 0, 0)
+                            toast.show() 
                         }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
@@ -388,14 +329,10 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { showNotesList() }
                         label.contains("সিঙ্ক") -> { 
-                            val dialog = showLoadingDialog()
-                            dialog.show()
-                            fetchNotesFromFirebase {
-                                dialog.dismiss()
-                                val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
-                                toast.setGravity(Gravity.CENTER, 0, 0)
-                                toast.show() 
-                            }
+                            fetchNotesFromFirebase() 
+                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                            toast.setGravity(Gravity.CENTER, 0, 0)
+                            toast.show() 
                         }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
