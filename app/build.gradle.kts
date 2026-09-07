@@ -20,7 +20,7 @@ android {
 
     signingConfigs {
         create("debug") {
-            storeFile = file("debug.jks")
+            storeFile = file("${project.projectDir}/debug.jks")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
