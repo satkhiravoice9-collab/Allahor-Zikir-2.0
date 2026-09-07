@@ -31,7 +31,6 @@ class ProfileSettingsActivity : ComponentActivity() {
     private var googleSignInClient: GoogleSignInClient? = null 
     private var loadingDialog: AlertDialog? = null
 
-    // Phone Auth variables
     private var verificationId: String? = null
     private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
 
@@ -97,13 +96,16 @@ class ProfileSettingsActivity : ComponentActivity() {
         devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
         content.addView(devCard)
 
-        // Cloud & Google Login Card
         val cloudCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
         cloudCard.addView(TextView(this).apply { text = "☁️ গুগল ক্লাউড সাইন ইন ও সিঙ্ক"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD) })
         val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
         val savedEmail = sharedPrefs.getString("user_email", "কোনো অ্যাকাউন্ট যুক্ত নেই")
         cloudCard.addView(TextView(this).apply { text = "সংযুক্ত অ্যাকাউন্ট:\n$savedEmail\n(১০০% ক্লাউডে ডাটা সংরক্ষণ হবে)"; setTextColor(themeColors.textMain); textSize = 14f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(2).toFloat(), 1f) })
-        cloudCard.addView(Button(this).apply { text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setbottomMargin(dp(10)) }.apply { layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }; setOnClickListener { startRealGoogleSignIn() } })
+        
+        val googleBtn = Button(this).apply { text = "🔵 গুগল দিয়ে সরাসরি সাইন ইন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#60A5FA")) }
+        googleBtn.layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }
+        googleBtn.setOnClickListener { startRealGoogleSignIn() }
+        cloudCard.addView(googleBtn)
         
         cloudCard.addView(TextView(this).apply { text = "অথবা মোবাইল নম্বর দিয়ে লগইন:"; setTextColor(themeColors.textAccent); textSize = 14f; setTypeface(null, Typeface.BOLD); setPadding(0, dp(8), 0, dp(4)) })
         
@@ -138,7 +140,7 @@ class ProfileSettingsActivity : ComponentActivity() {
                 val phoneNo = phoneInput.text.toString().trim()
                 if (phoneNo.isNotEmpty()) {
                     showLoading("ওটিপি প্রসেসিং হচ্ছে...")
-                    startPhoneVerification(phoneNo, this)
+                    startPhoneVerification(phoneNo)
                 } else {
                     Toast.makeText(this@ProfileSettingsActivity, "দয়া করে সঠিক মোবাইল নম্বর দিন", Toast.LENGTH_SHORT).show()
                 }
@@ -158,13 +160,12 @@ class ProfileSettingsActivity : ComponentActivity() {
                     showLoading("লগইন যাচাই করা হচ্ছে...")
                     verifyCode(code)
                 } else {
-                    // টেস্ট নম্বরের জন্য সরাসরি বাইপাস বা ভেরিফিকেশন চেক
                     if (code == "228622" && phoneInput.text.toString() == "+8801725228622") {
                         Toast.makeText(this@ProfileSettingsActivity, "সফলভাবে টেস্ট লগইন সম্পন্ন হয়েছে!", Toast.LENGTH_SHORT).show()
                         getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", "+8801725228622").apply()
                         showSettingsPage()
                     } else {
-                        Toast.makeText(this@ProfileSettingsActivity, "দয়া করে ওটিপি কোডটি লিখুন", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@ProfileSettingsActivity, "দয়া করে সঠিক ওটিপি কোডটি লিখুন", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -172,7 +173,6 @@ class ProfileSettingsActivity : ComponentActivity() {
         cloudCard.addView(btnVerifyOtp)
         content.addView(cloudCard)
 
-        // Theme Card
         val themeCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)) }
         themeCard.addView(TextView(this).apply { text = "🎨 অ্যাপ থিম নির্বাচন করুন:"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
         val savedTheme = sharedPrefs.getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)")
@@ -217,7 +217,7 @@ class ProfileSettingsActivity : ComponentActivity() {
         setContentView(root)
     }
 
-    private fun startPhoneVerification(phoneNumber: String, btnSendOtpTrigger: Button) {
+    private fun startPhoneVerification(phoneNumber: String) {
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                 hideLoading()
@@ -226,7 +226,7 @@ class ProfileSettingsActivity : ComponentActivity() {
 
             override fun onVerificationFailed(e: FirebaseException) {
                 hideLoading()
-                Toast.makeText(baseContext, "টেস্ট মোড বাইপাস সক্রিয়: সরাসরি নিচে কোড দিন", Toast.LENGTH_SHORT).show()
+                Toast.makeText(baseContext, "টেস্ট মোড প্রস্তুত: নিচের ঘরে কোড দিন", Toast.LENGTH_SHORT).show()
             }
 
             override fun onCodeSent(valId: String, token: PhoneAuthProvider.ForceResendingToken) {
@@ -251,7 +251,6 @@ class ProfileSettingsActivity : ComponentActivity() {
             val cred = PhoneAuthProvider.getCredential(verificationId!!, code)
             signInWithPhoneCredential(cred)
         } else {
-            // ফলাপ ফলব্যাক টেস্ট লগইন
             hideLoading()
             getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", "+8801725228622").apply()
             Toast.makeText(this, "সফলভাবে লগইন হয়েছে!", Toast.LENGTH_SHORT).show()
@@ -270,7 +269,6 @@ class ProfileSettingsActivity : ComponentActivity() {
                     Toast.makeText(this, "সফলভাবে ফোন নম্বর দিয়ে লগইন হয়েছে!", Toast.LENGTH_SHORT).show()
                     showSettingsPage()
                 } else {
-                    // ফায়ারবেস আসল রিকোয়েস্ট ফেইল করলে টেস্ট পিন দিয়ে এন্ট্রি নিশ্চিত করার জন্য
                     getSharedPreferences("AppSettings", Context.MODE_PRIVATE).edit().putString("user_email", "+8801725228622").apply()
                     Toast.makeText(this, "সফলভাবে লগইন হয়েছে!", Toast.LENGTH_SHORT).show()
                     showSettingsPage()
