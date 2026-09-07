@@ -1,38 +1,37 @@
 name: Build Muslim Time APK
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Install Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
+    - name: Download and Install Gradle 8.7
+      run: |
+        wget https://services.gradle.org/distributions/gradle-8.7-bin.zip
+        unzip -q gradle-8.7-bin.zip
+        echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
 
-      - name: Print Signing Report
-        run: gradle signingReport
+    - name: Build Debug APK with Gradle
+      run: gradle assembleDebug
 
-      - name: Build APK
-        run: gradle assembleDebug
+    - name: Run Signing Report (SHA-1 বের করার জন্য)
+      run: gradle signingReport
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Muslim-Time-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Build-Muslim-Time
+        path: app/build/outputs/apk/debug/app-debug.apk
