@@ -10,7 +10,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -31,7 +30,6 @@ class ZikirManagerActivity : Activity() {
     private lateinit var listContainer: LinearLayout
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
-    private val auth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,37 +41,16 @@ class ZikirManagerActivity : Activity() {
         textMain = themeColors.textMain
         textSub = themeColors.textSub
 
-        ensureUserAuthenticated {
-            buildUI()
-            fetchZikirFromFirebase()
-        }
-    }
-
-    private fun ensureUserAuthenticated(onReady: () -> Unit) {
-        val currentUser = auth.currentUser
-        if (currentUser == null) {
-            auth.signInAnonymously().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    onReady()
-                } else {
-                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
-                    onReady()
-                }
-            }
-        } else {
-            onReady()
-        }
+        buildUI()
+        fetchZikirFromFirebase()
     }
 
     private fun fetchZikirFromFirebase() {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            databaseRef.child("users").child(currentUser.uid).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
-                val cloudZikir = snapshot.value as? String
-                if (!cloudZikir.isNullOrEmpty()) {
-                    getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
-                    loadZikirList()
-                }
+        databaseRef.child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+            val cloudZikir = snapshot.value as? String
+            if (!cloudZikir.isNullOrEmpty()) {
+                getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
+                loadZikirList()
             }
         }
     }
@@ -337,18 +314,7 @@ class ZikirManagerActivity : Activity() {
         }
 
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
-
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            databaseRef.child("users").child(currentUser.uid).child("zikir_list_data").setValue(jsonArray.toString())
-        } else {
-            auth.signInAnonymously().addOnSuccessListener { authResult ->
-                val userId = authResult.user?.uid
-                if (userId != null) {
-                    databaseRef.child("users").child(userId).child("zikir_list_data").setValue(jsonArray.toString())
-                }
-            }
-        }
+        databaseRef.child("zikir_list_data").setValue(jsonArray.toString())
     }
 
     private fun deleteZikir(index: Int) {
@@ -360,17 +326,6 @@ class ZikirManagerActivity : Activity() {
         }
         prefs.edit().putString("zikir_list", newArray.toString()).apply()
         loadZikirList()
-
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            databaseRef.child("users").child(currentUser.uid).child("zikir_list_data").setValue(newArray.toString())
-        } else {
-            auth.signInAnonymously().addOnSuccessListener { authResult ->
-                val userId = authResult.user?.uid
-                if (userId != null) {
-                    databaseRef.child("users").child(userId).child("zikir_list_data").setValue(newArray.toString())
-                }
-            }
-        }
+        databaseRef.child("zikir_list_data").setValue(newArray.toString())
     }
 }
