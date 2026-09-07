@@ -10,6 +10,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -30,6 +31,7 @@ class ZikirManagerActivity : Activity() {
     private lateinit var listContainer: LinearLayout
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
+    private val auth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,12 +43,34 @@ class ZikirManagerActivity : Activity() {
         textMain = themeColors.textMain
         textSub = themeColors.textSub
 
-        buildUI()
-        fetchZikirFromFirebase()
+        ensureUserAuthenticated { uid ->
+            buildUI()
+            fetchZikirFromFirebase(uid)
+        }
     }
 
-    private fun fetchZikirFromFirebase() {
-        databaseRef.child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+    private fun ensureUserAuthenticated(onReady: (String) -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            onReady(currentUser.uid)
+        } else {
+            auth.signInAnonymously().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val uid = auth.currentUser?.uid
+                    if (uid != null) {
+                        onReady(uid)
+                    } else {
+                        Toast.makeText(this, "ইউজার আইডি পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun fetchZikirFromFirebase(uid: String) {
+        databaseRef.child("users").child(uid).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudZikir = snapshot.value as? String
             if (!cloudZikir.isNullOrEmpty()) {
                 getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
@@ -127,7 +151,7 @@ class ZikirManagerActivity : Activity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@ZikirManagerActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@ZikirManagerActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@ZikirManagerActivity, NotepadActivity::class.java)); finish() }
-                        label.contains("সিঙ্ক") -> { fetchZikirFromFirebase(); Toast.makeText(this@ZikirManagerActivity, "ক্লাউড থেকে জিকির লিস্ট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { ensureUserAuthenticated { uid -> fetchZikirFromFirebase(uid) }; Toast.makeText(this@ZikirManagerActivity, "ক্লাউড থেকে জিকির লিস্ট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@ZikirManagerActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
                 }
@@ -314,7 +338,10 @@ class ZikirManagerActivity : Activity() {
         }
 
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
-        databaseRef.child("zikir_list_data").setValue(jsonArray.toString())
+
+        ensureUserAuthenticated { uid ->
+            databaseRef.child("users").child(uid).child("zikir_list_data").setValue(jsonArray.toString())
+        }
     }
 
     private fun deleteZikir(index: Int) {
@@ -326,6 +353,9 @@ class ZikirManagerActivity : Activity() {
         }
         prefs.edit().putString("zikir_list", newArray.toString()).apply()
         loadZikirList()
-        databaseRef.child("zikir_list_data").setValue(newArray.toString())
+
+        ensureUserAuthenticated { uid ->
+            databaseRef.child("users").child(uid).child("zikir_list_data").setValue(newArray.toString())
+        }
     }
 }
