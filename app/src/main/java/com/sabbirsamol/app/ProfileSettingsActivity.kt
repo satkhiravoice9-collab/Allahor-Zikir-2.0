@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
@@ -55,11 +56,11 @@ class ProfileSettingsActivity : Activity() {
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val contentLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(10), dp(20), dp(80))
+            setPadding(dp(16), dp(8), dp(16), dp(80))
         }
 
-        // Mobile number setup card
-        val card = LinearLayout(this).apply {
+        // 1. Mobile & Password Security Card
+        val securityCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(cardBg)
@@ -67,57 +68,160 @@ class ProfileSettingsActivity : Activity() {
                 cornerRadius = dp(12).toFloat()
             }
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(15) }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
         }
 
-        card.addView(TextView(this).apply {
-            text = "আপনার মোবাইল নম্বর বা ফোল্ডার আইডি"
+        securityCard.addView(TextView(this).apply {
+            text = "🔐 ইউজার ফোল্ডার এবং পাসওয়ার্ড সেটিংস"
             textSize = 15f
             setTextColor(textMain)
             setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(8))
+            setPadding(0, 0, 0, dp(6))
         })
 
-        card.addView(TextView(this).apply {
-            text = "এই নম্বরটি দিয়ে ক্লাউডে আপনার আলাদা ফোল্ডার তৈরি হবে। অ্যাপ রিইন্সটল করলেও এই নম্বর দিয়ে আপনার সব ডেটা ফিরে পাবেন।"
-            textSize = 13f
+        securityCard.addView(TextView(this).apply {
+            text = "মোবাইল নম্বর দিয়ে আপনার ক্লাউড ফোল্ডার এবং পাসওয়ার্ড দিয়ে ডেটা সুরক্ষিত থাকবে।"
+            textSize = 12f
             setTextColor(textSub)
             setPadding(0, 0, 0, dp(12))
         })
 
         val prefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-        val currentMobile = prefs.getString("user_mobile", "01700000000") ?: "01700000000"
+        val currentMobile = prefs.getString("user_mobile", "") ?: ""
+        val currentPassword = prefs.getString("user_password", "") ?: ""
 
+        securityCard.addView(TextView(this).apply {
+            text = "মোবাইল নম্বর (ফোল্ডার আইডি):"
+            textSize = 13f
+            setTextColor(textMain)
+            setPadding(0, 0, 0, dp(4))
+        })
         val inputMobile = EditText(this).apply {
-            hint = "মোবাইল নম্বর লিখুন (যেমন: 017xxxxxxxx)"
+            hint = "যেমন: 017xxxxxxxx"
             setText(currentMobile)
             setTextColor(textMain)
             setHintTextColor(Color.GRAY)
             inputType = android.text.InputType.TYPE_CLASS_PHONE
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            background = GradientDrawable().apply { setStroke(dp(1), cardStroke); cornerRadius = dp(6).toFloat() }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) }
+        }
+        securityCard.addView(inputMobile)
+
+        securityCard.addView(TextView(this).apply {
+            text = "আপনার নিজস্ব পাসওয়ার্ড:"
+            textSize = 13f
+            setTextColor(textMain)
+            setPadding(0, 0, 0, dp(4))
+        })
+        val inputPassword = EditText(this).apply {
+            hint = "গোপন পাসওয়ার্ড লিখুন"
+            setText(currentPassword)
+            setTextColor(textMain)
+            setHintTextColor(Color.GRAY)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setPadding(dp(10), dp(10), dp(10), dp(10))
             background = GradientDrawable().apply { setStroke(dp(1), cardStroke); cornerRadius = dp(6).toFloat() }
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
         }
-        card.addView(inputMobile)
+        securityCard.addView(inputPassword)
 
         val saveBtn = Button(this).apply {
-            text = "সংরক্ষণ করুন"
+            text = "তথ্য সংরক্ষণ করুন"
             isAllCaps = false
             setTextColor(Color.WHITE)
             background = GradientDrawable().apply { setColor(Color.parseColor("#047857")); cornerRadius = dp(6).toFloat() }
-            layoutParams = LinearLayout.LayoutParams(-1, dp(45))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
             setOnClickListener {
                 val mobile = inputMobile.text.toString().trim()
-                if (mobile.isNotEmpty()) {
-                    prefs.edit().putString("user_mobile", mobile).apply()
-                    Toast.makeText(this@ProfileSettingsActivity, "সফলভাবে সংরক্ষণ করা হয়েছে!", Toast.LENGTH_SHORT).show()
+                val password = inputPassword.text.toString().trim()
+
+                if (mobile.isNotEmpty() && password.isNotEmpty()) {
+                    prefs.edit()
+                        .putString("user_mobile", mobile)
+                        .putString("user_password", password)
+                        .apply()
+                    Toast.makeText(this@ProfileSettingsActivity, "সফলভাবে সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@ProfileSettingsActivity, "দয়া করে সঠিক নম্বর দিন", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ProfileSettingsActivity, "দয়া করে মোবাইল নম্বর ও পাসওয়ার্ড দিন", Toast.LENGTH_LONG).show()
                 }
             }
         }
-        card.addView(saveBtn)
-        contentLayout.addView(card)
+        securityCard.addView(saveBtn)
+        contentLayout.addView(securityCard)
+
+        // 2. Theme Settings Card
+        val themeCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(cardBg)
+                setStroke(dp(1), cardStroke)
+                cornerRadius = dp(12).toFloat()
+            }
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+        }
+
+        themeCard.addView(TextView(this).apply {
+            text = "🎨 থিম সেটিংস"
+            textSize = 15f
+            setTextColor(textMain)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(6))
+        })
+
+        themeCard.addView(TextView(this).apply {
+            text = "অ্যাপের থিম পরিবর্তন বা কাস্টমাইজ করতে হোম পেজের থিম অপশন ব্যবহার করুন।"
+            textSize = 13f
+            setTextColor(textSub)
+            setPadding(0, 0, 0, dp(6))
+        })
+        contentLayout.addView(themeCard)
+
+        // 3. Developer & Facebook Page Card
+        val infoCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(cardBg)
+                setStroke(dp(1), cardStroke)
+                cornerRadius = dp(12).toFloat()
+            }
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+        }
+
+        infoCard.addView(TextView(this).apply {
+            text = "ℹ️ ডেভেলপার ও তথ্য"
+            textSize = 15f
+            setTextColor(textMain)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(6))
+        })
+
+        infoCard.addView(TextView(this).apply {
+            text = "ডেভেলপার: Sabbir Samol\nসহায়তা ও আপডেটের জন্য আমাদের অফিসিয়াল ফেসবুক পেজে ভিজিট করুন।"
+            textSize = 13f
+            setTextColor(textSub)
+            setPadding(0, 0, 0, dp(12))
+        })
+
+        val fbBtn = Button(this).apply {
+            text = "👍 ফেসবুক পেজ ভিজিট করুন"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply { setColor(Color.parseColor("#1877F2")); cornerRadius = dp(6).toFloat() }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
+            setOnClickListener {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com"))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this@ProfileSettingsActivity, "লিংক ওপেন করা যায়নি", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        infoCard.addView(fbBtn)
+        contentLayout.addView(infoCard)
 
         scroll.addView(contentLayout)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -159,7 +263,7 @@ class ProfileSettingsActivity : Activity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@ProfileSettingsActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@ProfileSettingsActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@ProfileSettingsActivity, NotepadActivity::class.java)); finish() }
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@ProfileSettingsActivity, "প্রোফাইল সেটিংস সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { Toast.makeText(this@ProfileSettingsActivity, "সেটিংস সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> {}
                     }
                 }
