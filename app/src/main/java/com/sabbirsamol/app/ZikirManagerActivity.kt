@@ -29,11 +29,12 @@ class ZikirManagerActivity : Activity() {
 
     private lateinit var listContainer: LinearLayout
 
+    private val adminMasterPassword = "Sabbir@@ahmad123" // ইউনিভার্সাল অ্যাডমিন পাসওয়ার্ড
     private val databaseRef = FirebaseDatabase.getInstance().reference
 
-    private fun getUserName(): String {
+    private fun getUserMobile(): String {
         val prefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-        return prefs.getString("user_name", "MyUser") ?: "MyUser"
+        return prefs.getString("user_mobile", "01700000000") ?: "01700000000"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,14 +52,68 @@ class ZikirManagerActivity : Activity() {
     }
 
     private fun fetchZikirFromFirebase() {
-        val userName = getUserName()
-        databaseRef.child("users").child(userName).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        val mobile = getUserMobile()
+        databaseRef.child("users").child(mobile).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudZikir = snapshot.value as? String
             if (!cloudZikir.isNullOrEmpty()) {
                 getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
                 loadZikirList()
             }
         }
+    }
+
+    private fun showPasswordOrAdminDialog(onSuccess: () -> Unit) {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+            setBackgroundColor(cardBg)
+        }
+        layout.addView(TextView(this).apply {
+            text = "🔒 পাসওয়ার্ড যাচাইকরণ"
+            textSize = 16f
+            setTextColor(Color.parseColor("#10B981"))
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(10))
+        })
+        val passInput = EditText(this).apply {
+            hint = "পাসওয়ার্ড বা অ্যাডমিন পাসওয়ার্ড দিন"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setTextColor(textMain)
+            setHintTextColor(Color.GRAY)
+            setBackgroundColor(Color.WHITE)
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+        }
+        layout.addView(passInput, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(15) })
+
+        val dialog = AlertDialog.Builder(this).setView(layout).create()
+
+        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f }
+        btnRow.addView(Button(this).apply {
+            text = "নিশ্চিত করুন"
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply { setColor(Color.parseColor("#047857")); cornerRadius = dp(6).toFloat() }
+            layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(5) }
+            setOnClickListener {
+                val enteredPass = passInput.text.toString()
+                val userSavedPass = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("user_password", "")
+
+                if (enteredPass == userSavedPass || enteredPass == adminMasterPassword) {
+                    dialog.dismiss()
+                    onSuccess()
+                } else {
+                    Toast.makeText(this@ZikirManagerActivity, "ভুল পাসওয়ার্ড! পাসওয়ার্ড ভুলে গেলে অ্যাডমিনের সাহায্য নিন।", Toast.LENGTH_LONG).show()
+                }
+            }
+        })
+        btnRow.addView(Button(this).apply {
+            text = "বাতিল"
+            setTextColor(Color.BLACK)
+            background = GradientDrawable().apply { setColor(Color.parseColor("#E5E7EB")); cornerRadius = dp(6).toFloat() }
+            layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { leftMargin = dp(5) }
+            setOnClickListener { dialog.dismiss() }
+        })
+        layout.addView(btnRow)
+        dialog.show()
     }
 
     private fun buildUI() {
@@ -72,8 +127,8 @@ class ZikirManagerActivity : Activity() {
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
         top.addView(TextView(this).apply {
-            text = "📋 জিকির তালিকা (${getUserName()})"
-            textSize = 16f
+            text = "📋 জিকির তালিকা (নং: ${getUserMobile()})"
+            textSize = 15f
             setTextColor(textMain)
             setTypeface(null, Typeface.BOLD)
         }, LinearLayout.LayoutParams(0, -2, 1f))
@@ -233,8 +288,10 @@ class ZikirManagerActivity : Activity() {
                 background = GradientDrawable().apply { setColor(Color.parseColor("#DC2626")); cornerRadius = dp(6).toFloat() }
                 layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { leftMargin = dp(4) }
                 setOnClickListener { 
-                    deleteZikir(i)
-                    Toast.makeText(this@ZikirManagerActivity, "জিকির ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                    showPasswordOrAdminDialog {
+                        deleteZikir(i)
+                        Toast.makeText(this@ZikirManagerActivity, "জিকির ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                    }
                 }
             })
 
@@ -324,8 +381,8 @@ class ZikirManagerActivity : Activity() {
 
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
         
-        val userName = getUserName()
-        databaseRef.child("users").child(userName).child("zikir_list_data").setValue(jsonArray.toString())
+        val mobile = getUserMobile()
+        databaseRef.child("users").child(mobile).child("zikir_list_data").setValue(jsonArray.toString())
     }
 
     private fun deleteZikir(index: Int) {
@@ -338,7 +395,7 @@ class ZikirManagerActivity : Activity() {
         prefs.edit().putString("zikir_list", newArray.toString()).apply()
         loadZikirList()
         
-        val userName = getUserName()
-        databaseRef.child("users").child(userName).child("zikir_list_data").setValue(newArray.toString())
+        val mobile = getUserMobile()
+        databaseRef.child("users").child(mobile).child("zikir_list_data").setValue(newArray.toString())
     }
 }
