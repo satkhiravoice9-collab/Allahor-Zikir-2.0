@@ -10,119 +10,69 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
+import androidx.activity.ComponentActivity
 
-class ProfileSettingsActivity : Activity() {
+class ProfileSettingsActivity : ComponentActivity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    private var bgMain: Int = Color.BLACK
-    private var cardBg: Int = Color.WHITE
-    private var cardStroke: Int = Color.GRAY
-    private var textMain: Int = Color.WHITE
-    private var textSub: Int = Color.GRAY
+    private val themeColors by lazy { ThemeManager.getTheme(this) }
+
+    private fun getCardDrawable() = GradientDrawable().apply {
+        setColor(themeColors.cardBg); setStroke(dp(1), themeColors.cardStroke); cornerRadius = dp(10).toFloat()
+    }
+    private fun getBtnDrawable(color: Int) = GradientDrawable().apply {
+        setColor(color); cornerRadius = dp(6).toFloat()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val themeColors = ThemeManager.getTheme(this)
-        bgMain = themeColors.bgMain
-        cardBg = themeColors.cardBg
-        cardStroke = themeColors.cardStroke
-        textMain = themeColors.textMain
-        textSub = themeColors.textSub
-
-        buildUI()
+        showSettingsPage()
     }
 
-    private fun buildUI() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(bgMain)
-        }
+    private fun showSettingsPage() {
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(themeColors.bgMain) }
 
-        // Top bar
-        val top = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-        }
-        top.addView(TextView(this).apply {
-            text = "👤 প্রোফাইল ও সেটিংস"
-            textSize = 18f
-            setTextColor(textMain)
-            setTypeface(null, Typeface.BOLD)
-        }, LinearLayout.LayoutParams(0, -2, 1f))
+        // Top Bar
+        val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
+        top.addView(TextView(this).apply { text = "← হোম"; textSize = 16f; setTextColor(themeColors.textMain); setPadding(0,0,dp(12),0); setOnClickListener { finish() } })
+        top.addView(TextView(this).apply { text = "👤 প্রোফাইল ও সেটিংস"; textSize = 17f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
         root.addView(top)
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        val contentLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), dp(80))
-        }
+        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(80)) }
 
-        // 1. Mobile & Password Security Card
-        val securityCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(cardBg)
-                setStroke(dp(1), cardStroke)
-                cornerRadius = dp(12).toFloat()
-            }
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
-        }
+        val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
 
-        securityCard.addView(TextView(this).apply {
-            text = "🔐 ইউজার ফোল্ডার এবং পাসওয়ার্ড সেটিংস"
-            textSize = 15f
-            setTextColor(textMain)
-            setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(6))
-        })
+        // 1. Mobile & Password Setup Card (Replacing Gmail/OTP)
+        val securityCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
+        securityCard.addView(TextView(this).apply { text = "📱 মোবাইল নম্বর (ফোল্ডার আইডি):"; textSize = 15f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
+        
+        val currentMobile = sharedPrefs.getString("user_mobile", "01725228622") ?: "01725228622"
+        val currentPassword = sharedPrefs.getString("user_password", "") ?: ""
 
-        securityCard.addView(TextView(this).apply {
-            text = "মোবাইল নম্বর দিয়ে আপনার ক্লাউড ফোল্ডার এবং পাসওয়ার্ড দিয়ে ডেটা সুরক্ষিত থাকবে।"
-            textSize = 12f
-            setTextColor(textSub)
-            setPadding(0, 0, 0, dp(12))
-        })
-
-        val prefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-        val currentMobile = prefs.getString("user_mobile", "") ?: ""
-        val currentPassword = prefs.getString("user_password", "") ?: ""
-
-        securityCard.addView(TextView(this).apply {
-            text = "মোবাইল নম্বর (ফোল্ডার আইডি):"
-            textSize = 13f
-            setTextColor(textMain)
-            setPadding(0, 0, 0, dp(4))
-        })
         val inputMobile = EditText(this).apply {
-            hint = "যেমন: 017xxxxxxxx"
+            hint = "মোবাইল নম্বর লিখুন"
             setText(currentMobile)
-            setTextColor(textMain)
-            setHintTextColor(Color.GRAY)
-            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            textSize = 14f
             setPadding(dp(10), dp(10), dp(10), dp(10))
-            background = GradientDrawable().apply { setStroke(dp(1), cardStroke); cornerRadius = dp(6).toFloat() }
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) }
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }
         }
         securityCard.addView(inputMobile)
 
-        securityCard.addView(TextView(this).apply {
-            text = "আপনার নিজস্ব পাসওয়ার্ড:"
-            textSize = 13f
-            setTextColor(textMain)
-            setPadding(0, 0, 0, dp(4))
-        })
+        securityCard.addView(TextView(this).apply { text = "আপনার নিজস্ব পাসওয়ার্ড:"; textSize = 14f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
+        
         val inputPassword = EditText(this).apply {
-            hint = "গোপন পাসওয়ার্ড লিখুন"
+            hint = "পাসওয়ার্ড লিখুন"
             setText(currentPassword)
-            setTextColor(textMain)
-            setHintTextColor(Color.GRAY)
+            textSize = 14f
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             setPadding(dp(10), dp(10), dp(10), dp(10))
-            background = GradientDrawable().apply { setStroke(dp(1), cardStroke); cornerRadius = dp(6).toFloat() }
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setTextColor(Color.BLACK)
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(12) }
         }
         securityCard.addView(inputPassword)
 
@@ -130,14 +80,13 @@ class ProfileSettingsActivity : Activity() {
             text = "তথ্য সংরক্ষণ করুন"
             isAllCaps = false
             setTextColor(Color.WHITE)
-            background = GradientDrawable().apply { setColor(Color.parseColor("#047857")); cornerRadius = dp(6).toFloat() }
+            background = getBtnDrawable(Color.parseColor("#047857"))
             layoutParams = LinearLayout.LayoutParams(-1, dp(42))
             setOnClickListener {
                 val mobile = inputMobile.text.toString().trim()
                 val password = inputPassword.text.toString().trim()
-
                 if (mobile.isNotEmpty() && password.isNotEmpty()) {
-                    prefs.edit()
+                    sharedPrefs.edit()
                         .putString("user_mobile", mobile)
                         .putString("user_password", password)
                         .apply()
@@ -148,112 +97,42 @@ class ProfileSettingsActivity : Activity() {
             }
         }
         securityCard.addView(saveBtn)
-        contentLayout.addView(securityCard)
+        content.addView(securityCard)
 
         // 2. Theme Settings Card
-        val themeCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(cardBg)
-                setStroke(dp(1), cardStroke)
-                cornerRadius = dp(12).toFloat()
-            }
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+        val themeCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
+        themeCard.addView(TextView(this).apply { text = "🎨 অ্যাপ থিম নির্বাচন করুন:"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
+        val savedTheme = sharedPrefs.getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)")
+        val themes = listOf(Pair("⚪ সাদা থিম (লাইট)", "#F3F4F6"), Pair("⬛ কাবা থিম (ডার্ক গোল্ড)", "#1F2937"), Pair("🟩 মদিনা থিম (এমরেল্ড গ্রিন)", "#064E3B"), Pair("🟡 সুবহে-সাদিক থিম (রয়্যাল গোল্ড)", "#B45309"))
+        themes.forEach { (tName, tColor) ->
+            val isSelected = savedTheme == tName
+            themeCard.addView(Button(this).apply {
+                text = if (isSelected) "✅ $tName" else tName
+                isAllCaps = false; setTextColor(if(tName.contains("সাদা")) Color.BLACK else Color.WHITE)
+                background = GradientDrawable().apply { setColor(Color.parseColor(tColor)); cornerRadius = dp(8).toFloat(); if (isSelected) setStroke(dp(3), themeColors.btnBg) else setStroke(dp(1), Color.GRAY) }
+                layoutParams = LinearLayout.LayoutParams(-1, dp(45)).apply { bottomMargin = dp(10) }
+                setOnClickListener { sharedPrefs.edit().putString("app_theme", tName).apply(); Toast.makeText(this@ProfileSettingsActivity, "থিম আপডেট হয়েছে!", Toast.LENGTH_SHORT).show(); startActivity(intent); finish(); overridePendingTransition(0, 0) }
+            })
         }
-
-        themeCard.addView(TextView(this).apply {
-            text = "🎨 থিম সেটিংস"
-            textSize = 15f
-            setTextColor(textMain)
-            setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(6))
-        })
-
-        themeCard.addView(TextView(this).apply {
-            text = "অ্যাপের থিম পরিবর্তন বা কাস্টমাইজ করতে হোম পেজের থিম অপশন ব্যবহার করুন।"
-            textSize = 13f
-            setTextColor(textSub)
-            setPadding(0, 0, 0, dp(6))
-        })
-        contentLayout.addView(themeCard)
+        content.addView(themeCard)
 
         // 3. Developer & Facebook Page Card
-        val infoCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(cardBg)
-                setStroke(dp(1), cardStroke)
-                cornerRadius = dp(12).toFloat()
-            }
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
-        }
+        val devCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)) }
+        devCard.addView(TextView(this).apply { text = "⭐ অ্যাপ উদ্যোক্তা ও পরিচালক"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD) })
+        devCard.addView(TextView(this).apply { text = "নাম: সাব্বির আহমাদ\nমোবাইল: ০১৭২৫-২২৮৬২২"; setTextColor(themeColors.textMain); textSize = 15f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(4).toFloat(), 1f) })
+        devCard.addView(Button(this).apply { text = "📞 সরাসরি কল করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(themeColors.btnBg); layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }; setOnClickListener { startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:01725228622"))) } })
+        devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
+        content.addView(devCard)
 
-        infoCard.addView(TextView(this).apply {
-            text = "ℹ️ ডেভেলপার ও তথ্য"
-            textSize = 15f
-            setTextColor(textMain)
-            setTypeface(null, Typeface.BOLD)
-            setPadding(0, 0, 0, dp(6))
-        })
-
-        infoCard.addView(TextView(this).apply {
-            text = "ডেভেলপার: Sabbir Samol\nসহায়তা ও আপডেটের জন্য আমাদের অফিসিয়াল ফেসবুক পেজে ভিজিট করুন।"
-            textSize = 13f
-            setTextColor(textSub)
-            setPadding(0, 0, 0, dp(12))
-        })
-
-        val fbBtn = Button(this).apply {
-            text = "👍 ফেসবুক পেজ ভিজিট করুন"
-            isAllCaps = false
-            setTextColor(Color.WHITE)
-            background = GradientDrawable().apply { setColor(Color.parseColor("#1877F2")); cornerRadius = dp(6).toFloat() }
-            layoutParams = LinearLayout.LayoutParams(-1, dp(42))
-            setOnClickListener {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com"))
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    Toast.makeText(this@ProfileSettingsActivity, "লিংক ওপেন করা যায়নি", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-        infoCard.addView(fbBtn)
-        contentLayout.addView(infoCard)
-
-        scroll.addView(contentLayout)
+        scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         // Bottom Navigation
-        val bottomNav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#0F172A"))
-            setPadding(dp(2), dp(4), dp(2), dp(4))
-            elevation = dp(8).toFloat()
-        }
-
-        val navItems = listOf(
-            Pair("🏠\nহোম", MainActivity::class.java),
-            Pair("📿\nতাসবিহ", TasbihActivity::class.java),
-            Pair("📚\nলাইব্রেরী", LibraryActivity::class.java),
-            Pair("📖\nআমল", MasnunAmolActivity::class.java),
-            Pair("📝\nনোটপ্যাড", NotepadActivity::class.java),
-            Pair("🔄\nসিঙ্ক", null),
-            Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
-        )
-
+        val bottomNav = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setBackgroundColor(Color.parseColor("#0F172A")); setPadding(dp(2), dp(4), dp(2), dp(4)); elevation = dp(8).toFloat() }
+        val navItems = listOf(Pair("🏠\nহোম", MainActivity::class.java), Pair("📿\nতাসবিহ", TasbihActivity::class.java), Pair("📚\nলাইব্রেরী", LibraryActivity::class.java), Pair("📖\nআমল", MasnunAmolActivity::class.java), Pair("📝\nনোটপ্যাড", NotepadActivity::class.java), Pair("🔄\nসিঙ্ক", null), Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java))
         navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
-                text = label
-                textSize = 10f
-                isAllCaps = false
-                minHeight = 0
-                minWidth = 0
-                setPadding(0, 0, 0, 0)
-                gravity = Gravity.CENTER
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 0; minWidth = 0; setPadding(0, 0, 0, 0); gravity = Gravity.CENTER
                 setTextColor(if (label.contains("প্রোফাইল")) Color.parseColor("#10B981") else Color.parseColor("#9CA3AF"))
                 background = GradientDrawable()
                 setOnClickListener {
@@ -263,7 +142,7 @@ class ProfileSettingsActivity : Activity() {
                         label.contains("লাইব্রেরী") -> { startActivity(Intent(this@ProfileSettingsActivity, LibraryActivity::class.java)); finish() }
                         label.contains("আমল") -> { startActivity(Intent(this@ProfileSettingsActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { startActivity(Intent(this@ProfileSettingsActivity, NotepadActivity::class.java)); finish() }
-                        label.contains("সিঙ্ক") -> { Toast.makeText(this@ProfileSettingsActivity, "সেটিংস সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
+                        label.contains("সিঙ্ক") -> { Toast.makeText(this@ProfileSettingsActivity, "সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT).show() }
                         label.contains("প্রোফাইল") -> {}
                     }
                 }
