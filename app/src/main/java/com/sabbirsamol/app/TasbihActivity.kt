@@ -37,9 +37,9 @@ class TasbihActivity : ComponentActivity() {
 
     private val databaseRef = FirebaseDatabase.getInstance().reference
 
-    private fun getUserName(): String {
+    private fun getUserMobile(): String {
         val prefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-        return prefs.getString("user_name", "MyUser") ?: "MyUser"
+        return prefs.getString("user_mobile", "01700000000") ?: "01700000000"
     }
 
     private fun getBtnDrawable(color: Int, radius: Int = 6) = GradientDrawable().apply {
@@ -69,8 +69,8 @@ class TasbihActivity : ComponentActivity() {
     }
 
     private fun fetchTasbihFromFirebase() {
-        val userName = getUserName()
-        databaseRef.child("users").child(userName).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        val mobile = getUserMobile()
+        databaseRef.child("users").child(mobile).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudCount = snapshot.value as? Long
             if (cloudCount != null && !isCustomMode) {
                 currentCount = cloudCount.toInt()
@@ -88,8 +88,8 @@ class TasbihActivity : ComponentActivity() {
 
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)) }
         top.addView(TextView(this).apply { 
-            text = if (isCustomMode) "🕋 $customZikirName" else "🕋 তাসবিহ (${getUserName()})"
-            textSize = 16f; setTextColor(textMain); setTypeface(null, Typeface.BOLD) 
+            text = if (isCustomMode) "🕋 $customZikirName" else "🕋 তাসবিহ (নং: ${getUserMobile()})"
+            textSize = 15f; setTextColor(textMain); setTypeface(null, Typeface.BOLD) 
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(0, -2, 1f))
         
@@ -245,7 +245,7 @@ class TasbihActivity : ComponentActivity() {
     private fun updateDisplay() { countTextView.text = bn(currentCount) }
 
     private fun saveProgress() {
-        val userName = getUserName()
+        val mobile = getUserMobile()
         if (isCustomMode) {
             val prefs = getSharedPreferences("ZikirManager", Context.MODE_PRIVATE)
             val jsonArray = JSONArray(prefs.getString("zikir_list", "[]") ?: "[]")
@@ -255,11 +255,11 @@ class TasbihActivity : ComponentActivity() {
             }
             prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
 
-            databaseRef.child("users").child(userName).child("zikir_list_data").setValue(jsonArray.toString())
+            databaseRef.child("users").child(mobile).child("zikir_list_data").setValue(jsonArray.toString())
         } else {
             getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
 
-            databaseRef.child("users").child(userName).child("main_count").setValue(currentCount)
+            databaseRef.child("users").child(mobile).child("main_count").setValue(currentCount)
         }
     }
 
