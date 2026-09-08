@@ -8,6 +8,8 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.text.method.HideReturnsTransformationMethod
+import android.text.method.PasswordTransformationMethod
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
@@ -72,17 +74,36 @@ class ProfileSettingsActivity : ComponentActivity() {
         securityCard.addView(inputMobile)
 
         securityCard.addView(TextView(this).apply { text = "আপনার নিজস্ব পাসওয়ার্ড:"; textSize = 14f; setTextColor(themeColors.textMain); setPadding(0, 0, 0, dp(4)) })
+        
         val inputPassword = EditText(this).apply {
             hint = "পাসওয়ার্ড লিখুন"
             setText(currentPassword)
             textSize = 14f
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            transformationMethod = PasswordTransformationMethod.getInstance()
             setPadding(dp(10), dp(10), dp(10), dp(10))
             setBackgroundColor(Color.parseColor("#FFFFFF"))
             setTextColor(Color.BLACK)
-            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(12) }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(6) }
         }
         securityCard.addView(inputPassword)
+
+        // Show/Hide Password Checkbox
+        val showPassCheckbox = CheckBox(this).apply {
+            text = "পাসওয়ার্ড দেখতে টিক দিন (Show Password)"
+            setTextColor(themeColors.textMain)
+            textSize = 12f
+            setPadding(0, 0, 0, dp(10))
+            setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    inputPassword.transformationMethod = HideReturnsTransformationMethod.getInstance()
+                } else {
+                    inputPassword.transformationMethod = PasswordTransformationMethod.getInstance()
+                }
+                inputPassword.setSelection(inputPassword.text.length)
+            }
+        }
+        securityCard.addView(showPassCheckbox)
 
         val saveBtn = Button(this).apply {
             text = "তথ্য সংরক্ষণ করুন"
