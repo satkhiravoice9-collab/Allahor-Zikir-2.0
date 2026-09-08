@@ -44,13 +44,22 @@ class ProfileSettingsActivity : ComponentActivity() {
 
         val sharedPrefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
 
-        // 1. Mobile & Password Setup Card (Replacing Gmail/OTP)
+        // 1. Developer & Facebook Page Card (Top)
+        val devCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
+        devCard.addView(TextView(this).apply { text = "⭐ অ্যাপ উদ্যোক্তা ও পরিচালক"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD) })
+        devCard.addView(TextView(this).apply { text = "নাম: সাব্বির আহমাদ\nমোবাইল: ০১৭২৫-২২৮৬২২"; setTextColor(themeColors.textMain); textSize = 15f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(4).toFloat(), 1f) })
+        devCard.addView(Button(this).apply { text = "📞 সরাসরি কল করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(themeColors.btnBg); layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }; setOnClickListener { startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:01725228622"))) } })
+        devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
+        content.addView(devCard)
+
+        // 2. Mobile & Password Setup Card (Middle)
         val securityCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
-        securityCard.addView(TextView(this).apply { text = "📱 মোবাইল নম্বর (ফোল্ডার আইডি):"; textSize = 15f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
+        securityCard.addView(TextView(this).apply { text = "📱 মোবাইল নম্বর ও পাসওয়ার্ড সেটিংস"; textSize = 16f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(10)) })
         
-        val currentMobile = sharedPrefs.getString("user_mobile", "01725228622") ?: "01725228622"
+        val currentMobile = sharedPrefs.getString("user_mobile", "") ?: ""
         val currentPassword = sharedPrefs.getString("user_password", "") ?: ""
 
+        securityCard.addView(TextView(this).apply { text = "মোবাইল নম্বর (ফোল্ডার আইডি):"; textSize = 14f; setTextColor(themeColors.textMain); setPadding(0, 0, 0, dp(4)) })
         val inputMobile = EditText(this).apply {
             hint = "মোবাইল নম্বর লিখুন"
             setText(currentMobile)
@@ -62,8 +71,7 @@ class ProfileSettingsActivity : ComponentActivity() {
         }
         securityCard.addView(inputMobile)
 
-        securityCard.addView(TextView(this).apply { text = "আপনার নিজস্ব পাসওয়ার্ড:"; textSize = 14f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6)) })
-        
+        securityCard.addView(TextView(this).apply { text = "আপনার নিজস্ব পাসওয়ার্ড:"; textSize = 14f; setTextColor(themeColors.textMain); setPadding(0, 0, 0, dp(4)) })
         val inputPassword = EditText(this).apply {
             hint = "পাসওয়ার্ড লিখুন"
             setText(currentPassword)
@@ -99,8 +107,8 @@ class ProfileSettingsActivity : ComponentActivity() {
         securityCard.addView(saveBtn)
         content.addView(securityCard)
 
-        // 2. Theme Settings Card
-        val themeCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
+        // 3. Theme Settings Card (Bottom)
+        val themeCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)) }
         themeCard.addView(TextView(this).apply { text = "🎨 অ্যাপ থিম নির্বাচন করুন:"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
         val savedTheme = sharedPrefs.getString("app_theme", "মদিনা থিম (এমরেল্ড গ্রিন)")
         val themes = listOf(Pair("⚪ সাদা থিম (লাইট)", "#F3F4F6"), Pair("⬛ কাবা থিম (ডার্ক গোল্ড)", "#1F2937"), Pair("🟩 মদিনা থিম (এমরেল্ড গ্রিন)", "#064E3B"), Pair("🟡 সুবহে-সাদিক থিম (রয়্যাল গোল্ড)", "#B45309"))
@@ -115,14 +123,6 @@ class ProfileSettingsActivity : ComponentActivity() {
             })
         }
         content.addView(themeCard)
-
-        // 3. Developer & Facebook Page Card
-        val devCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)) }
-        devCard.addView(TextView(this).apply { text = "⭐ অ্যাপ উদ্যোক্তা ও পরিচালক"; setTextColor(themeColors.textAccent); textSize = 16f; setTypeface(null, Typeface.BOLD) })
-        devCard.addView(TextView(this).apply { text = "নাম: সাব্বির আহমাদ\nমোবাইল: ০১৭২৫-২২৮৬২২"; setTextColor(themeColors.textMain); textSize = 15f; setPadding(0, dp(8), 0, dp(12)); setLineSpacing(dp(4).toFloat(), 1f) })
-        devCard.addView(Button(this).apply { text = "📞 সরাসরি কল করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(themeColors.btnBg); layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { bottomMargin = dp(10) }; setOnClickListener { startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:01725228622"))) } })
-        devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
-        content.addView(devCard)
 
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
