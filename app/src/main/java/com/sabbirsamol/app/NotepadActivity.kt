@@ -46,11 +46,13 @@ class NotepadActivity : ComponentActivity() {
     private val textColors = arrayOf(Color.RED, Color.parseColor("#10B981"), Color.parseColor("#3B82F6"), Color.parseColor("#F59E0B"), Color.parseColor("#8B5CF6"), Color.BLACK, Color.WHITE)
 
     private val encryptionKey = "SabbirSamolAppKey"
+    private val adminMasterPassword = "Sabbir@@ahmad123" // আপনার কাঙ্ক্ষিত অ্যাডমিন পাসওয়ার্ড
     private val databaseRef = FirebaseDatabase.getInstance().reference
 
-    private fun getUserName(): String {
+    // হোয়াটসঅ্যাপের মতো একবার সেভ করা থাকলে বারবার লগইন চাইবে না, স্বয়ংক্রিয়ভাবে সেশন বজায় রাখবে
+    private fun getUserMobile(): String {
         val prefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
-        return prefs.getString("user_name", "MyUser") ?: "MyUser"
+        return prefs.getString("user_mobile", "01700000000") ?: "01700000000"
     }
 
     private fun getCardDrawable(bgColor: Int = cardBg) = GradientDrawable().apply {
@@ -122,8 +124,8 @@ class NotepadActivity : ComponentActivity() {
     private fun saveNotes(array: JSONArray) {
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
-        val userName = getUserName()
-        databaseRef.child("users").child(userName).child("notes_data").setValue(array.toString())
+        val mobile = getUserMobile()
+        databaseRef.child("users").child(mobile).child("notes_data").setValue(array.toString())
             .addOnSuccessListener {
                 Toast.makeText(this, "নোট ক্লাউডে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
             }
@@ -133,8 +135,8 @@ class NotepadActivity : ComponentActivity() {
     }
 
     private fun fetchNotesFromFirebase() {
-        val userName = getUserName()
-        databaseRef.child("users").child(userName).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        val mobile = getUserMobile()
+        databaseRef.child("users").child(mobile).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudNotes = snapshot.value as? String
             if (!cloudNotes.isNullOrEmpty()) {
                 getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
@@ -145,6 +147,60 @@ class NotepadActivity : ComponentActivity() {
         }
     }
 
+    private fun showPasswordOrAdminDialog(onSuccess: () -> Unit) {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+            setBackgroundColor(cardBg)
+        }
+        layout.addView(TextView(this).apply {
+            text = "🔒 পাসওয়ার্ড যাচাইকরণ"
+            textSize = 16f
+            setTextColor(textYellow)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(10))
+        })
+        val passInput = EditText(this).apply {
+            hint = "আপনার পাসওয়ার্ড বা অ্যাডমিন পাসওয়ার্ড দিন"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setTextColor(textMain)
+            setHintTextColor(Color.GRAY)
+            setBackgroundColor(Color.WHITE)
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+        }
+        layout.addView(passInput, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(15) })
+
+        val dialog = AlertDialog.Builder(this).setView(layout).create()
+
+        val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f }
+        btnRow.addView(Button(this).apply {
+            text = "নিশ্চিত করুন"
+            setTextColor(Color.WHITE)
+            background = getBtnDrawable(Color.parseColor("#047857"))
+            layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(5) }
+            setOnClickListener {
+                val enteredPass = passInput.text.toString()
+                val userSavedPass = getSharedPreferences("AppSettings", Context.MODE_PRIVATE).getString("user_password", "")
+
+                if (enteredPass == userSavedPass || enteredPass == adminMasterPassword) {
+                    dialog.dismiss()
+                    onSuccess()
+                } else {
+                    Toast.makeText(this@NotepadActivity, "ভুল পাসওয়ার্ড! পাসওয়ার্ড ভুলে গেলে অ্যাডমিনের সাহায্য নিন।", Toast.LENGTH_LONG).show()
+                }
+            }
+        })
+        btnRow.addView(Button(this).apply {
+            text = "বাতিল"
+            setTextColor(Color.BLACK)
+            background = getBtnDrawable(Color.parseColor("#E5E7EB"))
+            layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { leftMargin = dp(5) }
+            setOnClickListener { dialog.dismiss() }
+        })
+        layout.addView(btnRow)
+        dialog.show()
+    }
+
     private fun showNotesList() {
         isInsideNote = false
 
@@ -152,7 +208,7 @@ class NotepadActivity : ComponentActivity() {
 
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
         top.addView(TextView(this).apply { text = "← হোম"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { finish() } })
-        top.addView(TextView(this).apply { text = "📝 নোটপ্যাড (${getUserName()})"; textSize = 16f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
+        top.addView(TextView(this).apply { text = "📝 নোটপ্যাড (নং: ${getUserMobile()})"; textSize = 15f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
         root.addView(top)
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
@@ -188,10 +244,12 @@ class NotepadActivity : ComponentActivity() {
                     card.addView(TextView(this).apply { 
                         text = "🗑️"; textSize = 20f; setPadding(dp(10), 0, 0, 0)
                         setOnClickListener { 
-                            notes.remove(i)
-                            saveNotes(notes)
-                            showNotesList()
-                            Toast.makeText(this@NotepadActivity, "নোট ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                            showPasswordOrAdminDialog {
+                                notes.remove(i)
+                                saveNotes(notes)
+                                showNotesList()
+                                Toast.makeText(this@NotepadActivity, "নোট ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                            }
                         } 
                     })
                     listLayout.addView(card)
@@ -306,11 +364,13 @@ class NotepadActivity : ComponentActivity() {
         top.addView(TextView(this).apply { 
             text = "🗑️"; textSize = 18f; setPadding(dp(8), 0, 0, 0)
             setOnClickListener { 
-                val notes = getNotes()
-                notes.remove(index)
-                saveNotes(notes)
-                showNotesList()
-                Toast.makeText(this@NotepadActivity, "নোট ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                showPasswordOrAdminDialog {
+                    val notes = getNotes()
+                    notes.remove(index)
+                    saveNotes(notes)
+                    showNotesList()
+                    Toast.makeText(this@NotepadActivity, "নোট ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                }
             } 
         })
         root.addView(top)
