@@ -19,7 +19,6 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
@@ -48,7 +47,11 @@ class NotepadActivity : ComponentActivity() {
 
     private val encryptionKey = "SabbirSamolAppKey"
     private val databaseRef = FirebaseDatabase.getInstance().reference
-    private val auth = FirebaseAuth.getInstance()
+
+    private fun getUserName(): String {
+        val prefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        return prefs.getString("user_name", "MyUser") ?: "MyUser"
+    }
 
     private fun getCardDrawable(bgColor: Int = cardBg) = GradientDrawable().apply {
         setColor(bgColor); setStroke(dp(1), cardStroke); cornerRadius = dp(10).toFloat()
@@ -99,63 +102,14 @@ class NotepadActivity : ComponentActivity() {
         return try { Color.parseColor(colorStr) } catch (e: Exception) { defaultColor }
     }
 
-    private fun showLoadingDialog(): AlertDialog {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(20), dp(20), dp(20), dp(20))
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.WHITE)
-        }
-        val progressBar = ProgressBar(this).apply {
-            isIndeterminate = true
-            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(16) }
-        }
-        val textView = TextView(this).apply {
-            text = "ক্লাউড থেকে ডেটা সিঙ্ক হচ্ছে..."
-            textSize = 15f
-            setTextColor(Color.BLACK)
-        }
-        layout.addView(progressBar)
-        layout.addView(textView)
-        return AlertDialog.Builder(this).setView(layout).setCancelable(false).create()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        val loadingDialog = showLoadingDialog()
-        loadingDialog.show()
-
-        ensureUserAuthenticated { uid ->
-            fetchNotesFromFirebase(uid) {
-                loadingDialog.dismiss()
-                showNotesList()
-            }
-        }
+        showNotesList()
+        fetchNotesFromFirebase()
     }
     
     override fun onBackPressed() {
         if (isInsideNote) showNotesList() else super.onBackPressed()
-    }
-
-    private fun ensureUserAuthenticated(onReady: (String) -> Unit) {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            onReady(currentUser.uid)
-        } else {
-            auth.signInAnonymously().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val uid = auth.currentUser?.uid
-                    if (uid != null) {
-                        onReady(uid)
-                    } else {
-                        Toast.makeText(this, "ইউজার আইডি পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    Toast.makeText(this, "অথেন্টিকেশন ব্যর্থ হয়েছে", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
     }
 
     private fun getNotes(): JSONArray {
@@ -168,26 +122,26 @@ class NotepadActivity : ComponentActivity() {
     private fun saveNotes(array: JSONArray) {
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
-        ensureUserAuthenticated { uid ->
-            databaseRef.child("users").child(uid).child("notes_data").setValue(array.toString())
-                .addOnSuccessListener {
-                    Toast.makeText(this, "ক্লাউডে ব্যাকআপ সফল হয়েছে!", Toast.LENGTH_SHORT).show()
-                }
-                .addOnFailureListener { e ->
-                    Toast.makeText(this, "ব্যাকআপ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-        }
+        val userName = getUserName()
+        databaseRef.child("users").child(userName).child("notes_data").setValue(array.toString())
+            .addOnSuccessListener {
+                Toast.makeText(this, "নোট ক্লাউডে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "সেভ ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
+            }
     }
 
-    private fun fetchNotesFromFirebase(uid: String, onComplete: () -> Unit) {
-        databaseRef.child("users").child(uid).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+    private fun fetchNotesFromFirebase() {
+        val userName = getUserName()
+        databaseRef.child("users").child(userName).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudNotes = snapshot.value as? String
             if (!cloudNotes.isNullOrEmpty()) {
                 getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
+                showNotesList()
             }
-            onComplete()
-        }.addOnFailureListener {
-            onComplete()
+        }.addOnFailureListener { e ->
+            Toast.makeText(this, "সিঙ্ক ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -198,7 +152,7 @@ class NotepadActivity : ComponentActivity() {
 
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
         top.addView(TextView(this).apply { text = "← হোম"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { finish() } })
-        top.addView(TextView(this).apply { text = "📝 কালার নোটপ্যাড (AES Secured)"; textSize = 18f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
+        top.addView(TextView(this).apply { text = "📝 নোটপ্যাড (${getUserName()})"; textSize = 16f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f))
         root.addView(top)
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
@@ -231,7 +185,15 @@ class NotepadActivity : ComponentActivity() {
                         addView(TextView(this@NotepadActivity).apply { text = title; setTextColor(titleColor); textSize = 16f; setTypeface(null, Typeface.BOLD) })
                         addView(TextView(this@NotepadActivity).apply { text = date; setTextColor(Color.GRAY); textSize = 12f; setPadding(0, dp(4), 0, 0) })
                     })
-                    card.addView(TextView(this).apply { text = "🗑️"; textSize = 20f; setPadding(dp(10), 0, 0, 0); setOnClickListener { notes.remove(i); saveNotes(notes); showNotesList() } })
+                    card.addView(TextView(this).apply { 
+                        text = "🗑️"; textSize = 20f; setPadding(dp(10), 0, 0, 0)
+                        setOnClickListener { 
+                            notes.remove(i)
+                            saveNotes(notes)
+                            showNotesList()
+                            Toast.makeText(this@NotepadActivity, "নোট ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+                        } 
+                    })
                     listLayout.addView(card)
                 } catch (e: Exception) { continue }
             }
@@ -272,16 +234,10 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> {}
                         label.contains("সিঙ্ক") -> { 
-                            val dialog = showLoadingDialog()
-                            dialog.show()
-                            ensureUserAuthenticated { uid ->
-                                fetchNotesFromFirebase(uid) {
-                                    dialog.dismiss()
-                                    val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
-                                    toast.setGravity(Gravity.CENTER, 0, 0)
-                                    toast.show() 
-                                }
-                            }
+                            fetchNotesFromFirebase() 
+                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                            toast.setGravity(Gravity.CENTER, 0, 0)
+                            toast.show() 
                         }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
@@ -347,7 +303,16 @@ class NotepadActivity : ComponentActivity() {
         top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { showNotesList() } })
         top.addView(TextView(this).apply { text = decryptedTitle; textSize = 17f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD); isSingleLine = true }, LinearLayout.LayoutParams(0, -2, 1f))
         top.addView(TextView(this).apply { text = "✏️"; textSize = 18f; setPadding(dp(8), 0, dp(8), 0); setOnClickListener { showAddEditNoteDialog(index, obj) } })
-        top.addView(TextView(this).apply { text = "🗑️"; textSize = 18f; setPadding(dp(8), 0, 0, 0); setOnClickListener { val notes = getNotes(); notes.remove(index); saveNotes(notes); showNotesList() } })
+        top.addView(TextView(this).apply { 
+            text = "🗑️"; textSize = 18f; setPadding(dp(8), 0, 0, 0)
+            setOnClickListener { 
+                val notes = getNotes()
+                notes.remove(index)
+                saveNotes(notes)
+                showNotesList()
+                Toast.makeText(this@NotepadActivity, "নোট ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+            } 
+        })
         root.addView(top)
 
         val contentScroll = ScrollView(this).apply { setPadding(dp(16), dp(16), dp(16), dp(16)) }
@@ -388,16 +353,10 @@ class NotepadActivity : ComponentActivity() {
                         label.contains("আমল") -> { startActivity(Intent(this@NotepadActivity, MasnunAmolActivity::class.java)); finish() }
                         label.contains("নোটপ্যাড") -> { showNotesList() }
                         label.contains("সিঙ্ক") -> { 
-                            val dialog = showLoadingDialog()
-                            dialog.show()
-                            ensureUserAuthenticated { uid ->
-                                fetchNotesFromFirebase(uid) {
-                                    dialog.dismiss()
-                                    val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
-                                    toast.setGravity(Gravity.CENTER, 0, 0)
-                                    toast.show() 
-                                }
-                            }
+                            fetchNotesFromFirebase() 
+                            val toast = Toast.makeText(this@NotepadActivity, "ক্লাউড থেকে নোট সিঙ্ক করা হয়েছে!", Toast.LENGTH_SHORT)
+                            toast.setGravity(Gravity.CENTER, 0, 0)
+                            toast.show() 
                         }
                         label.contains("প্রোফাইল") -> { startActivity(Intent(this@NotepadActivity, ProfileSettingsActivity::class.java)); finish() }
                     }
