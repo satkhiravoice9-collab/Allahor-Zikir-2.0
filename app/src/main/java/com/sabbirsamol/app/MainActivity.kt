@@ -91,7 +91,6 @@ class MainActivity : Activity() {
         super.onResume()
         startCountdownTimer()
 
-        // প্রতিদিন ডেট পরিবর্তন বা নতুন দিন শুরু হলে স্বয়ংক্রিয়ভাবে টাইম ও হিজরি ডেট রিফ্রেশ করার লজিক
         val currentDate = getCurrentDateString()
         if (lastLoadedDate != currentDate) {
             lastLoadedDate = currentDate
@@ -535,7 +534,6 @@ class MainActivity : Activity() {
             try {
                 val calendar = Calendar.getInstance()
                 
-                // মাগরিবের ওয়াক্ত পার হয়ে গেলে ইসলামিক নিয়ম অনুযায়ী পরবর্তী দিনের হিজরি তারিখ ফেচ করার লজিক
                 val maghribStr = timingsMap["Maghrib"]
                 if (!maghribStr.isNullOrEmpty()) {
                     val parts = maghribStr.trim().split(":")
@@ -596,15 +594,24 @@ class MainActivity : Activity() {
 
     private fun loadCachedPrayerTimes() {
         val prefs = getSharedPreferences("PrayerCache", Context.MODE_PRIVATE)
-        val keys = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Maghrib", "Isha")
-        keys.forEach { key ->
-            prefs.getString(key, null)?.let { timingsMap[key] = it }
+        val cachedDate = prefs.getString("cache_date", "")
+        val currentDate = getCurrentDateString()
+
+        if (cachedDate == currentDate) {
+            val keys = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Maghrib", "Isha")
+            keys.forEach { key ->
+                prefs.getString(key, null)?.let { timingsMap[key] = it }
+            }
+            applyTimingsToUI()
+        } else {
+            prefs.edit().clear().apply()
         }
-        applyTimingsToUI()
     }
 
     private fun saveTimingsToCache(times: Map<String, String>) {
         val prefs = getSharedPreferences("PrayerCache", Context.MODE_PRIVATE).edit()
+        val currentDate = getCurrentDateString()
+        prefs.putString("cache_date", currentDate)
         times.forEach { (k, v) -> prefs.putString(k, v) }
         prefs.apply()
     }
@@ -638,12 +645,12 @@ class MainActivity : Activity() {
     }
 
     private fun applyTimingsToUI() {
-        val fajr = timingsMap["Fajr"] ?: "04:30"
-        val sunrise = timingsMap["Sunrise"] ?: "05:46"
-        val dhuhr = timingsMap["Dhuhr"] ?: "12:03"
-        val sunset = timingsMap["Sunset"] ?: timingsMap["Maghrib"] ?: "18:20"
-        val maghrib = timingsMap["Maghrib"] ?: "18:20"
-        val isha = timingsMap["Isha"] ?: "19:37"
+        val fajr = timingsMap["Fajr"] ?: "--:--"
+        val sunrise = timingsMap["Sunrise"] ?: "--:--"
+        val dhuhr = timingsMap["Dhuhr"] ?: "--:--"
+        val sunset = timingsMap["Sunset"] ?: timingsMap["Maghrib"] ?: "--:--"
+        val maghrib = timingsMap["Maghrib"] ?: "--:--"
+        val isha = timingsMap["Isha"] ?: "--:--"
 
         tvFajrTime.text = "${convertTo12Hour(fajr)} - ${convertTo12Hour(sunrise)}"
         tvZoharTime.text = "${convertTo12Hour(dhuhr)} - ০৪:৩৩ PM"
@@ -674,7 +681,7 @@ class MainActivity : Activity() {
         tvNafalTahajjud.text = "এশার পর - ${convertTo12Hour(fajr)}"
 
         updateLiveCountdown()
-        loadOnlineHijriDate() // মাগরিবের টাইম লোড হওয়ার পর হিজরি ডেট রিফ্রেশ কল করা হলো
+        loadOnlineHijriDate()
     }
 
     private fun loadOnlinePrayerTimes() {
