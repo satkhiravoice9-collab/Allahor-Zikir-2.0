@@ -516,16 +516,44 @@ class MainActivity : Activity() {
         val engStr = engFormat.format(Date())
         tvEnglishDate.text = "📅 $engStr"
 
-        val now = Calendar.getInstance()
-        val hour = now.get(Calendar.HOUR_OF_DAY)
-        if (hour >= 18) {
-            now.add(Calendar.DAY_OF_MONTH, 1)
+        val calendar = Calendar.getInstance()
+        val gYear = calendar.get(Calendar.YEAR)
+        val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
+
+        val isLeap = (gYear % 4 == 0 && gYear % 100 != 0) || (gYear % 400 == 0)
+        val boishakh1DayOfYear = if (isLeap) 105 else 104
+
+        val banglaYear: Int
+        val daysPassed: Int
+
+        if (dayOfYear >= boishakh1DayOfYear) {
+            banglaYear = gYear - 593
+            daysPassed = dayOfYear - boishakh1DayOfYear
+        } else {
+            banglaYear = gYear - 594
+            val prevYearLeap = ((gYear - 1) % 4 == 0 && (gYear - 1) % 100 != 0) || ((gYear - 1) % 400 == 0)
+            val totalDaysInPrevYear = if (prevYearLeap) 366 else 365
+            daysPassed = totalDaysInPrevYear - boishakh1DayOfYear + dayOfYear
         }
-        val dayOfYear = now.get(Calendar.DAY_OF_YEAR)
-        val bDay = ((dayOfYear + 16) % 365) + 1
-        val bMonthIdx = ((dayOfYear + 16) / 30) % 12
-        val bMonths = arrayOf("বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন", "কার্তিক", "অগ্রহায়ণ", "পৌষ", "মাঘ", "ফাল্গুন", "চৈত্র")
-        val bengaliStr = "${bn(bDay.toString())} ${bMonths[bMonthIdx]}, ১৪৩৩ বঙ্গাব্দ"
+
+        val bMonthLengths = arrayOf(31, 31, 31, 31, 31, 30, 30, 30, 30, 30, if (isLeap) 31 else 30, 30)
+        val bMonthNames = arrayOf("বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন", "কার্তিক", "অগ্রহায়ণ", "পৌষ", "মাঘ", "ফাল্গুন", "চৈত্র")
+
+        var currentMonthIndex = 0
+        var remainingDays = daysPassed
+
+        for (i in bMonthLengths.indices) {
+            if (remainingDays < bMonthLengths[i]) {
+                currentMonthIndex = i
+                break
+            }
+            remainingDays -= bMonthLengths[i]
+        }
+
+        val bDay = remainingDays + 1
+        val bMonthName = bMonthNames[currentMonthIndex]
+
+        val bengaliStr = "${bn(bDay.toString())} $bMonthName, ${bn(banglaYear.toString())} বঙ্গাব্দ"
         tvBengaliDate.text = "🌾 $bengaliStr"
     }
 
