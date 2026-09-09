@@ -19,7 +19,6 @@ object OnlinePrayerFetcher {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    // বাংলাদেশের ৬৪ জেলার সঠিক স্থানাঙ্ক (Latitude ও Longitude)
     private val districtCoordinates = mapOf(
         "ঢাকা" to Pair(23.8103, 90.4125),
         "ফরিদপুর" to Pair(23.6070, 89.8423),
@@ -79,14 +78,13 @@ object OnlinePrayerFetcher {
         "খাগড়াছড়ি" to Pair(23.1192, 91.9847),
         "লক্ষ্মীপুর" to Pair(22.9447, 90.8412),
         "নোয়াখালী" to Pair(22.8695, 91.0994),
-        "রাঙামাটি" to Pair, Pair(22.6533, 92.1751), // (Note: syntax fix below)
+        "রাঙামাটি" to Pair(22.6533, 92.1751),
         "হবিগঞ্জ" to Pair(24.3745, 91.4137),
         "মৌলভীবাজার" to Pair(24.4829, 91.7774),
         "সুনামগঞ্জ" to Pair(25.0658, 91.3950),
         "সিলেট" to Pair(24.8949, 91.8687)
     )
 
-    // লাইভ AlAdhan API থেকে ডেটা ফেচ করার ফাংশন
     fun fetchTimingsForDistrict(districtName: String): Map<String, String>? {
         return try {
             val coord = districtCoordinates[districtName] ?: districtCoordinates["সাতক্ষীরা"]!!
@@ -94,7 +92,6 @@ object OnlinePrayerFetcher {
             val lng = coord.second
 
             val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.ENGLISH).format(Date())
-            // method=1 (University of Islamic Sciences, Karachi - Hanafi এর জন্য উপযুক্ত)
             val urlStr = "https://api.aladhan.com/v1/timings/$currentDate?latitude=$lat&longitude=$lng&method=1"
 
             val url = URL(urlStr)
