@@ -58,6 +58,7 @@ class MainActivity : Activity() {
 
     private lateinit var spinnerLocation: Spinner
     private var selectedDistrict = "সাতক্ষীরা"
+    private var lastLoadedDate = ""
 
     private val prayerRows = mutableMapOf<String, LinearLayout>()
     private val prayerNameViews = mutableMapOf<String, TextView>()
@@ -74,8 +75,13 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun getCurrentDateString(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).format(Date())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lastLoadedDate = getCurrentDateString()
         setupProfessionalUI()
         loadCachedPrayerTimes()
         loadOnlinePrayerTimes()
@@ -84,6 +90,14 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         startCountdownTimer()
+
+        // প্রতিদিন ডেট পরিবর্তন বা নতুন দিন শুরু হলে স্বয়ংক্রিয়ভাবে টাইম ও হিজরি ডেট রিফ্রেশ করার লজিক
+        val currentDate = getCurrentDateString()
+        if (lastLoadedDate != currentDate) {
+            lastLoadedDate = currentDate
+            updateDynamicDates()
+            loadOnlinePrayerTimes()
+        }
     }
 
     override fun onPause() {
@@ -462,7 +476,7 @@ class MainActivity : Activity() {
             Pair("👤\nপ্রোফাইল", ProfileSettingsActivity::class.java)
         )
 
-        navItems.forEach { (label, targetClass) ->
+        navItems.forEach { (label, _) ->
             bottomNav.addView(Button(this).apply {
                 text = label
                 textSize = 10f
@@ -519,7 +533,25 @@ class MainActivity : Activity() {
     private fun loadOnlineHijriDate() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val url = URL("https://api.aladhan.com/v1/gToH")
+                val calendar = Calendar.getInstance()
+                
+                // মাগরিবের ওয়াক্ত পার হয়ে গেলে ইসলামিক নিয়ম অনুযায়ী পরবর্তী দিনের হিজরি তারিখ ফেচ করার লজিক
+                val maghribStr = timingsMap["Maghrib"]
+                if (!maghribStr.isNullOrEmpty()) {
+                    val parts = maghribStr.trim().split(":")
+                    if (parts.size >= 2) {
+                        val maghribMin = (parts[0].toIntOrNull() ?: 18) * 60 + (parts[1].toIntOrNull() ?: 0)
+                        val currentMin = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+                        if (currentMin >= maghribMin) {
+                            calendar.add(Calendar.DAY_OF_MONTH, 1)
+                        }
+                    }
+                }
+                
+                val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.ENGLISH)
+                val dateQueryStr = dateFormat.format(calendar.time)
+
+                val url = URL("https://api.aladhan.com/v1/gToH?date=$dateQueryStr")
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
@@ -532,7 +564,6 @@ class MainActivity : Activity() {
                     val hijri = data.getJSONObject("hijri")
                     
                     val rawDay = hijri.getString("day").toIntOrNull() ?: 23
-                    // সরাসরি কোডের মাধ্যমে ১ দিন মাইনাস করে ২৩ থেকে ২২ করা হলো
                     val adjustedDay = rawDay - 1
 
                     val monthObj = hijri.getJSONObject("month")
@@ -643,6 +674,7 @@ class MainActivity : Activity() {
         tvNafalTahajjud.text = "এশার পর - ${convertTo12Hour(fajr)}"
 
         updateLiveCountdown()
+        loadOnlineHijriDate() // মাগরিবের টাইম লোড হওয়ার পর হিজরি ডেট রিফ্রেশ কল করা হলো
     }
 
     private fun loadOnlinePrayerTimes() {
