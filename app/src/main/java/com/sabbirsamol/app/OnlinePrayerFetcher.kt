@@ -45,7 +45,7 @@ object OnlinePrayerFetcher {
         "রাজশাহী" to 5,
         "সিরাজগঞ্জ" to 2,
         "দিনাজপুর" to 6,
-        "গাইবান্ধা" to 3,
+        "গাইবান্ধا" to 3,
         "কুড়িগ্রাম" to 2,
         "লালমনিরহাট" to 3,
         "নীলফামারী" to 4,
@@ -61,7 +61,6 @@ object OnlinePrayerFetcher {
         "মাগুরা" to 3,
         "মেহেরপুর" to 5,
         "নড়াইল" to 3,
-        "সাতক্ষীরা" to 3,
         "বরগুনা" to 2,
         "বরিশাল" to 2,
         "ভোলা" to 0,
@@ -88,7 +87,12 @@ object OnlinePrayerFetcher {
     fun fetchTimingsForDistrict(districtName: String): Map<String, String>? {
         return try {
             val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.ENGLISH).format(Date())
-            val urlStr = "https://api.aladhan.com/v1/timings/$currentDate?latitude=23.8103&longitude=90.4125&method=1"
+            
+            // সাতক্ষীরার জন্য আলাদা কোঅর্ডিনেট এবং বাকিদের জন্য ঢাকার কোঅর্ডিনেট ব্যবহার করা হলো
+            val lat = if (districtName == "সাতক্ষীরা") 22.7185 else 23.8103
+            val lng = if (districtName == "সাতক্ষীরা") 89.0705 else 90.4125
+
+            val urlStr = "https://api.aladhan.com/v1/timings/$currentDate?latitude=$lat&longitude=$lng&method=1&school=1"
 
             val url = URL(urlStr)
             val connection = url.openConnection() as HttpsURLConnection
@@ -102,26 +106,39 @@ object OnlinePrayerFetcher {
                 val data = json.getJSONObject("data")
                 val timings = data.getJSONObject("timings")
 
-                val offset = districtOffsets[districtName] ?: 3
-
-                fun adjustTime(timeStr: String, minutes: Int): String {
-                    val parts = timeStr.trim().split(":")
-                    if (parts.size < 2) return timeStr
-                    val rawMin = parts[0].toInt() * 60 + parts[1].toInt() + minutes
-                    val totalMin = (rawMin % 1440 + 1440) % 1440
-                    val h = totalMin / 60
-                    val m = totalMin % 60
-                    return String.format(Locale.ENGLISH, "%02d:%02d", h, m)
-                }
-
                 val map = mutableMapOf<String, String>()
-                map["Fajr"] = adjustTime(timings.getString("Fajr"), offset)
-                map["Sunrise"] = adjustTime(timings.getString("Sunrise"), offset)
-                map["Dhuhr"] = adjustTime(timings.getString("Dhuhr"), offset)
-                map["Asr"] = adjustTime(timings.getString("Asr"), offset)
-                map["Sunset"] = adjustTime(timings.getString("Sunset"), offset)
-                map["Maghrib"] = adjustTime(timings.getString("Maghrib"), offset)
-                map["Isha"] = adjustTime(timings.getString("Isha"), offset)
+
+                if (districtName == "সাতক্ষীরা") {
+                    // সাতক্ষীরার জন্য সরাসরি অনলাইন API-এর নিখুঁত লাইভ ডেটা বসবে
+                    map["Fajr"] = timings.getString("Fajr")
+                    map["Sunrise"] = timings.getString("Sunrise")
+                    map["Dhuhr"] = timings.getString("Dhuhr")
+                    map["Asr"] = timings.getString("Asr")
+                    map["Sunset"] = timings.getString("Sunset")
+                    map["Maghrib"] = timings.getString("Maghrib")
+                    map["Isha"] = timings.getString("Isha")
+                } else {
+                    // অন্যান্য জেলার জন্য ঢাকার সময়ের সাপেক্ষে অফসেট হিসাব হবে
+                    val offset = districtOffsets[districtName] ?: 0
+
+                    fun adjustTime(timeStr: String, minutes: Int): String {
+                        val parts = timeStr.trim().split(":")
+                        if (parts.size < 2) return timeStr
+                        val rawMin = parts[0].toInt() * 60 + parts[1].toInt() + minutes
+                        val totalMin = (rawMin % 1440 + 1440) % 1440
+                        val h = totalMin / 60
+                        val m = totalMin % 60
+                        return String.format(Locale.ENGLISH, "%02d:%02d", h, m)
+                    }
+
+                    map["Fajr"] = adjustTime(timings.getString("Fajr"), offset)
+                    map["Sunrise"] = adjustTime(timings.getString("Sunrise"), offset)
+                    map["Dhuhr"] = adjustTime(timings.getString("Dhuhr"), offset)
+                    map["Asr"] = adjustTime(timings.getString("Asr"), offset)
+                    map["Sunset"] = adjustTime(timings.getString("Sunset"), offset)
+                    map["Maghrib"] = adjustTime(timings.getString("Maghrib"), offset)
+                    map["Isha"] = adjustTime(timings.getString("Isha"), offset)
+                }
 
                 connection.disconnect()
                 return map
