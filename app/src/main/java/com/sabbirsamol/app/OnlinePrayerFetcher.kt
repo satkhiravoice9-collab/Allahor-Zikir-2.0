@@ -19,78 +19,81 @@ object OnlinePrayerFetcher {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    // জেলাভিত্তিক অফসেট মিনিট (ঢাকার সময়ের তুলনায় কত মিনিট কম বা বেশি)
-    private val districtOffsets = mapOf(
-        "ঢাকা" to 0,
-        "ফরিদপুর" to 2,
-        "গোপালগঞ্জ" to 2,
-        "জামালপুর" to -1,
-        "কিশোরগঞ্জ" to -2,
-        "মাদারীপুর" to 1,
-        "মানিকগঞ্জ" to 1,
-        "মুন্সিগঞ্জ" to 0,
-        "ময়মনসিংহ" to -1,
-        "নারায়ণগঞ্জ" to 0,
-        "নরসিংদী" to -1,
-        "নেত্রকোণা" to -2,
-        "রাজবাড়ী" to 2,
-        "শরীয়তপুর" to 1,
-        "শেরপুর" to -1,
-        "টাঙ্গাইল" to 1,
-        "বগুড়া" to 3,
-        "জয়পুরহাট" to 3,
-        "নওগাঁ" to 4,
-        "নাটোর" to 3,
-        "নবাবগঞ্জ" to 5,
-        "পাবনা" to 2,
-        "রাজশাহী" to 5,
-        "সিরাজগঞ্জ" to 2,
-        "দিনাজপুর" to 6,
-        "গাইবান্ধা" to 3,
-        "কুড়িগ্রাম" to 2,
-        "লালমনিরহাট" to 3,
-        "নীলফামারী" to 4,
-        "পঞ্চগড়" to 5,
-        "রংপুর" to 4,
-        "ঠাকুরগাঁও" to 6,
-        "বাগেরহাট" to 3,
-        "চুয়াডাঙ্গা" to 5,
-        "যশোর" to 4,
-        "ঝিনাইদহ" to 4,
-        "খুলনা" to 3,
-        "কুষ্টিয়া" to 4,
-        "মাগুরা" to 3,
-        "মেহেরপুর" to 5,
-        "নড়াইল" to 3,
-        "সাতক্ষীরা" to 3,
-        "বরগুনা" to 2,
-        "বরিশাল" to 2,
-        "ভোলা" to 0,
-        "ঝালকাঠি" to 2,
-        "পটুয়াখালী" to 1,
-        "পিরোজপুর" to 2,
-        "বান্দরবান" to -6,
-        "ব্রাহ্মণবাড়িয়া" to -3,
-        "চাঁদপুর" to -2,
-        "চট্টগ্রাম" to -5,
-        "কুমিল্লা" to -3,
-        "কক্সবাজার" to -5,
-        "ফেনী" to -4,
-        "খাগড়াছড়ি" to -5,
-        "লক্ষ্মীপুর" to -2,
-        "নোয়াখালী" to -3,
-        "রাঙামাটি" to -6,
-        "হবিগঞ্জ" to -4,
-        "মৌলভীবাজার" to -5,
-        "সুনামগঞ্জ" to -4,
-        "সিলেট" to -5
+    private val districtCoordinates = mapOf(
+        "ঢাকা" to Pair(23.8103, 90.4125),
+        "ফরিদপুর" to Pair(23.6070, 89.8423),
+        "গোপালগঞ্জ" to Pair(23.0051, 89.8265),
+        "জামালপুর" to Pair(24.9375, 89.9377),
+        "কিশোরগঞ্জ" to Pair(24.4449, 90.7766),
+        "মাদারীপুর" to Pair(23.1641, 90.2013),
+        "মানিকগঞ্জ" to Pair(23.8644, 90.0047),
+        "মুন্সিগঞ্জ" to Pair(23.5422, 90.5305),
+        "ময়মনসিংহ" to Pair(24.7471, 90.4203),
+        "নারায়ণগঞ্জ" to Pair(23.6336, 90.4964),
+        "নরসিংদী" to Pair(23.9322, 90.7151),
+        "নেত্রকোণা" to Pair(24.8709, 90.7276),
+        "রাজবাড়ী" to Pair(23.7574, 89.6445),
+        "শরীয়তপুর" to Pair(23.2423, 90.3432),
+        "শেরপুর" to Pair(25.0204, 90.0153),
+        "টাঙ্গাইল" to Pair(24.2513, 89.9167),
+        "বগুড়া" to Pair(24.8465, 89.3777),
+        "জয়পুরহাট" to Pair(25.0968, 89.0227),
+        "নওগাঁ" to Pair(24.7936, 88.9318),
+        "নাটোর" to Pair(24.4205, 89.0003),
+        "নবাবগঞ্জ" to Pair(24.5952, 88.2773),
+        "পাবনা" to Pair(24.0032, 89.2473),
+        "রাজশাহী" to Pair(24.3636, 88.6241),
+        "সিরাজগঞ্জ" to Pair(24.4533, 89.7008),
+        "দিনাজপুর" to Pair(25.6217, 88.6355),
+        "গাইবান্ধা" to Pair(25.3287, 89.5428),
+        "কুড়িগ্রাম" to Pair(25.8054, 89.6362),
+        "লালমনিরহাট" to Pair(25.9178, 89.4478),
+        "নীলফামারী" to Pair(25.9317, 88.8560),
+        "পঞ্চগড়" to Pair(26.3411, 88.5542),
+        "রংপুর" to Pair(25.7439, 89.2752),
+        "ঠাকুরগাঁও" to Pair(26.0330, 88.4616),
+        "বাগেরহাট" to Pair(22.6515, 89.7859),
+        "চুয়াডাঙ্গা" to Pair(23.6401, 88.8418),
+        "যশোর" to Pair(23.1664, 89.2081),
+        "ঝিনাইদহ" to Pair(23.5450, 89.1726),
+        "খুলনা" to Pair(22.8456, 89.5403),
+        "কুষ্টিয়া" to Pair(23.9012, 89.1204),
+        "মাগুরা" to Pair(23.4873, 89.4198),
+        "মেহেরপুর" to Pair(23.7622, 88.6318),
+        "নড়াইল" to Pair(23.1725, 89.5126),
+        "সাতক্ষীরা" to Pair(22.7185, 89.0705),
+        "বরগুনা" to Pair(22.1557, 90.1259),
+        "বরিশাল" to Pair(22.7010, 90.3535),
+        "ভোলা" to Pair(22.6823, 90.6482),
+        "ঝালকাঠি" to Pair(22.6406, 90.1987),
+        "পটুয়াখালী" to Pair(22.3596, 90.3298),
+        "পিরোজপুর" to Pair(22.5841, 89.9720),
+        "বান্দরবান" to Pair(22.1953, 92.2184),
+        "ব্রাহ্মণবাড়িয়া" to Pair(23.9571, 91.1118),
+        "চাঁদপুর" to Pair(23.2321, 90.6633),
+        "চট্টগ্রাম" to Pair(22.3569, 91.7832),
+        "কুমিল্লা" to Pair(23.4682, 91.1788),
+        "কক্সবাজার" to Pair(21.4272, 92.0058),
+        "ফেনী" to Pair(23.0185, 91.3975),
+        "খাগড়াছড়ি" to Pair(23.1192, 91.9847),
+        "লক্ষ্মীপুর" to Pair(22.9447, 90.8412),
+        "নোয়াখালী" to Pair(22.8695, 91.0994),
+        "রাঙামাটি" to Pair(22.6533, 92.1751),
+        "হবিগঞ্জ" to Pair(24.3745, 91.4137),
+        "মৌলভীবাজার" to Pair(24.4829, 91.7774),
+        "সুনামগঞ্জ" to Pair(25.0658, 91.3950),
+        "সিলেট" to Pair(24.8949, 91.8687)
     )
 
     fun fetchTimingsForDistrict(districtName: String): Map<String, String>? {
         return try {
+            val coord = districtCoordinates[districtName] ?: districtCoordinates["সাতক্ষীরা"]!!
+            val lat = coord.first
+            val lng = coord.second
+
             val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.ENGLISH).format(Date())
-            // ঢাকার রিয়েল-টাইম মূল সময় এপিআই থেকে ফেচ করা হচ্ছে (method=1 হলো ওলামা/হানাফি সমর্থিত)
-            val urlStr = "https://api.aladhan.com/v1/timings/$currentDate?latitude=23.8103&longitude=90.4125&method=1"
+            // method=1 (University of Islamic Sciences, Karachi) এবং school=1 (Hanafi Asr calculation)
+            val urlStr = "https://api.aladhan.com/v1/timings/$currentDate?latitude=$lat&longitude=$lng&method=1&school=1"
 
             val url = URL(urlStr)
             val connection = url.openConnection() as HttpsURLConnection
@@ -104,25 +107,14 @@ object OnlinePrayerFetcher {
                 val data = json.getJSONObject("data")
                 val timings = data.getJSONObject("timings")
 
-                val offset = districtOffsets[districtName] ?: 3
-
-                fun adjustTime(timeStr: String, minutes: Int): String {
-                    val parts = timeStr.trim().split(":")
-                    if (parts.size < 2) return timeStr
-                    val totalMin = parts[0].toInt() * 60 + parts[1].toInt() + minutes
-                    val h = (totalMin / 60) % 24
-                    val m = totalMin % 60
-                    return String.format(Locale.ENGLISH, "%02d:%02d", h, m)
-                }
-
                 val map = mutableMapOf<String, String>()
-                map["Fajr"] = adjustTime(timings.getString("Fajr"), offset)
-                map["Sunrise"] = adjustTime(timings.getString("Sunrise"), offset)
-                map["Dhuhr"] = adjustTime(timings.getString("Dhuhr"), offset)
-                map["Asr"] = adjustTime(timings.getString("Asr"), offset)
-                map["Sunset"] = adjustTime(timings.getString("Sunset"), offset)
-                map["Maghrib"] = adjustTime(timings.getString("Maghrib"), offset)
-                map["Isha"] = adjustTime(timings.getString("Isha"), offset)
+                map["Fajr"] = timings.getString("Fajr")
+                map["Sunrise"] = timings.getString("Sunrise")
+                map["Dhuhr"] = timings.getString("Dhuhr")
+                map["Asr"] = timings.getString("Asr")
+                map["Sunset"] = timings.getString("Sunset")
+                map["Maghrib"] = timings.getString("Maghrib")
+                map["Isha"] = timings.getString("Isha")
 
                 connection.disconnect()
                 return map
