@@ -1,7 +1,7 @@
 package com.sabbirsamol.app
 
+import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -9,14 +9,18 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
 import androidx.activity.ComponentActivity
+import kotlinx.coroutines.*
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
 
 data class DoaItem(val title: String, val arabic: String, val pron: String? = null, val meaning: String? = null)
-data class DoaFolder(val id: Int, val title: String, val subtitle: String, val btnText: String, val doasList: List<DoaItem>, val driveUrl: String? = null)
+data class AmolPdfItem(val fileName: String, val title: String, val id: String, val subtitle: String)
 
 class MasnunAmolActivity : ComponentActivity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private fun bnStr(s: String): String = s.map { if (it in '0'..'9') "০১২৩৪৫৬৭৮৯"[it - '0'] else it }.joinToString("")
+    private fun bn(n: Int): String = n.toString().map { "০১২৩৪৫৬৭৮৯"[it - '0'] }.joinToString("")
     
     private var isInsideFolder = false
 
@@ -29,6 +33,8 @@ class MasnunAmolActivity : ComponentActivity() {
     private val btnYellow get() = themeColors.btnBg
     private val textMain get() = themeColors.textMain
     private val textSub get() = themeColors.textSub
+    private val btnDark get() = Color.parseColor("#0C291F")
+    private val btnRed = Color.parseColor("#DC2626")
 
     private val textPron = Color.parseColor("#A7F3D0")
     private val textMeaning = Color.parseColor("#9CA3AF")
@@ -43,19 +49,18 @@ class MasnunAmolActivity : ComponentActivity() {
         setColor(cardStroke); cornerRadius = dp(6).toFloat()
     }
 
-    private val folder1 = DoaFolder(
-        id = 1, title = "📁 ফোল্ডার ১: মাসনূন আমল",
-        subtitle = "সকাল ও সন্ধ্যায় পঠিত গুরুত্বপূর্ণ আমল ও পিডিএফ বই।", btnText = "📖 মাসনূন আমল সংগ্রহ করুন ➔",
-        doasList = emptyList(),
-        driveUrl = "https://drive.google.com/file/d/1HO1U_cA0LvHtblEFFxbAXX6y7D-QyFkY/view?usp=drivesdk"
-    )
+    private fun getSafeFileName(title: String) = title.replace(Regex("[^A-Za-z0-9]"), "_") + ".pdf"
+    private fun isFileExists(title: String) = File(filesDir, getSafeFileName(title)).exists()
+    private fun deleteFileSilent(title: String) {
+        val file = File(filesDir, getSafeFileName(title))
+        if (file.exists()) file.delete()
+        Toast.makeText(this, "ফাইলটি ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
+        showMainFolders()
+    }
 
-    private val folder2 = DoaFolder(
-        id = 2, title = "📁 ফোল্ডার ২: মানযিল আয়াত (সম্পূর্ণ)",
-        subtitle = "কুরআনুল কারীমের রোগ-বালাই ও অনিষ্ট থেকে বাঁচার মানযিল বুকলেট।", btnText = "📖 মানযিল বই সংগ্রহ করুন ➔",
-        doasList = emptyList(),
-        driveUrl = "https://drive.google.com/file/d/1gaNkUuBFczLhe5FHw2leGz9qdbqGzzvb/view?usp=drivesdk"
-    )
+    // ফোল্ডার ১ এবং ফোল্ডার ২ এর জন্য ড্রাইভ ফাইল আইডিসহ আইটেম
+    private val masnunPdf = AmolPdfItem("masnun_amol.pdf", "মাসনূন আমল সংগ্রহ", "1HO1U_cA0LvHtblEFFxbAXX6y7D-QyFkY", "সকাল ও সন্ধ্যায় পঠিত গুরুত্বপূর্ণ আমল ও দোয়া সংকলন।")
+    private val manzilPdf = AmolPdfItem("manzil_amol.pdf", "মানযিল আয়াত (সম্পূর্ণ)", "1gaNkUuBFczLhe5FHw2leGz9qdbqGzzvb", "কুরআনুল কারীমের রোগ-বালাই ও অনিষ্ট থেকে বাঁচার মানযিল বুকলেট।")
 
     private val folder3 = DoaFolder(
         id = 3, title = "📁 ফোল্ডার ৩: দৈনন্দিন জীবনের গুরুত্বপূর্ণ দোয়া",
@@ -79,7 +84,7 @@ class MasnunAmolActivity : ComponentActivity() {
             DoaItem("১৬। বৃষ্টি হলে দোয়া", "اللَّهُمَّ صَيِّبًا نَافِعًا", "আল্লাহুম্মা সাইয়্যিবান নাফিআ।", "হে আল্লাহ! এটিকে উপকারী বৃষ্টি করুন।"),
             DoaItem("১৭। হাঁচি দিলে", "الْحَمْدُ لِلَّهِ", "আলহামদুলিল্লাহ।", "সব প্রশংসা আল্লাহর।"),
             DoaItem("১৮। হাঁচির জবাব", "يَرْحَمُكَ اللَّهُ", "ইয়ারহামুকাল্লাহ।", "আল্লাহ আপনার প্রতি রহম করুন।"),
-            DoaItem("১৯। রাগের সময়ের দোয়া", "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ", "আউযু বিল্লাহি মিনাশ শাইতানির রাজীম।", "আমি বিতাড়িত শয়তান থেকে আল্লাহর আশ্রয় চাই।"),
+            DoaItem("১৯। রাগের সময়ের দোয়া", "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ", "আউযু বিল্লাহি মিনাশ শাইতানির রাজীম।", "আমি বিতাড়িত শয়তান থেকে আল্লাহর আশ্রয় চাই।"),
             DoaItem("২০। স্ত্রী সহবাসের পূর্বের দোয়া", "بِسْمِ اللَّهِ، اللَّهُمَّ جَنِّبْنَا الشَّيْطَانَ وَجَنِّبِ الشَّيْطَانَ مَا رَزَقْتَنَا", "বিসমিল্লাহ, আল্লাহুম্মা জান্নিবনাশ শাইতানা ওয়া জান্নিবিশ শাইতানা মা রাযাকতানা।", "হে আল্লাহ! আমাদের এবং আমাদেরকে যে সন্তান দান করবেন, তাকে শয়তান থেকে দূরে রাখুন।"),
             DoaItem("২১। বিপদের সময়", "حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ", "হাসبুনাল্লাহু ওয়া নি'মাল ওয়াকীল।", "আল্লাহই আমাদের জন্য যথেষ্ট এবং তিনিই উত্তম অভিভাবক।"),
             DoaItem("২২। দুশ্চিন্তার সময়", "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", "লা হাওলা ওয়ালা কুওয়াতা ইল্লা বিল্লাহ।", "আল্লাহ ছাড়া কোনো শক্তি ও ক্ষমতা নেই।"),
@@ -89,7 +94,7 @@ class MasnunAmolActivity : ComponentActivity() {
             DoaItem("২৬। বেশি বেশি ইস্তিগফার", "أَسْتَغْفِرُ اللَّهَ", "আস্তাগফিরুল্লাহ।", "আমি আল্লাহর কাছে ক্ষমা চাই।"),
             DoaItem("২৭। দরুদ শরিফ", "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ", "আল্লাহুম্মা সাল্লি আলা মুহাম্মাদ।", "হে আল্লাহ! মুহাম্মদ ﷺ-এর ওপর রহমত বর্ষণ করুন।"),
             DoaItem("২৮। আল্লাহর ওপর ভরসা", "حَسْبِيَ اللَّهُ لَا إِلٰهَ إِلَّا هُوَ عَلَيْهِ تَوَكَّلْتُ", "হাসবিয়াল্লাহু লা ইলাহা ইল্লা হুয়া আলাইহি তাওয়াক্কালতু।", "আল্লাহই আমার জন্য যথেষ্ট। তিনি ছাড়া কোনো ইলাহ নেই। আমি তাঁর ওপর ভরসা করি।"),
-            DoaItem("২৯। তওবা ও ক্ষমা প্রার্থনা", "رَبِّ اغْفِرْ لِي وَتُبْ عَلَيَّ إِنَّكَ أَنْتَ التَّوَّابُ الرَّحِيمُ", "রাব্বিগফির লী ওয়া তুব আলাইয়া, ইন্নাকা আন্তাত তাওয়াবুর রাহীম।", "হে আমাদের রব! আমাকে ক্ষমা করুন এবং আমার তওবা কবুল করুন। নিশ্চয়ই আপনি তওবা কবুলকারী, পরম দয়ালু।"),
+            DoaItem("২৯। তওবা ও ক্ষমা প্রার্থনা", "رَبِّ اغْفِرْ لِي وَتُبْ عَلَيَّ إِنَّكَ أَنْتَ التَّوَّابُ الرَّحِيمُ", "রাব্বিগফির লী ওয়া তুব আলাইয়া, ইন্নাকা আন্তাত তাওয়াবুর রাহীম।", "হে আমাদের রব! আমাকে ক্ষমা করুন এবং আমাদের তওবা কবুল করুন। নিশ্চয়ই আপনি তওবা কবুলকারী, পরম দয়ালু।"),
             DoaItem("৩০। দুনিয়া ও আখিরাতের কল্যাণের দোয়া", "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", "রাব্বāna آtina fiদ্দুনইয়া হাসানাতাও ওয়া ফিল আখিরাতি হাসানাতাও ওয়া কিনা আযাবান্নার।", "হে আমাদের রব! আমাদের দুনিয়াতে কল্যাণ দিন, আখিরাতে কল্যাণ দিন এবং জাহান্নামের শাস্তি থেকে রক্ষা করুন।")
         )
     )
@@ -102,20 +107,18 @@ class MasnunAmolActivity : ComponentActivity() {
             DoaItem("২। সূরা ফাতিহা পড়ার আগে", "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ\nبِسْمِ اللَّهِ الرَّحْمٰنِ الرَّحِيمِ", "আউযু বিল্লাহি মিনাশ শাইত্বানির রাজীম।\nবিসমিল্লাহির রাহমানির রাহীম।", "আমি বিতাড়িত শয়তান থেকে আল্লাহর আশ্রয় চাই।\nপরম করুণাময়, অতি দয়ালু আল্লাহর নামে।"),
             DoaItem("৩। রুকুর তাসবিহ", "سُبْحَانَ رَبِّيَ الْعَظِيمِ", "সুবহানা রব্বিয়াল আযীম।", "আমার মহান রব পবিত্র।"),
             DoaItem("৪। রুকু থেকে ওঠার সময়", "سَمِعَ اللَّهُ لِمَنْ حَمِدَهُ\nرَبَّنَا وَلَكَ الْحَمْدُ", "সামিআল্লাহু লিমান হামিদাহ।\nরাব্বানা ওয়া লাকাল হামদ।", "যে আল্লাহর প্রশংসা করে, আল্লাহ তার প্রশংসা শুনেন।\nহে আমাদের রব! সমস্ত প্রশংসা আপনারই জন্য।"),
-            DoaItem("৫। সিজদার তাসবিহ", "سُبْحَانَ رَبِّيَ الْأَعْلَى", "সুবহানা রব্বিয়াল আ'লা।", "আমার সর্বোচ্চ রব পবিত্র।"),
+            DoaItem("৫। সিজদার তাসবিহ", "سُبْحَانَ رَبِّيَ الْأَعْلَى", "সুবহানা রব্বিয়াল আ'لا।", "আমার সর্বোচ্চ রব পবিত্র।"),
             DoaItem("৬। দুই সিজদার মাঝখানের দোয়া", "رَبِّ اغْفِرْ لِي", "রাব্বিগফির লী।", "হে আমাদের রব! আমাকে ক্ষমা করুন।"),
             DoaItem("৭। আত্তাহিয়্যাতু", "التَّحِيَّاتُ لِلَّهِ وَالصَّلَوَاتُ وَالطَّيِّبَاتُ،\n\nالسَّلَامُ عَلَيْكَ أَيُّهَا النَّبِيُّ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ،\n\nالسَّلَامُ عَلَيْنَا وَعَلَى عِبَادِ اللَّهِ الصَّالِحِينَ،\n\nأَشْهَدُ أَنْ لَا إِلٰهَ إِلَّا اللَّهُ،\n\nوَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ", "আত্তাহিয়্যাতু লিল্লাহি ওয়াস সালাওয়াতু ওয়াত তায়্যিবাত। আসসালামু আলাইকা আইয়ুহান নাবিয়্যু ওয়া রাহমাতুল্লাহি ওয়া বারাকাতুহ। আসসালামু আলাইনা ওয়া আলা ইবাদিল্লাহিস সালিহীন। আশহাদু আল্লা ইলাহা ইল্লাল্লাহু, ওয়া আশহাদু আন্না মুহাম্মাদান আবদুহু ওয়া রাসূলুহ।", "সকল সম্মান, ইবাদত ও পবিত্র বিষয় আল্লাহর জন্য। হে নবী! আপনার ওপর শান্তি, আল্লাহর রহমত ও বরকত বর্ষিত হোক। আমাদের এবং আল্লাহর নেক বান্দাদের ওপর শান্তি বর্ষিত হোক। আমি সাক্ষ্য দিচ্ছি, আল্লাহ ছাড়া কোনো সত্য ইলাহ নেই এবং আমি সাক্ষ্য দিচ্ছি যে, মুহাম্মদ ﷺ তাঁর বান্দা ও রাসূল।"),
             DoaItem("৮। দরুদে ইবরাহিম", "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ، كَمَا صَلَّيْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ\n\nاللَّهُمَّ بَارِكْ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ، كَمَا بَارَكْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ", "আল্লাহুম্মা সাল্লি আলা মুহাম্মাদিও ওয়া আলা আলি মুহাম্মাদ, কামা সাল্লাইতা আলা ইবরাহীما ওয়া আলা আলি ইবরাহীما, ইন্নাকা হামিদুম মাজীদ।\n\nআল্লাহুম্মা বারিক আলা মুহাম্মাদিও ওয়া আলা আলি মুহাম্মাদ, কামা বারাকতা আলা ইবরাহীما ওয়া আলা আলি ইবরাহীما, ইন্নাকা হামিদুম মাজীদ।", "হে আল্লাহ! মুহাম্মদ ﷺ এবং তাঁর পরিবারের ওপর রহমত বর্ষণ করুন, যেমন আপনি ইবরাহীম ও তাঁর পরিবারের ওপর রহমত বর্ষণ করেছেন। নিশ্চয়ই আপনি প্রশংসিত ও মহিমান্বিত। হে আল্লাহ! মুহাম্মদ ﷺ এবং তাঁর পরিবারের ওপর বরকত দিন, যেমন আপনি ইবরাহীম ও তাঁর পরিবারের ওপর বরকত দিয়েছেন।"),
             DoaItem("৯। দোয়া মাসুরা", "اللَّهُمَّ إِنِّي ظَلَمْتُ نَفْسِي ظُلْمًا كَثِيرًا، وَلَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ، فَاغْفِرْ لِي مَغْفِرَةً مِنْ عِنْدِكَ، وَارْحَمْنِي، إِنَّكَ أَنْتَ الْغَفُورُ الرَّحِيمُ", "আল্লাহুম্মা ইন্নী যালামতু নাফসী যুলমান কাছীরা, ওয়ালা ইয়াগফিরুয যুনূবা ইল্লা আন্তা, ফাগফির লী মাগফিরাতাম মিন ইন্দিকা, ওয়ারহামনী, ইন্নাকা আন্তাল গফুরুর রাহীম।", "হে আল্লাহ! আমি নিজের ওপর অনেক জুলুম করেছি। আপনি ছাড়া কেউ গুনাহ ক্ষমা করতে পারে না। তাই আমাকে আপনার পক্ষ থেকে ক্ষমা করুন এবং আমাদের প্রতি দয়া করুন। নিশ্চয়ই আপনি ক্ষমাশীল, পরম দয়ালু।"),
             DoaItem("১০। সালামের আগে গুরুত্বপূর্ণ দোয়া", "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ عَذَابِ جَهَنَّمَ، وَمِنْ عَذَابِ الْقَبْرِ، وَمِنْ فِتْنَةِ الْمَحْيَا وَالْمَمَاتِ، وَمِنْ شَرِّ فِتْنَةِ الْمَسِيحِ الدَّجَّالِ", "আল্লাহুম্মা ইন্নী আউযু বিকা মিন আযাবি জাহান্নাম, ওয়া মিন আযাবিল কবর, ওয়া মিন ফিতনাতিল মাহইয়া ওয়াল মামাত, ওয়া মিন শাররি ফিতনাতিল মাসীহিদ দাজ্জাল।", "হে আল্লাহ! আমি আপনার কাছে জাহান্নামের আযাব, কবরের আযাব, জীবন ও মৃত্যুর ফিতনা এবং মাসীহ দাজ্জালের ফিতনার অনিষ্ট থেকে আশ্রয় চাই।"),
-            DoaItem("১১। প্রাপ্তবয়স্ক পুরুষ ও নারীর জানাযার দোয়া", "اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ، وَعَافِهِ وَاعْفُ عَنْهُ، وَأَكْرِمْ نُزُلَهُ، وَوَسِّعْ مُدْخَلَهُ، وَاغْسِلْهُ بِالْمَاءِ وَالثَّلْجِ وَالْبَرَدِ، وَنَقِّهِ مِنَ الْخَطَايَا كَمَا نَقَّيْتَ الثَّوْبَ الْأَبْيَضَ مِنَ الدَّنَسِ، وَأَبْدِلْهُ دَارًا خَيْرًا مِنْ دَارِهِ، وَأَهْلًا خَيْرًا مِنْ أَهْلِهِ، وَزَوْجًا خَيْرًا مِنْ زَوْجِهِ، وَأَدْخِلْهُ الْجَنَّةَ، وَأَعِذْهُ مِنْ عَذَابِ الْقَبْرِ وَعَذَابِ النَّارِ", "আল্লাহুম্মাগفیر লাহু ওয়ারহামহু, ওয়া আফিহি ওয়া'ফু আনহু, ওয়া আকরিম নুযুলাহু, ওয়া ওয়াসসি' মুদখালাহু, ওয়াগসিলহু বিল মায়ি ওয়াস সালজি ওয়াল বারাদ, ওয়া নাক্কিহি মিনাল খাতায়া কামা নাক্কাইতাস সাওবাল আবইয়াদা মিনাদ দানাস, ওয়া আবদিলহু দারান খাইরাম মিন দারিহি, ওয়া আহলান খাইরাম মিন আহলিহি, ওয়া যাওজান খাইরাম মিন যাওজিহি, ওয়া আদখিলহুল জান্নাহ, ওয়া আ'ইযহু মিন আযাবিল কবরি ওয়া আযাবিন্নার।", "হে আল্লাহ! তাকে ক্ষমা করুন, তার প্রতি দয়া করুন, তাকে নিরাপদ রাখুন এবং তাকে ক্ষমা করে দিন। তার আতিথেয়তা উত্তম করুন, তার প্রবেশস্থান প্রশস্ত করুন, পানি, বরফ ও শিলার মাধ্যমে তাকে ধৌত করুন। তার গুনাহগুলো এমনভাবে পরিষ্কার করুন, যেমন সাদা কাপড় ময়লা থেকে পরিষ্কার করা হয়। তাকে তার ঘরের চেয়ে উত্তম ঘর, তার পরিবারের চেয়ে উত্তম পরিবার ও উত্তম সঙ্গী দান করুন। তাকে জান্নাতে প্রবেশ করান এবং কবর ও জাহান্নামের আযাব থেকে রক্ষা করুন।"),
-            DoaItem("১২। জানাযার সংক্ষিপ্ত ও جامع দোয়া", "اللَّهُمَّ اغْفِرْ لِحَيِّنَا وَمَيِّتِنَا، وَشَاهِدِنَا وَغَائِبِنَا، وَصَغِيرِنَا وَكَبِيرِنَا، وَذَكَرِنَا وَأُنْثَانَا، اللَّهُمَّ مَنْ أَحْيَيْتَهُ مِنَّا فَأَحْيِهِ عَلَى الْإِسْلَامِ، وَمَنْ تَوَفَّيْتَهُ مِنَّا فَتَوَفَّهُ عَلَى الْإِيمَانِ", "আল্লাহুম্মাগفیر লিহাইয়্যিনা ওয়া মাইয়্যিতিনা, ওয়া শাহিদিনা ওয়া গায়িবিনা, ওয়া সাগীরিনা ওয়া কাবীরিনা, ওয়া যাকারিনা ওয়া উনসানা। আল্লাহুম্মা মান আহইয়াইতাহু মিননা ফা আহইহি আলাল ইসলাম, ওয়া মান তাওয়াফ্ফাইতাহু মিননা ফাতাওয়াফ্ফাহু আলাল ঈমান।", "হে আল্লাহ! আমাদের জীবিত ও মৃত, উপস্থিত ও অনুপস্থিত, ছোট ও বড়, পুরুষ ও নারী—সকলকে ক্ষমা করুন। আমাদের মধ্যে যাকে জীবিত রাখবেন তাকে ইসলামের ওপর জীবিত রাখুন এবং যাকে মৃত্যু দেবেন তাকে ঈমানের ওপর মৃত্যু দিন।"),
+            DoaItem("১১। প্রাপ্তবয়স্ক পুরুষ ও নারীর জানাযার দোয়া", "اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ، وَعَافِهِ وَاعْفُ عَنْهُ، وَأَكْرِمْ نُزُلَهُ، وَوَسِّعْ مُدْخَلَهُ، وَاغْسِلْهُ بِالْمَاءِ وَالثَّلْجِ وَالْبَرَدِ، وَنَقِّهِ مِنَ الْخَطَايَا كَمَا نَقَّيْتَ الثَّوْبَ الْأَبْيَضَ مِنَ الدَّنَسِ، وَأَبْدِلْهُ دَارًا خَيْرًا مِنْ دَارِهِ، وَأَهْلًا خَيْرًا مِنْ أَهْلِهِ، وَزَوْجًا خَيْرًا مِنْ زَوْجِهِ، وَأَدْخِلْهُ الْجَنَّةَ، وَأَعِذْهُ مِنْ عَذَابِ الْقَبْرِ وَعَذَابِ النَّارِ", "আল্লাহুম্মাগفیر লাহু ওয়ারহামহু, ওয়া আফিহি ওয়া'ফু আনহু, ওয়া আকরিম নুযুলাহু, ওয়া ওয়াসসি' মুদখালাহু, ওয়াগসিলহু বিল মায়ি ওয়াস সালজি ওয়াল বারাদ, ওয়া নাক্কিহি মিনাল খাতায়া কামা নাক্কাইতাস সাওবাল আবইয়াদা মিনাদ দানাস, ওয়া আবদিলহু দারান খাইরাম মিন দারিহি, ওয়া আহلান খাইরাম মিন আহলিহি, ওয়া যাওজান খাইরাম মিন যাওজিহি, ওয়া আদখিলহুল জান্নাহ, ওয়া আ'ইযহু মিন আযাবিল কবরি ওয়া আযাবিন্নার।", "হে আল্লাহ! তাকে ক্ষমা করুন, তার প্রতি দয়া করুন, তাকে নিরাপদ রাখুন এবং তাকে ক্ষমা করে দিন। তার আতিথেয়তা উত্তম করুন, তার প্রবেশস্থান প্রশস্ত করুন, পানি, বরফ ও শিলার মাধ্যমে তাকে ধৌত করুন। তার গুনাহগুলো এমনভাবে পরিষ্কার করুন, যেমন সাদা কাপড় ময়লা থেকে পরিষ্কার করা হয়। তাকে তার ঘরের চেয়ে উত্তম ঘর, তার পরিবারের চেয়ে উত্তম পরিবার ও উত্তম সঙ্গী দান করুন। তাকে জান্নাতে প্রবেশ করান এবং কবর ও জাহান্নামের আযাব থেকে রক্ষা করুন।"),
+            DoaItem("১২। জানাযার সংক্ষিপ্ত ও جامع দোয়া", "اللَّهُمَّ اغْفِرْ لِحَيِّنَا وَمَيِّتِنَا، وَشَاهِدِنَا وَغَائِبِنَا، وَصَغِيرِنَا وَكَبِيرِنَا، وَذَكَرِنَا وَأُنْثَانَا، اللَّهُمَّ مَنْ أَحْيَيْتَهُ مِنَّا فَأَحْيِهِ عَلَى الْإِسْلَامِ، وَمَنْ تَوَفَّيْتَهُ مِنَّا فَتَوَفَّهُ عَلَى الْإِيمَانِ", "আল্লাহুম্মাগفیر লিহাইয়্যিনা ওয়া মাইয়্যিতিনা, ওয়া শাহিদিনা ওয়া গায়িবিনা, ওয়া সাগীরিনা ওয়া কাবীরিনা, ওয়া যাকারিনা ওয়া উনসানা। আল্লাহুম্মা মান আহইয়াইতাহু মিননা ফা আহইহি আলাল ইসলাম, ওয়া মান তাওয়াফ্ফাইতাহុ মিননা ফাতাওয়াফ্ফাহু আলাল ঈমান।", "হে আল্লাহ! আমাদের জীবিত ও মৃত, উপস্থিত ও অনুপস্থিত, ছোট ও বড়, পুরুষ ও নারী—সকলকে ক্ষমা করুন। আমাদের মধ্যে যাকে জীবিত রাখবেন তাকে ইসলামের ওপর জীবিত রাখুন এবং যাকে মৃত্যু দেবেন তাকে ঈমানের ওপর মৃত্যু দিন।"),
             DoaItem("১৩। ছেলে শিশুর জানাযার দোয়া", "اللَّهُمَّ اجْعَلْهُ لَنَا فَرَطًا، وَاجْعَلْهُ لَنَا أَجْرًا وَذُخْرًا، وَاجْعَلْهُ لَنَا شَافِعًا وَمُشَفَّعًا", "আল্লাহুম্মাজ'আলহু লানা ফারাতান, ওয়াজ'আলহু লানা আজরান ওয়া যুখরান, ওয়াজ'আলহু লানা শাফি'আন ওয়া মুশাফ্ফা'আন।", "হে আল্লাহ! তাকে আমাদের জন্য অগ্রগামী বানান, তাকে আমাদের জন্য সওয়াব ও সঞ্চয় বানান এবং তাকে আমাদের জন্য সুপারিশকারী ও যার সুপারিশ কবুল করা হবে—এমন বানান।"),
             DoaItem("১৪। মেয়ে শিশুর জানাযার দোয়া", "اللَّهُمَّ اجْعَلْهَا لَنَا فَرَطًا، وَاجْعَلْهَا لَنَا أَجْرًا وَذُخْرًا، وَاجْعَلْهَا لَنَا شَافِعَةً وَمُشَفَّعَةً", "আল্লাহুম্মাজ'আলহা লানা ফারাতান, ওয়াজ'আলহা লানা আজরান ওয়া যুখরান, ওয়াজ'আলহা লানা শাফি'আতান ওয়া মুশাফ্ফা'আতান।", "হে আল্লাহ! তাকে আমাদের জন্য অগ্রগামী বানান, তাকে আমাদের জন্য সওয়াব ও সঞ্চয় বানান এবং তাকে আমাদের জন্য সুপারিশকারী ও যার সুপারিশ কবুল করা হবে—এমন বানান।")
         )
     )
-
-    private val allFolders = listOf(folder1, folder2, folder3, folder4)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,14 +151,21 @@ class MasnunAmolActivity : ComponentActivity() {
         root.addView(top)
         
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(16), dp(14), dp(15)) }
+        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(16), dp(14), dp(80)) }
 
         content.addView(TextView(this).apply {
             text = "মাসনুন আমল, মানযিল ও দৈনন্দিন জীবনের সকল দোয়া"
             setTextColor(textSub); textSize = 15f; setPadding(0, 0, 0, dp(16))
         })
 
-        allFolders.forEach { folder ->
+        // ফোল্ডার ১: মাসনুন আমল (পিডিএফ ডাউনলোড ও রিডার সিস্টেম)
+        content.addView(createAmolPdfCard(masnunPdf))
+
+        // ফোল্ডার ২: মানযিল আমল (পিডিএফ ডাউনলোড ও রিডার সিস্টেম)
+        content.addView(createAmolPdfCard(manzilPdf))
+
+        // ফোল্ডার ৩ ও ৪ (আগের মতোই টেক্সট কার্ড হিসেবে থাকবে)
+        listOf(folder3, folder4).forEach { folder ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; background = getCardDrawable()
                 setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -170,14 +180,7 @@ class MasnunAmolActivity : ComponentActivity() {
             card.addView(Button(this).apply {
                 text = folder.btnText; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow)
                 layoutParams = LinearLayout.LayoutParams(-1, dp(42))
-                setOnClickListener { 
-                    if (folder.driveUrl != null) {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(folder.driveUrl))
-                        startActivity(intent)
-                    } else {
-                        showFolderDetails(folder)
-                    }
-                }
+                setOnClickListener { showFolderDetails(folder) }
             })
             content.addView(card)
         }
@@ -232,6 +235,103 @@ class MasnunAmolActivity : ComponentActivity() {
         setContentView(root)
     }
 
+    private fun createAmolPdfCard(item: AmolPdfItem): View {
+        val qCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = getCardDrawable()
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+        }
+        qCard.addView(TextView(this).apply {
+            text = if (item.fileName.contains("masnun")) "📁 ফোল্ডার ১: মাসনূন আমল" else "📁 ফোল্ডার ২: মানযিল আয়াত (সম্পূর্ণ)"
+            setTextColor(textMain); textSize = 18f; setTypeface(null, Typeface.BOLD)
+        })
+        qCard.addView(TextView(this).apply {
+            text = item.subtitle; setTextColor(textSub); textSize = 14f; setPadding(0, dp(4), 0, dp(10))
+        })
+
+        if (isFileExists(item.title)) {
+            val qBtnRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                weightSum = 2f
+                setPadding(0, dp(4), 0, dp(8))
+            }
+            qBtnRow.addView(Button(this).apply {
+                text = "📖 পড়ুন"
+                isAllCaps = false; setTextColor(Color.WHITE)
+                background = getBtnDrawable(btnDark)
+                layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(6) }
+                setOnClickListener { openPdf(item, 0) }
+            })
+            qBtnRow.addView(Button(this).apply {
+                text = "🗑️ ডিলিট"
+                isAllCaps = false; setTextColor(Color.WHITE)
+                background = getBtnDrawable(btnRed)
+                layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { leftMargin = dp(6) }
+                setOnClickListener { deleteFileSilent(item.title) }
+            })
+            qCard.addView(qBtnRow)
+
+            val continueLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(4), 0, 0)
+            }
+            val savedPage = getSharedPreferences("PdfLibrary", Context.MODE_PRIVATE).getInt(item.title, 0)
+            continueLayout.addView(TextView(this).apply {
+                text = "📖 পড়া চালিয়ে যান (পৃষ্ঠা ${bn(savedPage + 1)})"
+                setTextColor(textSub); textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+                setOnClickListener { openPdf(item, savedPage) }
+            })
+            qCard.addView(continueLayout)
+        } else {
+            val dlBtn = Button(this).apply {
+                text = "📥 ডাউনলোড করুন"
+                isAllCaps = false; setTextColor(Color.BLACK)
+                background = getBtnDrawable(btnYellow)
+                layoutParams = LinearLayout.LayoutParams(-1, dp(42)).apply { topMargin = dp(4) }
+            }
+            dlBtn.setOnClickListener { startDownload(item, dlBtn) }
+            qCard.addView(dlBtn)
+        }
+        return qCard
+    }
+
+    private fun startDownload(book: AmolPdfItem, btn: Button) {
+        btn.text = "⏳ ডাউনলোড হচ্ছে..."
+        btn.isEnabled = false
+        val file = File(filesDir, getSafeFileName(book.title))
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = URL("https://drive.google.com/uc?export=download&id=${book.id}")
+                val connection = url.openConnection(); connection.connect()
+                val input = connection.getInputStream(); val output = FileOutputStream(file)
+                val data = ByteArray(4096); var count: Int
+                while (input.read(data).also { count = it } != -1) output.write(data, 0, count)
+                output.flush(); output.close(); input.close()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MasnunAmolActivity, "ডাউনলোড সফল হয়েছে!", Toast.LENGTH_SHORT).show()
+                    showMainFolders()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    btn.text = "📥 ডাউনলোড করুন"
+                    btn.isEnabled = true
+                    if (file.exists()) file.delete()
+                    Toast.makeText(this@MasnunAmolActivity, "ডাউনলোড ব্যর্থ হয়েছে! ইন্টারনেট কানেকশন চেক করুন।", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun openPdf(book: AmolPdfItem, page: Int) {
+        val intent = Intent(this@MasnunAmolActivity, PdfReaderActivity::class.java)
+        intent.putExtra("BOOK_NAME", book.title)
+        intent.putExtra("TARGET_PAGE", page)
+        startActivity(intent)
+    }
+
     private fun showFolderDetails(folder: DoaFolder) {
         isInsideFolder = true
 
@@ -250,7 +350,7 @@ class MasnunAmolActivity : ComponentActivity() {
         root.addView(top)
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(15)) }
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(80)) }
 
         list.addView(TextView(this).apply {
             text = "সংকলনে: সাব্বির আহমাদ"
