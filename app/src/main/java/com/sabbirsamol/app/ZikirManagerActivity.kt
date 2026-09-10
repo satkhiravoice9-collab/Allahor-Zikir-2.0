@@ -32,6 +32,18 @@ class ZikirManagerActivity : Activity() {
     private val adminMasterPassword = "Sabbir@@ahmad123" // ইউনিভার্সাল অ্যাডমিন পাসওয়ার্ড
     private val databaseRef = FirebaseDatabase.getInstance().reference
 
+    // জিকির কার্ডের জন্য ৮-১০টি আকর্ষণীয় ভিন্ন রঙের প্যাটার্ন
+    private val cardColors = arrayOf(
+        Color.parseColor("#065F46"), // গাঢ় সবুজ
+        Color.parseColor("#1E3A8A"), // গাঢ় নীল
+        Color.parseColor("#7C2D12"), // গাঢ় ব্রাউন/লালচে
+        Color.parseColor("#581C87"), // বেগুনি
+        Color.parseColor("#111827"), // চারকোল ডার্ক
+        Color.parseColor("#9F1239"), // গোলাপী/ম্যাজেন্টা
+        Color.parseColor("#14532D"), // ফরেস্ট গ্রিন
+        Color.parseColor("#312E81")  // ইন্ডিগো
+    )
+
     private fun getUserMobile(): String {
         val prefs = getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
         return prefs.getString("user_mobile", "01700000000") ?: "01700000000"
@@ -223,41 +235,21 @@ class ZikirManagerActivity : Activity() {
             val target = obj.getInt("target")
             val read = obj.getInt("read")
 
+            // প্রতি কার্ডের জন্য আলাদা ভিন্ন ব্যাকগ্রাউন্ড কালার সেট করা হলো
+            val uniqueCardBg = cardColors[i % cardColors.size]
+
             val card = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
                 background = GradientDrawable().apply {
-                    setColor(cardBg)
+                    setColor(uniqueCardBg)
                     setStroke(dp(1), cardStroke)
                     cornerRadius = dp(12).toFloat()
                 }
-                setPadding(dp(14), dp(14), dp(14), dp(14))
+                setPadding(dp(14), dp(14), dp(10), dp(14))
                 layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) }
-            }
-
-            card.addView(TextView(this).apply {
-                text = name
-                textSize = 16f
-                setTextColor(textMain)
-                setTypeface(null, Typeface.BOLD)
-                setPadding(0, 0, 0, dp(4))
-            })
-
-            card.addView(TextView(this).apply {
-                text = "পড়া হয়েছে: ${bn(read)} / ${bn(target)} বার"
-                textSize = 13f
-                setTextColor(textSub)
-                setPadding(0, 0, 0, dp(8))
-            })
-
-            val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 3f }
-
-            btnRow.addView(Button(this).apply {
-                text = "পড়ুন"
-                isAllCaps = false
-                setTextColor(Color.WHITE)
-                textSize = 12f
-                background = GradientDrawable().apply { setColor(Color.parseColor("#047857")); cornerRadius = dp(6).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { rightMargin = dp(4) }
+                
+                // সম্পূর্ণ কার্ডের ওপর টাচ করলে তাসবিহ ওপেন হবে
                 setOnClickListener {
                     val intent = Intent(this@ZikirManagerActivity, TasbihActivity::class.java).apply {
                         putExtra("ZIKIR_ID", id)
@@ -268,26 +260,58 @@ class ZikirManagerActivity : Activity() {
                     startActivity(intent)
                     finish()
                 }
+            }
+
+            // বাম দিকের টেক্সট কন্টেইনার (নাম এবং পড়ার সংখ্যা)
+            val textLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            }
+
+            textLayout.addView(TextView(this).apply {
+                text = name
+                textSize = 16f
+                setTextColor(textMain)
+                setTypeface(null, Typeface.BOLD)
+                setPadding(0, 0, 0, dp(4))
             })
 
-            btnRow.addView(Button(this).apply {
-                text = "এডিট"
-                isAllCaps = false
-                setTextColor(Color.WHITE)
-                textSize = 12f
-                background = GradientDrawable().apply { setColor(Color.parseColor("#2563EB")); cornerRadius = dp(6).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { setMargins(dp(2), 0, dp(2), 0) }
-                setOnClickListener { showAddEditDialog(obj, i) }
+            textLayout.addView(TextView(this).apply {
+                text = "পড়া হয়েছে: ${bn(read)} / ${bn(target)} বার"
+                textSize = 13f
+                setTextColor(textSub)
+                setPadding(0, 0, 0, 0)
+            })
+            card.addView(textLayout)
+
+            // ডান দিকের আইকন কন্টেইনার (উপরে এডিট, নিচে ডিলিট)
+            val iconLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(4), 0, 0, 0)
+            }
+
+            // এডিট আইকন বা বাটন
+            iconLayout.addView(TextView(this).apply {
+                text = "✏️"
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setPadding(dp(8), dp(6), dp(8), dp(6))
+                setOnClickListener {
+                    // যাতে কার্ডের মেইন ক্লিক ফায়ার না হয়
+                    it.isPressed = true
+                    showAddEditDialog(obj, i)
+                }
             })
 
-            btnRow.addView(Button(this).apply {
-                text = "ডিলিট"
-                isAllCaps = false
-                setTextColor(Color.WHITE)
-                textSize = 12f
-                background = GradientDrawable().apply { setColor(Color.parseColor("#DC2626")); cornerRadius = dp(6).toFloat() }
-                layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply { leftMargin = dp(4) }
-                setOnClickListener { 
+            // ডিলিট আইকন বা বাটন
+            iconLayout.addView(TextView(this).apply {
+                text = "🗑️"
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setPadding(dp(8), dp(6), dp(8), dp(6))
+                setOnClickListener {
+                    it.isPressed = true
                     showPasswordOrAdminDialog {
                         deleteZikir(i)
                         Toast.makeText(this@ZikirManagerActivity, "জিকির ডিলিট করা হয়েছে", Toast.LENGTH_SHORT).show()
@@ -295,7 +319,7 @@ class ZikirManagerActivity : Activity() {
                 }
             })
 
-            card.addView(btnRow)
+            card.addView(iconLayout)
             listContainer.addView(card)
         }
     }
