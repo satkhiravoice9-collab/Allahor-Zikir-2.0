@@ -383,7 +383,9 @@ class NotepadActivity : ComponentActivity() {
             hint = "নোটের বিবরণ লিখুন..."; setHintTextColor(Color.GRAY)
             val isDark = currentBgColor == "#114D3C" || currentBgColor == "#1F2937"
             setTextColor(if (isDark) Color.WHITE else Color.BLACK)
-            textSize = 17f; background = null; minLines = 15; gravity = Gravity.TOP
+            textSize = 17f
+            setBackgroundColor(Color.TRANSPARENT) // FIXED: Replaced background = null with setBackgroundColor(Color.TRANSPARENT)
+            minLines = 15; gravity = Gravity.TOP
             if (rawContent.isNotEmpty()) setText(fromHtmlSafe(rawContent))
         }
 
@@ -407,7 +409,6 @@ class NotepadActivity : ComponentActivity() {
                 layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { rightMargin = dp(8) }
                 setOnClickListener { 
                     currentBgColor = hexColor
-                    // FIXED: Using setBackground() method instead of background property assignment to resolve type mismatch
                     editorBox.setBackground(getCardDrawable(parseColorSafe(hexColor, Color.WHITE)))
                     val isDarkBg = hexColor == "#114D3C" || hexColor == "#1F2937"
                     contentInput.setTextColor(if (isDarkBg) Color.WHITE else Color.BLACK)
