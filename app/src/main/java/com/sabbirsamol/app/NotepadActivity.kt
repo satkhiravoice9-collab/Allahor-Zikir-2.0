@@ -375,7 +375,7 @@ class NotepadActivity : ComponentActivity() {
         val contentScroll = ScrollView(this).apply { isFillViewport = true; setPadding(dp(12), dp(12), dp(12), dp(12)) }
         val editorBox = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
-            background = getCardDrawable(parseColorSafe(currentBgColor, Color.WHITE))
+            setBackground(getCardDrawable(parseColorSafe(currentBgColor, Color.WHITE)))
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
 
@@ -407,8 +407,8 @@ class NotepadActivity : ComponentActivity() {
                 layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { rightMargin = dp(8) }
                 setOnClickListener { 
                     currentBgColor = hexColor
-                    // FIXED: Passed getCardDrawable with parsed color instead of assigning raw Int to background
-                    editorBox.background = getCardDrawable(parseColorSafe(hexColor, Color.WHITE))
+                    // FIXED: Using setBackground() method instead of background property assignment to resolve type mismatch
+                    editorBox.setBackground(getCardDrawable(parseColorSafe(hexColor, Color.WHITE)))
                     val isDarkBg = hexColor == "#114D3C" || hexColor == "#1F2937"
                     contentInput.setTextColor(if (isDarkBg) Color.WHITE else Color.BLACK)
                 } 
