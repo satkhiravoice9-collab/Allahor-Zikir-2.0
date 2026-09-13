@@ -352,7 +352,6 @@ class NotepadActivity : ComponentActivity() {
 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
 
-        // Top Bar mimicking ColorNote style editor header
         val topBar = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), dp(8), dp(8), dp(8)); background = getCardDrawable() 
@@ -373,7 +372,6 @@ class NotepadActivity : ComponentActivity() {
         topBar.addView(titleInput)
         root.addView(topBar)
 
-        // Main content area with scroll view and color note background
         val contentScroll = ScrollView(this).apply { isFillViewport = true; setPadding(dp(12), dp(12), dp(12), dp(12)) }
         val editorBox = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
@@ -393,7 +391,6 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(editorBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // Formatting & Color Palette Toolbar
         val bottomToolsLayout = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL; background = cardBg; setPadding(dp(10), dp(8), dp(10), dp(8))
         }
@@ -410,7 +407,8 @@ class NotepadActivity : ComponentActivity() {
                 layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { rightMargin = dp(8) }
                 setOnClickListener { 
                     currentBgColor = hexColor
-                    editorBox.background = getCardDrawable(Color.parseColor(hexColor))
+                    // FIXED: Passed getCardDrawable with parsed color instead of assigning raw Int to background
+                    editorBox.background = getCardDrawable(parseColorSafe(hexColor, Color.WHITE))
                     val isDarkBg = hexColor == "#114D3C" || hexColor == "#1F2937"
                     contentInput.setTextColor(if (isDarkBg) Color.WHITE else Color.BLACK)
                 } 
@@ -421,7 +419,6 @@ class NotepadActivity : ComponentActivity() {
         bottomToolsLayout.addView(HorizontalScrollView(this).apply { addView(bgColorsRow); setPadding(0, dp(4), 0, dp(4)) })
         root.addView(bottomToolsLayout)
 
-        // Save action on checkmark click
         btnSave.setOnClickListener {
             val t = titleInput.text.toString().trim()
             val htmlContent = toHtmlSafe(contentInput.text).trim()
