@@ -236,15 +236,12 @@ class NotepadActivity : ComponentActivity() {
                         setOnClickListener { showViewOrEditNoteDialog(i, obj) }
                     }
                     
-                    // Note Info View[span_2](start_span)[span_2](end_span)
                     card.addView(LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
                         addView(TextView(this@NotepadActivity).apply { text = title; setTextColor(titleColor); textSize = 17f; setTypeface(null, Typeface.BOLD) })
-                        // FIXED: Color.DKGRAY and Color.LTGRAY used instead of DARKGRAY and LIGHT_GRAY
                         addView(TextView(this@NotepadActivity).apply { text = date; setTextColor(if(isLight) Color.DKGRAY else Color.LTGRAY); textSize = 13f; setPadding(0, dp(4), 0, 0) })
                     })
 
-                    // Reordering Buttons (Up & Down for custom fixed positioning)[span_3](start_span)[span_3](end_span)
                     val reorderLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     
                     val btnUp = TextView(this).apply {
@@ -274,7 +271,6 @@ class NotepadActivity : ComponentActivity() {
                     reorderLayout.addView(btnUp)
                     reorderLayout.addView(btnDown)
 
-                    // Delete Button[span_4](start_span)[span_4](end_span)
                     val btnDelete = TextView(this).apply { 
                         text = "🗑️"; textSize = 18f; setPadding(dp(8), dp(6), dp(2), dp(6))
                         setOnClickListener { 
@@ -300,7 +296,7 @@ class NotepadActivity : ComponentActivity() {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val bottomBar = LinearLayout(this).apply { gravity = Gravity.CENTER; setPadding(dp(10), dp(10), dp(10), dp(10)); background = getCardDrawable() }
-        bottomBar.addView(Button(this).apply { text = "＋ নতুন নোট তৈরি করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow); layoutParams = LinearLayout.LayoutParams(-1, dp(45)); setOnClickListener { showAddEditNoteDialog(-1, null) } })
+        bottomBar.addView(Button(this).apply { text = "＋ নতুন নোট তৈরি করুন"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(btnYellow); layoutParams = LinearLayout.LayoutParams(-1, dp(45)); setOnClickListener { showAddEditNoteScreen(-1, null) } })
         root.addView(bottomBar)
 
         val bottomNav = LinearLayout(this).apply {
@@ -347,83 +343,116 @@ class NotepadActivity : ComponentActivity() {
         setContentView(root)
     }
 
-    private fun showAddEditNoteDialog(index: Int, existingObj: JSONObject?) {
-        val dialogScrollContainer = ScrollView(this).apply { isFillViewport = true }
-        val dialogView = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16)); setBackgroundColor(cardBg) }
-        
+    private fun showAddEditNoteScreen(index: Int, existingObj: JSONObject?) {
+        isInsideNote = true
         var currentBgColor = existingObj?.optString("bgColor", "#FFFFFF") ?: "#FFFFFF"
 
         val rawTitle = if (existingObj != null) decrypt(existingObj.optString("title", "")) else ""
         val rawContent = if (existingObj != null) decrypt(existingObj.optString("content", "")) else ""
 
-        val titleInput = EditText(this).apply {
-            hint = "নোটের শিরোনাম লিখুন"; setHintTextColor(Color.GRAY); setTextColor(Color.BLACK); textSize = 16f
-            setBackgroundColor(Color.WHITE); setPadding(dp(12), dp(12), dp(12), dp(12)); setText(rawTitle)
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
+
+        // Top Bar mimicking ColorNote style editor header
+        val topBar = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(8), dp(8), dp(8)); background = getCardDrawable() 
         }
-        
+
+        val btnSave = TextView(this).apply {
+            text = " ✓ "; textSize = 22f; setTextColor(Color.parseColor("#10B981"))
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+        }
+
+        val titleInput = EditText(this).apply {
+            hint = "নোটের শিরোনাম লিখুন"; setHintTextColor(Color.GRAY); setTextColor(textMain); textSize = 18f
+            setBackgroundColor(Color.TRANSPARENT); setPadding(dp(8), dp(8), dp(8), dp(8)); setText(rawTitle)
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+        }
+
+        topBar.addView(btnSave)
+        topBar.addView(titleInput)
+        root.addView(topBar)
+
+        // Main content area with scroll view and color note background
+        val contentScroll = ScrollView(this).apply { isFillViewport = true; setPadding(dp(12), dp(12), dp(12), dp(12)) }
+        val editorBox = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL
+            background = getCardDrawable(parseColorSafe(currentBgColor, Color.WHITE))
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+        }
+
         val contentInput = EditText(this).apply {
-            hint = "নোটের বিবরণ লিখুন..."; setHintTextColor(Color.GRAY); setTextColor(Color.BLACK); textSize = 17f
-            setBackgroundColor(parseColorSafe(currentBgColor, Color.WHITE)); minLines = 10; gravity = Gravity.TOP; setPadding(dp(12), dp(12), dp(12), dp(12))
+            hint = "নোটের বিবরণ লিখুন..."; setHintTextColor(Color.GRAY)
+            val isDark = currentBgColor == "#114D3C" || currentBgColor == "#1F2937"
+            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            textSize = 17f; background = null; minLines = 15; gravity = Gravity.TOP
             if (rawContent.isNotEmpty()) setText(fromHtmlSafe(rawContent))
         }
 
-        val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        formatRow.addView(Button(this).apply { text = "B"; setTypeface(null, Typeface.BOLD); setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(4) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
-        formatRow.addView(Button(this).apply { text = "U"; paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG; setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(8) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
-        textColors.forEach { color -> formatRow.addView(View(this).apply { background = getCircleColorDrawable(color); layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply { rightMargin = dp(6); gravity = Gravity.CENTER_VERTICAL }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } }) }
+        editorBox.addView(contentInput)
+        contentScroll.addView(editorBox)
+        root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        // Formatting & Color Palette Toolbar
+        val bottomToolsLayout = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL; background = cardBg; setPadding(dp(10), dp(8), dp(10), dp(8))
+        }
+
+        val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 0, 0, dp(6)) }
+        formatRow.addView(Button(this).apply { text = "B"; setTypeface(null, Typeface.BOLD); setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(4) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
+        formatRow.addView(Button(this).apply { text = "U"; paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG; setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(8) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
+        textColors.forEach { color -> formatRow.addView(View(this).apply { background = getCircleColorDrawable(color); layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { rightMargin = dp(6); gravity = Gravity.CENTER_VERTICAL }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } }) }
 
         val bgColorsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        noteBgColors.forEach { hexColor -> bgColorsRow.addView(View(this).apply { background = getCircleColorDrawable(Color.parseColor(hexColor)); layoutParams = LinearLayout.LayoutParams(dp(35), dp(35)).apply { rightMargin = dp(8) }; setOnClickListener { currentBgColor = hexColor; contentInput.setBackgroundColor(Color.parseColor(hexColor)); val isDark = hexColor == "#114D3C" || hexColor == "#1F2937"; contentInput.setTextColor(if (isDark) Color.WHITE else Color.BLACK) } }) }
-
-        dialogView.addView(TextView(this).apply { text = if (index == -1) "নতুন নোট তৈরি" else "নোট সম্পাদনা"; setTextColor(textYellow); textSize = 18f; setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(12)) })
-        dialogView.addView(titleInput, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
-        dialogView.addView(contentInput, LinearLayout.LayoutParams(-1, dp(250)).apply { bottomMargin = dp(5) })
-        dialogView.addView(formatRow)
-        dialogView.addView(HorizontalScrollView(this).apply { addView(bgColorsRow); setPadding(0, dp(8), 0, dp(8)) })
-
-        val dialog = AlertDialog.Builder(this).setView(dialogScrollContainer.apply { addView(dialogView) }).create()
-
-        val btnLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 2f; setPadding(0, dp(10), 0, 0) }
-        btnLayout.addView(Button(this).apply { 
-            text = "সংরক্ষণ"
-            isAllCaps = false
-            setTextColor(Color.BLACK)
-            background = getBtnDrawable(btnYellow)
-            layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { rightMargin = dp(5) }
-            setOnClickListener { 
-                val t = titleInput.text.toString().trim()
-                val htmlContent = toHtmlSafe(contentInput.text).trim()
-                if (t.isNotEmpty() && contentInput.text.toString().trim().isNotEmpty()) { 
-                    val notes = getNotes()
-                    val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
-                    val obj = JSONObject().apply { 
-                        put("title", encrypt(t))
-                        put("content", encrypt(htmlContent))
-                        put("date", sdf.format(Date()))
-                        put("bgColor", currentBgColor) 
-                    }
-                    
-                    if (index == -1) {
-                        val newNotesArray = JSONArray()
-                        newNotesArray.put(obj)
-                        for (i in 0 until notes.length()) {
-                            newNotesArray.put(notes.get(i))
-                        }
-                        saveNotes(newNotesArray)
-                    } else {
-                        notes.put(index, obj)
-                        saveNotes(notes)
-                    }
-                    dialog.dismiss()
-                    showNotesList() 
-                } else {
-                    Toast.makeText(this@NotepadActivity, "শিরোনাম ও বিবরণ লিখুন", Toast.LENGTH_SHORT).show()
+        noteBgColors.forEach { hexColor -> 
+            bgColorsRow.addView(View(this).apply { 
+                background = getCircleColorDrawable(Color.parseColor(hexColor))
+                layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { rightMargin = dp(8) }
+                setOnClickListener { 
+                    currentBgColor = hexColor
+                    editorBox.background = getCardDrawable(Color.parseColor(hexColor))
+                    val isDarkBg = hexColor == "#114D3C" || hexColor == "#1F2937"
+                    contentInput.setTextColor(if (isDarkBg) Color.WHITE else Color.BLACK)
                 } 
-            } 
-        })
-        btnLayout.addView(Button(this).apply { text = "বাতিল"; isAllCaps = false; setTextColor(Color.BLACK); background = getBtnDrawable(Color.parseColor("#E5E7EB")); layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply { leftMargin = dp(5) }; setOnClickListener { dialog.dismiss() } })
-        dialogView.addView(btnLayout)
-        dialog.show()
+            }) 
+        }
+
+        bottomToolsLayout.addView(formatRow)
+        bottomToolsLayout.addView(HorizontalScrollView(this).apply { addView(bgColorsRow); setPadding(0, dp(4), 0, dp(4)) })
+        root.addView(bottomToolsLayout)
+
+        // Save action on checkmark click
+        btnSave.setOnClickListener {
+            val t = titleInput.text.toString().trim()
+            val htmlContent = toHtmlSafe(contentInput.text).trim()
+            if (t.isNotEmpty() && contentInput.text.toString().trim().isNotEmpty()) { 
+                val notes = getNotes()
+                val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
+                val obj = JSONObject().apply { 
+                    put("title", encrypt(t))
+                    put("content", encrypt(htmlContent))
+                    put("date", sdf.format(Date()))
+                    put("bgColor", currentBgColor) 
+                }
+                
+                if (index == -1) {
+                    val newNotesArray = JSONArray()
+                    newNotesArray.put(obj)
+                    for (i in 0 until notes.length()) {
+                        newNotesArray.put(notes.get(i))
+                    }
+                    saveNotes(newNotesArray)
+                } else {
+                    notes.put(index, obj)
+                    saveNotes(notes)
+                }
+                showNotesList() 
+            } else {
+                Toast.makeText(this@NotepadActivity, "শিরোনাম ও বিবরণ লিখুন", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        setContentView(root)
     }
 
     private fun showViewOrEditNoteDialog(index: Int, obj: JSONObject) {
@@ -436,7 +465,7 @@ class NotepadActivity : ComponentActivity() {
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
         top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { showNotesList() } })
         top.addView(TextView(this).apply { text = decryptedTitle; textSize = 17f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD); isSingleLine = true }, LinearLayout.LayoutParams(0, -2, 1f))
-        top.addView(TextView(this).apply { text = "✏️"; textSize = 18f; setPadding(dp(8), 0, dp(8), 0); setOnClickListener { showAddEditNoteDialog(index, obj) } })
+        top.addView(TextView(this).apply { text = "✏️"; textSize = 18f; setPadding(dp(8), 0, dp(8), 0); setOnClickListener { showAddEditNoteScreen(index, obj) } })
         top.addView(TextView(this).apply { 
             text = "🗑️"; textSize = 18f; setPadding(dp(8), 0, 0, 0)
             setOnClickListener { 
