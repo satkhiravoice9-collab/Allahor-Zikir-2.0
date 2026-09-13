@@ -384,7 +384,7 @@ class NotepadActivity : ComponentActivity() {
             val isDark = currentBgColor == "#114D3C" || currentBgColor == "#1F2937"
             setTextColor(if (isDark) Color.WHITE else Color.BLACK)
             textSize = 17f
-            setBackgroundColor(Color.TRANSPARENT) // FIXED: Replaced background = null with setBackgroundColor(Color.TRANSPARENT)
+            setBackgroundColor(Color.TRANSPARENT)
             minLines = 15; gravity = Gravity.TOP
             if (rawContent.isNotEmpty()) setText(fromHtmlSafe(rawContent))
         }
@@ -393,8 +393,11 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(editorBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
+        // FIXED: Using setBackground() with getCardDrawable(cardBg) to prevent type mismatch
         val bottomToolsLayout = LinearLayout(this).apply { 
-            orientation = LinearLayout.VERTICAL; background = cardBg; setPadding(dp(10), dp(8), dp(10), dp(8))
+            orientation = LinearLayout.VERTICAL
+            setBackground(getCardDrawable(cardBg))
+            setPadding(dp(10), dp(8), dp(10), dp(8))
         }
 
         val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 0, 0, dp(6)) }
