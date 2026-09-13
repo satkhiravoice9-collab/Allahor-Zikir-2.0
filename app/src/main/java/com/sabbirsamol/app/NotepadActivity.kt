@@ -236,14 +236,15 @@ class NotepadActivity : ComponentActivity() {
                         setOnClickListener { showViewOrEditNoteDialog(i, obj) }
                     }
                     
-                    // Note Info View
+                    // Note Info View[span_2](start_span)[span_2](end_span)
                     card.addView(LinearLayout(this).apply {
                         orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
                         addView(TextView(this@NotepadActivity).apply { text = title; setTextColor(titleColor); textSize = 17f; setTypeface(null, Typeface.BOLD) })
-                        addView(TextView(this@NotepadActivity).apply { text = date; setTextColor(if(isLight) Color.DARKGRAY else Color.LIGHT_GRAY); textSize = 13f; setPadding(0, dp(4), 0, 0) })
+                        // FIXED: Color.DKGRAY and Color.LTGRAY used instead of DARKGRAY and LIGHT_GRAY
+                        addView(TextView(this@NotepadActivity).apply { text = date; setTextColor(if(isLight) Color.DKGRAY else Color.LTGRAY); textSize = 13f; setPadding(0, dp(4), 0, 0) })
                     })
 
-                    // Reordering Buttons (Up & Down for custom fixed positioning)
+                    // Reordering Buttons (Up & Down for custom fixed positioning)[span_3](start_span)[span_3](end_span)
                     val reorderLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                     
                     val btnUp = TextView(this).apply {
@@ -273,7 +274,7 @@ class NotepadActivity : ComponentActivity() {
                     reorderLayout.addView(btnUp)
                     reorderLayout.addView(btnDown)
 
-                    // Delete Button
+                    // Delete Button[span_4](start_span)[span_4](end_span)
                     val btnDelete = TextView(this).apply { 
                         text = "🗑️"; textSize = 18f; setPadding(dp(8), dp(6), dp(2), dp(6))
                         setOnClickListener { 
@@ -403,7 +404,6 @@ class NotepadActivity : ComponentActivity() {
                     }
                     
                     if (index == -1) {
-                        // Insert new note at the very top (Index 0)
                         val newNotesArray = JSONArray()
                         newNotesArray.put(obj)
                         for (i in 0 until notes.length()) {
