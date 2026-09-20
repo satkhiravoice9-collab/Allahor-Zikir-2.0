@@ -22,8 +22,20 @@ data class AmolPdfItem(val fileName: String, val title: String, val id: String, 
 class MasnunAmolActivity : ComponentActivity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-    private fun bn(n: Int): String = n.toString().map { "০১২translateX৫৬৭৮৯"[it - '0'] }.joinToString("")
-    private fun bnStr(s: String): String = s.map { if (it in '0'..'9') "০১২৩৪৫৬৭৮৯"[it - '0'] else it }.joinToString("")
+    
+    private fun bn(n: Int): String = n.toString().map { 
+        val digits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+        digits[it - '0'] 
+    }.joinToString("")
+
+    private fun bnStr(s: String): String = s.map { 
+        if (it in '0'..'9') {
+            val digits = charArrayOf('০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯')
+            digits[it - '0']
+        } else {
+            it 
+        }
+    }.joinToString("")
     
     private var isInsideFolder = false
 
@@ -61,12 +73,12 @@ class MasnunAmolActivity : ComponentActivity() {
         showMainFolders()
     }
 
-    // মূল পিডিএফ আইটেমসমূহ (আপনার লিংক থেকে প্রাপ্ত আইডি সহ আপডেট করা)[span_0](start_span)[span_0](end_span)
+    // পিডিএফ আইটেমসমূহ (আপনার দেওয়া লিংক ও আইডি সহ)[span_1](start_span)[span_1](end_span)
     private val masnunPdf = AmolPdfItem("masnun_amol.pdf", "মাসনূন আমল সংগ্রহ", "1HO1U_cA0LvHtblEFFxbAXX6y7D-QyFkY", "সকাল ও সন্ধ্যায় পঠিত গুরুত্বপূর্ণ আমল ও দোয়া সংকলন।")
     private val manzilPdf = AmolPdfItem("manzil_amol.pdf", "মানযিল আয়াত (সম্পূর্ণ)", "1gaNkUuBFczLhe5FHw2leGz9qdbqGzzvb", "কুরআনুল কারীমের রোগ-বালাই ও অনিষ্ট থেকে বাঁচার মানযিল বুকলেট।")
-    private val ayatusSeherPdf = AmolPdfItem("ayatus_seher.pdf", "আয়াতুস সেহের", "1G5Bl4fq-4woUFNJrPFhTBB-q0O2JROES", "জাদু ও কুফরি প্রভাব থেকে বাঁচার বিশেষ আয়াতসমূহ।")[span_1](start_span)[span_1](end_span)
-    private val ayateKutubPdf = AmolPdfItem("ayate_kutub.pdf", "আয়াতে কুতুব", "14d7e_rjDOLVIiNc9GDvnGEUIrOLCyWq_", "নিরাপত্তা ও হেফাজতের জন্য পরীক্ষিত আয়াতে কুতুব সংকলন।")[span_2](start_span)[span_2](end_span)
-    private val surahYasinMubinPdf = AmolPdfItem("surah_yasin_mubin.pdf", "সুরা ইয়াসিন মুবিন বাই মুবিন", "10Vexi7BWNHHaNlnE-hxM6Xbik4sxPMQs", "মুবিন মুবিন বিশিষ্ট বরকতময় সুরা ইয়াসিন শরীফ।")[span_3](start_span)[span_3](end_span)
+    private val ayatusSeherPdf = AmolPdfItem("ayatus_seher.pdf", "আয়াতুস সেহের", "1G5Bl4fq-4woUFNJrPFhTBB-q0O2JROES", "জাদু ও কুফরি প্রভাব থেকে বাঁচার বিশেষ আয়াতসমূহ।")[span_2](start_span)[span_2](end_span)
+    private val ayateKutubPdf = AmolPdfItem("ayate_kutub.pdf", "আয়াতে কুতুব", "14d7e_rjDOLVIiNc9GDvnGEUIrOLCyWq_", "নিরাপত্তা ও হেফাজতের জন্য পরীক্ষিত আয়াতে কুতুব সংকলন।")[span_3](start_span)[span_3](end_span)
+    private val surahYasinMubinPdf = AmolPdfItem("surah_yasin_mubin.pdf", "সুরা ইয়াসিন মুবিন বাই মুবিন", "10Vexi7BWNHHaNlnE-hxM6Xbik4sxPMQs", "মুবিন মুবিন বিশিষ্ট বরকতময় সুরা ইয়াসিন শরীফ।")[span_4](start_span)[span_4](end_span)
 
     private val folder3 = DoaFolder(
         id = 3, title = "📁 ফোল্ডার ৫: দৈনন্দিন জীবনের গুরুত্বপূর্ণ দোয়া",
@@ -75,7 +87,7 @@ class MasnunAmolActivity : ComponentActivity() {
             DoaItem("১। ঘুম থেকে ওঠার দোয়া", "الحمد لله الذي أحيانا بعدما أماتنا وإليه النشور", "আলহামদু লিল্লাহিল্লাযী আহইয়ানা বা'দা মা আমাতানা ওয়া ইলাইহিন নুশূর।", "সব প্রশংসা আল্লাহর, যিনি আমাদের মৃত্যুর মতো ঘুমের পর জীবিত করলেন এবং তাঁর কাছেই ফিরে যেতে হবে।"),
             DoaItem("২। ঘুমানোর দোয়া", "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا", "বিসমিকা আল্লাহুম্মা আমূতু ওয়া আহইয়া।", "হে আল্লাহ! আপনার নামেই আমি মরি এবং বেঁচে থাকি।"),
             DoaItem("৩। পোশাক পরার দোয়া", "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا الثَّوْبَ وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", "আলহামদু লিল্লাহিল্লাযী কাসানী হাযাস সাওবা ওয়া রাযাকানীহি মিন গাইরি হাওলিন মিন্নী ওয়ালা কুওয়াহ।", "সব প্রশংসা আল্লাহর, যিনি আমাকে এই পোশাক পরিয়েছেন এবং তা আমাকে দান করেছেন।"),
-            DoaItem("৪। বাথরুمه প্রবেশের দোয়া", "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ", "আল্লাহুম্মা ইন্নী আউযু বিকা মিনাল খুবুছি ওয়াল খাবায়িছ।", "হে আল্লাহ! আমি আপনার কাছে অপবিত্র শয়তানদের থেকে আশ্রয় চাই।"),
+            DoaItem("৪। বাথরুমে প্রবেশের দোয়া", "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ", "আল্লাহুম্মা ইন্নী আউযু বিকা মিনাল খুবুছি ওয়াল খাবায়িছ।", "হে আল্লাহ! আমি আপনার কাছে অপবিত্র শয়তানদের থেকে আশ্রয় চাই।"),
             DoaItem("৫। বাথরুম থেকে বের হওয়ার দোয়া", "غُفْرَانَكَ", "গুফরানাকা।", "হে আল্লাহ! আমি আপনার ক্ষমা চাই।"),
             DoaItem("৬। ওযু শুরু করার সময়", "بِسْمِ اللَّهِ", "বিসমিল্লাহ।", "আল্লাহর নামে।"),
             DoaItem("৭। ওযুর পরের দোয়া", "أَشْهَدُ أَنْ لَا إِلٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ", "আশহাদু আল্লা ইলাহা ইল্লাল্লাহু ওয়াহদাহু লা শারীকা লাহু, ওয়া আশহাদু আন্না মুহাম্মাদান আবদুহু ওয়া রাসূলুহু।", "আমি সাক্ষ্য দিচ্ছি, আল্লাহ ছাড়া কোনো সত্য ইলাহ নেই এবং মুহাম্মদ ﷺ তাঁর বান্দা ও রাসূল।"),
@@ -164,7 +176,7 @@ class MasnunAmolActivity : ComponentActivity() {
             setTextColor(textSub); textSize = 15f; setPadding(0, 0, 0, dp(16))
         })
 
-        // ফোল্ডার ১ থেকে ৫ পর্যন্ত সুন্দরভাবে সাজানো হলো
+        // সমস্ত পিডিএফ কার্ড সিরিয়াল অনুযায়ী যুক্ত করা হলো
         content.addView(createAmolPdfCard(masnunPdf))
         content.addView(createAmolPdfCard(manzilPdf))
         content.addView(createAmolPdfCard(ayatusSeherPdf))
