@@ -95,7 +95,6 @@ class NotepadActivity : ComponentActivity() {
                 @Suppress("DEPRECATION")
                 Html.toHtml(spanned)
             }
-            // এন্টার দিয়ে রাখা ফাঁকা লাইন বা গ্যাপ সংরক্ষণের জন্য প্যারাগ্রাফ ট্যাগ ঠিক রাখা হলো
             html.replace("<p dir=\"ltr\"></p>", "<p><br></p>").replace("<p></p>", "<p><br></p>")
         } catch (e: Exception) { spanned.toString() }
     }
@@ -502,7 +501,7 @@ class NotepadActivity : ComponentActivity() {
             }
 
             val textPaint = android.graphics.Paint().apply {
-                color = Color.DARKGRAY
+                color = Color.DKGRAY // Fixed from DARKGRAY to DKGRAY
                 textSize = 14f
                 isAntiAlias = true
             }
@@ -550,7 +549,6 @@ class NotepadActivity : ComponentActivity() {
         top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { showNotesList() } })
         top.addView(TextView(this).apply { text = decryptedTitle; textSize = 17f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD); isSingleLine = true }, LinearLayout.LayoutParams(0, -2, 1f))
         
-        // PDF Export Button in Top Bar
         top.addView(TextView(this).apply { 
             text = "📄"; textSize = 18f; setPadding(dp(8), 0, dp(8), 0)
             setOnClickListener { exportNoteAsPdf(decryptedTitle, decryptedContent, noteDate) } 
