@@ -9,8 +9,12 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.text.Html
+import android.text.Layout
 import android.text.Spannable
 import android.text.Spanned
+import android.text.style.AlignmentSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
 import android.util.Base64
@@ -44,6 +48,7 @@ class NotepadActivity : ComponentActivity() {
     private val textMain get() = themeColors.textMain
 
     private val noteBgColors = arrayOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2", "#114D3C", "#1F2937")
+    private val textColors = arrayOf(Color.RED, Color.parseColor("#10B981"), Color.parseColor("#3B82F6"), Color.parseColor("#F59E0B"), Color.parseColor("#8B5CF6"), Color.BLACK, Color.WHITE)
 
     private val encryptionKey = "SabbirSamolAppKey"
     private val adminMasterPassword = "Sabbir@@ahmad123"
@@ -403,20 +408,25 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(editorBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // Bottom Tools Layout containing B, U and a single horizontal scrolling line of colors
-        val bottomToolsLayout = LinearLayout(this).apply { 
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        // Bottom Tools Layout (Row 1: Text formatting tools & Text Colors)
+        val bottomToolsContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             setBackgroundColor(cardBg)
             setPadding(dp(8), dp(6), dp(8), dp(6))
         }
 
-        val btnBold = Button(this).apply { 
+        val formatRow = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        // Bold Button
+        formatRow.addView(Button(this).apply { 
             text = "B"
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.BLACK)
             background = getBtnDrawable(Color.WHITE)
-            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(6) }
+            layoutParams = LinearLayout.LayoutParams(dp(34), dp(34)).apply { rightMargin = dp(4) }
             setOnClickListener { 
                 val s = contentInput.selectionStart
                 val e = contentInput.selectionEnd
@@ -424,14 +434,15 @@ class NotepadActivity : ComponentActivity() {
                     contentInput.text.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
-        }
-        
-        val btnUnderline = Button(this).apply { 
+        })
+
+        // Underline Button
+        formatRow.addView(Button(this).apply { 
             text = "U"
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
             setTextColor(Color.BLACK)
             background = getBtnDrawable(Color.WHITE)
-            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(dp(34), dp(34)).apply { rightMargin = dp(4) }
             setOnClickListener { 
                 val s = contentInput.selectionStart
                 val e = contentInput.selectionEnd
@@ -439,15 +450,70 @@ class NotepadActivity : ComponentActivity() {
                     contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
+        })
+
+        // Center Align Button
+        formatRow.addView(Button(this).apply { 
+            text = "↔"
+            setTextColor(Color.BLACK)
+            background = getBtnDrawable(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(dp(34), dp(34)).apply { rightMargin = dp(4) }
+            setOnClickListener { 
+                val s = contentInput.selectionStart
+                val e = contentInput.selectionEnd
+                if (s != -1 && e != -1 && s < e) {
+                    contentInput.text.setSpan(AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+        })
+
+        // Larger Text Button
+        formatRow.addView(Button(this).apply { 
+            text = "A+"
+            setTextColor(Color.BLACK)
+            background = getBtnDrawable(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(dp(34), dp(34)).apply { rightMargin = dp(8) }
+            setOnClickListener { 
+                val s = contentInput.selectionStart
+                val e = contentInput.selectionEnd
+                if (s != -1 && e != -1 && s < e) {
+                    contentInput.text.setSpan(RelativeSizeSpan(1.3f), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+        })
+
+        // Text Color Circles in a horizontal scroll row
+        val textColorsRow = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        textColors.forEach { color ->
+            textColorsRow.addView(View(this).apply {
+                background = getCircleColorDrawable(color)
+                layoutParams = LinearLayout.LayoutParams(dp(26), dp(26)).apply { rightMargin = dp(6) }
+                setOnClickListener {
+                    val s = contentInput.selectionStart
+                    val e = contentInput.selectionEnd
+                    if (s != -1 && e != -1 && s < e) {
+                        contentInput.text.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                }
+            })
         }
 
-        bottomToolsLayout.addView(btnBold)
-        bottomToolsLayout.addView(btnUnderline)
+        formatRow.addView(HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(textColorsRow)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        })
 
-        // Background Color Palette in a STRICT SINGLE LINE with Horizontal Scrolling
+        bottomToolsContainer.addView(formatRow)
+
+        // Row 2: Background Note Color Palette in a strict single horizontal line with Horizontal Scroll
         val bgColorsRow = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         
         noteBgColors.forEach { hexColor -> 
@@ -467,10 +533,11 @@ class NotepadActivity : ComponentActivity() {
             isHorizontalScrollBarEnabled = true
             isFillViewport = false
             addView(bgColorsRow)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            setPadding(0, dp(6), 0, dp(2))
         }
-        bottomToolsLayout.addView(horizontalScroll)
-        root.addView(bottomToolsLayout)
+        bottomToolsContainer.addView(horizontalScroll)
+        root.addView(bottomToolsContainer)
 
         btnSave.setOnClickListener {
             val t = titleInput.text.toString().trim()
