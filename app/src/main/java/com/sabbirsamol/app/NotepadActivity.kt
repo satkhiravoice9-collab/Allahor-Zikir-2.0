@@ -755,14 +755,26 @@ class NotepadActivity : ComponentActivity() {
 
     private fun showViewOrEditNoteDialog(index: Int, obj: JSONObject) {
         isInsideNote = true 
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
+        val noteBgColor = obj.optString("bgColor", "#FFFFFF")
+        val parsedBgColor = parseColorSafe(noteBgColor, Color.WHITE)
+        val isLightBg = noteBgColor in listOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2")
+        val contentTextColor = if (isLightBg) Color.BLACK else Color.WHITE
+
+        val root = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(parsedBgColor) 
+        }
 
         val decryptedTitle = decrypt(obj.optString("title", ""))
         val decryptedContent = decrypt(obj.optString("content", ""))
         val noteDate = obj.optString("date", "")
 
-        val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
-        top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { showNotesList() } })
+        val top = LinearLayout(this).apply { 
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setBackgroundColor(Color.parseColor("#114D3C"))
+        }
+        top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(Color.WHITE); setPadding(0,0,dp(12),0); setOnClickListener { showNotesList() } })
         top.addView(TextView(this).apply { text = decryptedTitle; textSize = 17f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD); isSingleLine = true }, LinearLayout.LayoutParams(0, -2, 1f))
         
         top.addView(TextView(this).apply { 
@@ -789,12 +801,15 @@ class NotepadActivity : ComponentActivity() {
         root.addView(top)
 
         val contentScroll = ScrollView(this).apply { setPadding(dp(16), dp(16), dp(16), dp(16)); isFillViewport = true }
-        val contentBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(parseColorSafe(obj.optString("bgColor", "#114D3C"), Color.parseColor("#114D3C"))); setPadding(dp(16), dp(16), dp(16), dp(16)) }
-        contentBox.addView(TextView(this).apply { text = "তারিখ: $noteDate"; setTextColor(Color.parseColor("#9CA3AF")); textSize = 13f; setPadding(0, 0, 0, dp(12)) })
+        val contentBox = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dp(8), dp(8), dp(8), dp(8)) 
+        }
+        contentBox.addView(TextView(this).apply { text = "তারিখ: $noteDate"; setTextColor(if(isLightBg) Color.DKGRAY else Color.LTGRAY); textSize = 13f; setPadding(0, 0, 0, dp(12)) })
         
-        val isLight = obj.optString("bgColor", "#114D3C") in listOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2")
         val renderedSpanned = jsonToSpanned(decryptedContent)
-        contentBox.addView(TextView(this).apply { text = renderedSpanned; setTextColor(if (isLight) Color.BLACK else Color.WHITE); textSize = 17f })
+        contentBox.addView(TextView(this).apply { text = renderedSpanned; setTextColor(contentTextColor); textSize = 17f })
         
         contentScroll.addView(contentBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
