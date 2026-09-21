@@ -15,6 +15,7 @@ import android.text.Html
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.Spannable
+import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.AlignmentSpan
 import android.text.style.ForegroundColorSpan
@@ -94,23 +95,88 @@ class NotepadActivity : ComponentActivity() {
         } catch (e: Exception) { encryptedData }
     }
 
-    private fun toHtmlSafe(spanned: Spanned): String {
-        return try {
-            val html = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                Html.toHtml(spanned, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
-            } else {
-                @Suppress("DEPRECATION")
-                Html.toHtml(spanned)
+    private fun spannedToJson(spanned: Spanned): String {
+        val json = JSONObject()
+        json.put("text", spanned.toString())
+        val spanArray = JSONArray()
+        
+        val spans = spanned.getSpans(0, spanned.length, Any::class.java)
+        for (span in spans) {
+            val start = spanned.getSpanStart(span)
+            val end = spanned.getSpanEnd(span)
+            val spanObj = JSONObject()
+            spanObj.put("start", start)
+            spanObj.put("end", end)
+            
+            when (span) {
+                is StyleSpan -> {
+                    if (span.style == Typeface.BOLD) {
+                        spanObj.put("type", "BOLD")
+                        spanArray.put(spanObj)
+                    }
+                }
+                is UnderlineSpan -> {
+                    spanObj.put("type", "UNDERLINE")
+                    spanArray.put(spanObj)
+                }
+                is ForegroundColorSpan -> {
+                    spanObj.put("type", "COLOR")
+                    spanObj.put("color", span.foregroundColor)
+                    spanArray.put(spanObj)
+                }
+                is RelativeSizeSpan -> {
+                    spanObj.put("type", "SIZE")
+                    spanObj.put("size", span.sizeChange.toDouble())
+                    spanArray.put(spanObj)
+                }
+                is AlignmentSpan.Standard -> {
+                    if (span.alignment == Layout.Alignment.ALIGN_CENTER) {
+                        spanObj.put("type", "ALIGN_CENTER")
+                        spanArray.put(spanObj)
+                    }
+                }
             }
-            html.replace("<p dir=\"ltr\"></p>", "<p><br></p>").replace("<p></p>", "<p><br></p>")
-        } catch (e: Exception) { spanned.toString() }
+        }
+        json.put("spans", spanArray)
+        return json.toString()
     }
 
-    private fun fromHtmlSafe(html: String): Spanned {
+    private fun jsonToSpanned(jsonStr: String): Spanned {
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) Html.fromHtml(html, Html.FROM_HTML_MODE_COMPACT)
-            else @Suppress("DEPRECATION") Html.fromHtml(html)
-        } catch (e: Exception) { Spannable.Factory.getInstance().newSpannable(html) }
+            val json = JSONObject(jsonStr)
+            val text = json.optString("text", "")
+            val spannable = SpannableString(text)
+            val spanArray = json.optJSONArray("spans") ?: JSONArray()
+            
+            for (i in 0 until spanArray.length()) {
+                val spanObj = spanArray.getJSONObject(i)
+                val start = spanObj.optInt("start", 0)
+                val end = spanObj.optInt("end", 0)
+                val type = spanObj.optString("type", "")
+                
+                if (start >= 0 && end <= text.length && start < end) {
+                    when (type) {
+                        "BOLD" -> spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        "UNDERLINE" -> spannable.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        "COLOR" -> {
+                            val color = spanObj.optInt("color", Color.BLACK)
+                            spannable.setSpan(ForegroundColorSpan(color), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        "SIZE" -> {
+                            val size = spanObj.optDouble("size", 1.3).toFloat()
+                            spannable.setSpan(RelativeSizeSpan(size), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        "ALIGN_CENTER" -> {
+                            spannable.setSpan(AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    }
+                }
+            }
+            spannable
+        } catch (e: Exception) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) Html.fromHtml(jsonStr, Html.FROM_HTML_MODE_COMPACT)
+            else @Suppress("DEPRECATION") Html.fromHtml(jsonStr)
+        }
     }
 
     private fun parseColorSafe(colorStr: String, defaultColor: Int): Int {
@@ -405,7 +471,7 @@ class NotepadActivity : ComponentActivity() {
             textSize = 17f
             setBackgroundColor(Color.TRANSPARENT)
             minLines = 20; gravity = Gravity.TOP
-            if (rawContent.isNotEmpty()) setText(fromHtmlSafe(rawContent))
+            if (rawContent.isNotEmpty()) setText(jsonToSpanned(rawContent))
         }
 
         editorBox.addView(contentInput)
@@ -538,13 +604,13 @@ class NotepadActivity : ComponentActivity() {
 
         btnSave.setOnClickListener {
             val t = titleInput.text.toString().trim()
-            val htmlContent = toHtmlSafe(contentInput.text).trim()
+            val contentJson = spannedToJson(contentInput.text)
             if (t.isNotEmpty() && contentInput.text.toString().trim().isNotEmpty()) { 
                 val notes = getNotes()
                 val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
                 val obj = JSONObject().apply { 
                     put("title", encrypt(t))
-                    put("content", encrypt(htmlContent))
+                    put("content", encrypt(contentJson))
                     put("date", sdf.format(Date()))
                     put("bgColor", currentBgColor) 
                 }
@@ -569,7 +635,7 @@ class NotepadActivity : ComponentActivity() {
         setContentView(root)
     }
 
-    private fun exportNoteAsPdf(title: String, contentHtml: String, date: String) {
+    private fun exportNoteAsPdf(title: String, contentJson: String, date: String) {
         try {
             val pageWidth = 595
             val pageHeight = 842
@@ -584,7 +650,7 @@ class NotepadActivity : ComponentActivity() {
                 isAntiAlias = true
             }
 
-            val spannedContent = fromHtmlSafe(contentHtml)
+            val spannedContent = jsonToSpanned(contentJson)
             val staticLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 StaticLayout.Builder.obtain(spannedContent, 0, spannedContent.length, textPaint, printableWidth)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
@@ -681,7 +747,7 @@ class NotepadActivity : ComponentActivity() {
             }
 
             pdfDocument.close()
-            Toast.makeText(this, "পিডিএফ সফলভাবে A4 সাইজে (মাল্টি-পেজ সহ) Download ফোল্ডারে সেভ হয়েছে!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "পিডিএফ সফলভাবে A4 সাইজে Download ফোল্ডারে সেভ হয়েছে!", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "পিডিএফ এক্সপোর্ট ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
         }
@@ -727,7 +793,8 @@ class NotepadActivity : ComponentActivity() {
         contentBox.addView(TextView(this).apply { text = "তারিখ: $noteDate"; setTextColor(Color.parseColor("#9CA3AF")); textSize = 13f; setPadding(0, 0, 0, dp(12)) })
         
         val isLight = obj.optString("bgColor", "#114D3C") in listOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2")
-        contentBox.addView(TextView(this).apply { text = fromHtmlSafe(decryptedContent); setTextColor(if (isLight) Color.BLACK else Color.WHITE); textSize = 17f })
+        val renderedSpanned = jsonToSpanned(decryptedContent)
+        contentBox.addView(TextView(this).apply { text = renderedSpanned; setTextColor(if (isLight) Color.BLACK else Color.WHITE); textSize = 17f })
         
         contentScroll.addView(contentBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
