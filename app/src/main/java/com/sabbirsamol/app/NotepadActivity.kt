@@ -350,21 +350,23 @@ class NotepadActivity : ComponentActivity() {
         val rawTitle = if (existingObj != null) decrypt(existingObj.optString("title", "")) else ""
         val rawContent = if (existingObj != null) decrypt(existingObj.optString("content", "")) else ""
 
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(parseColorSafe(currentBgColor, Color.WHITE)) }
 
+        // Top Bar matching ColorNote style editor header
         val topBar = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(8), dp(8), dp(8)); background = getCardDrawable() 
+            setPadding(dp(4), dp(8), dp(8), dp(8))
+            setBackgroundColor(Color.parseColor("#114D3C"))
         }
 
         val btnSave = TextView(this).apply {
-            text = " ✓ "; textSize = 22f; setTextColor(Color.parseColor("#10B981"))
-            setPadding(dp(10), dp(10), dp(10), dp(10))
+            text = " ✓ "; textSize = 24f; setTextColor(Color.parseColor("#10B981"))
+            setPadding(dp(8), dp(4), dp(12), dp(4))
         }
 
         val titleInput = EditText(this).apply {
-            hint = "নোটের শিরোনাম লিখুন"; setHintTextColor(Color.GRAY); setTextColor(textMain); textSize = 18f
-            setBackgroundColor(Color.TRANSPARENT); setPadding(dp(8), dp(8), dp(8), dp(8)); setText(rawTitle)
+            hint = "নোটের শিরোনাম লিখুন"; setHintTextColor(Color.LTGRAY); setTextColor(Color.WHITE); textSize = 18f
+            setBackgroundColor(Color.TRANSPARENT); setPadding(dp(4), dp(4), dp(4), dp(4)); setText(rawTitle)
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
         }
 
@@ -372,11 +374,12 @@ class NotepadActivity : ComponentActivity() {
         topBar.addView(titleInput)
         root.addView(topBar)
 
-        val contentScroll = ScrollView(this).apply { isFillViewport = true; setPadding(dp(12), dp(12), dp(12), dp(12)) }
+        // Main content area filling full screen height properly
+        val contentScroll = ScrollView(this).apply { isFillViewport = true; setPadding(dp(8), dp(8), dp(8), dp(8)) }
         val editorBox = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
-            setBackground(getCardDrawable(parseColorSafe(currentBgColor, Color.WHITE)))
-            setPadding(dp(16), dp(16), dp(16), dp(16))
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
         val contentInput = EditText(this).apply {
@@ -385,7 +388,7 @@ class NotepadActivity : ComponentActivity() {
             setTextColor(if (isDark) Color.WHITE else Color.BLACK)
             textSize = 17f
             setBackgroundColor(Color.TRANSPARENT)
-            minLines = 15; gravity = Gravity.TOP
+            minLines = 20; gravity = Gravity.TOP
             if (rawContent.isNotEmpty()) setText(fromHtmlSafe(rawContent))
         }
 
@@ -393,25 +396,27 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(editorBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
+        // Bottom Formatting & Single Line Horizontal Scrollable Color Palette Bar
         val bottomToolsLayout = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
-            setBackground(getCardDrawable(cardBg))
-            setPadding(dp(10), dp(8), dp(10), dp(8))
+            setBackgroundColor(cardBg)
+            setPadding(dp(8), dp(6), dp(8), dp(6))
         }
 
-        val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 0, 0, dp(6)) }
+        val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 0, 0, dp(4)) }
         formatRow.addView(Button(this).apply { text = "B"; setTypeface(null, Typeface.BOLD); setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(4) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
         formatRow.addView(Button(this).apply { text = "U"; paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG; setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(8) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
         textColors.forEach { color -> formatRow.addView(View(this).apply { background = getCircleColorDrawable(color); layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { rightMargin = dp(6); gravity = Gravity.CENTER_VERTICAL }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } }) }
 
-        val bgColorsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        // Horizontal scrollable color palette row (Swipe left/right)
+        val bgColorsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         noteBgColors.forEach { hexColor -> 
             bgColorsRow.addView(View(this).apply { 
                 background = getCircleColorDrawable(Color.parseColor(hexColor))
                 layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { rightMargin = dp(8) }
                 setOnClickListener { 
                     currentBgColor = hexColor
-                    editorBox.setBackground(getCardDrawable(parseColorSafe(hexColor, Color.WHITE)))
+                    root.setBackgroundColor(parseColorSafe(hexColor, Color.WHITE))
                     val isDarkBg = hexColor == "#114D3C" || hexColor == "#1F2937"
                     contentInput.setTextColor(if (isDarkBg) Color.WHITE else Color.BLACK)
                 } 
@@ -419,7 +424,11 @@ class NotepadActivity : ComponentActivity() {
         }
 
         bottomToolsLayout.addView(formatRow)
-        bottomToolsLayout.addView(HorizontalScrollView(this).apply { addView(bgColorsRow); setPadding(0, dp(4), 0, dp(4)) })
+        bottomToolsLayout.addView(HorizontalScrollView(this).apply { 
+            isHorizontalScrollBarEnabled = true
+            addView(bgColorsRow)
+            setPadding(0, dp(4), 0, dp(4)) 
+        })
         root.addView(bottomToolsLayout)
 
         btnSave.setOnClickListener {
