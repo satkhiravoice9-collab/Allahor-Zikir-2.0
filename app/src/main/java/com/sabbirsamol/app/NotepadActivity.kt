@@ -23,6 +23,8 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.crypto.Cipher
@@ -87,8 +89,14 @@ class NotepadActivity : ComponentActivity() {
 
     private fun toHtmlSafe(spanned: Spanned): String {
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) Html.toHtml(spanned, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
-            else @Suppress("DEPRECATION") Html.toHtml(spanned)
+            val html = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Html.toHtml(spanned, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
+            } else {
+                @Suppress("DEPRECATION")
+                Html.toHtml(spanned)
+            }
+            // এন্টার দিয়ে রাখা ফাঁকা লাইন বা গ্যাপ সংরক্ষণের জন্য প্যারাগ্রাফ ট্যাগ ঠিক রাখা হলো
+            html.replace("<p dir=\"ltr\"></p>", "<p><br></p>").replace("<p></p>", "<p><br></p>")
         } catch (e: Exception) { spanned.toString() }
     }
 
@@ -350,9 +358,11 @@ class NotepadActivity : ComponentActivity() {
         val rawTitle = if (existingObj != null) decrypt(existingObj.optString("title", "")) else ""
         val rawContent = if (existingObj != null) decrypt(existingObj.optString("content", "")) else ""
 
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(parseColorSafe(currentBgColor, Color.WHITE)) }
+        val root = LinearLayout(this).apply { 
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(parseColorSafe(currentBgColor, Color.WHITE)) 
+        }
 
-        // Top Bar matching ColorNote style editor header
         val topBar = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(4), dp(8), dp(8), dp(8))
@@ -374,7 +384,6 @@ class NotepadActivity : ComponentActivity() {
         topBar.addView(titleInput)
         root.addView(topBar)
 
-        // Main content area filling full screen height properly
         val contentScroll = ScrollView(this).apply { isFillViewport = true; setPadding(dp(8), dp(8), dp(8), dp(8)) }
         val editorBox = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
@@ -382,10 +391,11 @@ class NotepadActivity : ComponentActivity() {
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
+        val initialIsDark = currentBgColor == "#114D3C" || currentBgColor == "#1F2937"
+
         val contentInput = EditText(this).apply {
             hint = "নোটের বিবরণ লিখুন..."; setHintTextColor(Color.GRAY)
-            val isDark = currentBgColor == "#114D3C" || currentBgColor == "#1F2937"
-            setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+            setTextColor(if (initialIsDark) Color.WHITE else Color.BLACK)
             textSize = 17f
             setBackgroundColor(Color.TRANSPARENT)
             minLines = 20; gravity = Gravity.TOP
@@ -396,7 +406,6 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(editorBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // Bottom Formatting & Single Line Horizontal Scrollable Color Palette Bar
         val bottomToolsLayout = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(cardBg)
@@ -408,8 +417,12 @@ class NotepadActivity : ComponentActivity() {
         formatRow.addView(Button(this).apply { text = "U"; paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG; setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(8) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
         textColors.forEach { color -> formatRow.addView(View(this).apply { background = getCircleColorDrawable(color); layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { rightMargin = dp(6); gravity = Gravity.CENTER_VERTICAL }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } }) }
 
-        // Horizontal scrollable color palette row (Swipe left/right)
-        val bgColorsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val bgColorsRow = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+        
         noteBgColors.forEach { hexColor -> 
             bgColorsRow.addView(View(this).apply { 
                 background = getCircleColorDrawable(Color.parseColor(hexColor))
@@ -424,11 +437,15 @@ class NotepadActivity : ComponentActivity() {
         }
 
         bottomToolsLayout.addView(formatRow)
-        bottomToolsLayout.addView(HorizontalScrollView(this).apply { 
+        
+        val horizontalScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = true
+            isFillViewport = false
             addView(bgColorsRow)
-            setPadding(0, dp(4), 0, dp(4)) 
-        })
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            setPadding(0, dp(4), 0, dp(4))
+        }
+        bottomToolsLayout.addView(horizontalScroll)
         root.addView(bottomToolsLayout)
 
         btnSave.setOnClickListener {
@@ -464,16 +481,81 @@ class NotepadActivity : ComponentActivity() {
         setContentView(root)
     }
 
+    private fun exportNoteAsPdf(title: String, contentHtml: String, date: String) {
+        try {
+            val pdfDocument = android.graphics.pdf.PdfDocument()
+            val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, 1).create()
+            val page = pdfDocument.startPage(pageInfo)
+            val canvas = page.canvas
+
+            val titlePaint = android.graphics.Paint().apply {
+                color = Color.BLACK
+                textSize = 20f
+                isFakeBoldText = true
+                isAntiAlias = true
+            }
+
+            val datePaint = android.graphics.Paint().apply {
+                color = Color.GRAY
+                textSize = 12f
+                isAntiAlias = true
+            }
+
+            val textPaint = android.graphics.Paint().apply {
+                color = Color.DARKGRAY
+                textSize = 14f
+                isAntiAlias = true
+            }
+
+            val plainContent = fromHtmlSafe(contentHtml).toString()
+
+            val x = 50f
+            var y = 60f
+
+            canvas.drawText(title, x, y, titlePaint)
+            y += 25f
+            canvas.drawText("তারিখ: $date", x, y, datePaint)
+            y += 40f
+
+            val lines = plainContent.split("\n")
+            for (line in lines) {
+                if (y > 800f) break
+                canvas.drawText(line, x, y, textPaint)
+                y += 22f
+            }
+
+            pdfDocument.finishPage(page)
+
+            val safeTitle = title.replace(Regex("[^A-Za-z0-9]"), "_")
+            val fileName = "Note_${safeTitle}_${System.currentTimeMillis()}.pdf"
+            val file = File(getExternalFilesDir(null), fileName)
+            pdfDocument.writeTo(FileOutputStream(file))
+            pdfDocument.close()
+
+            Toast.makeText(this, "পিডিএফ সফলভাবে এক্সপোর্ট হয়েছে!\nলোকেশন: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "পিডিএফ এক্সপোর্ট ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun showViewOrEditNoteDialog(index: Int, obj: JSONObject) {
         isInsideNote = true 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bgMain) }
 
         val decryptedTitle = decrypt(obj.optString("title", ""))
         val decryptedContent = decrypt(obj.optString("content", ""))
+        val noteDate = obj.optString("date", "")
 
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(12), dp(12), dp(12)); background = getCardDrawable() }
         top.addView(TextView(this).apply { text = "← ফিরে যান"; textSize = 16f; setTextColor(textMain); setPadding(0,0,dp(12),0); setOnClickListener { showNotesList() } })
         top.addView(TextView(this).apply { text = decryptedTitle; textSize = 17f; setTextColor(textYellow); setTypeface(null, Typeface.BOLD); isSingleLine = true }, LinearLayout.LayoutParams(0, -2, 1f))
+        
+        // PDF Export Button in Top Bar
+        top.addView(TextView(this).apply { 
+            text = "📄"; textSize = 18f; setPadding(dp(8), 0, dp(8), 0)
+            setOnClickListener { exportNoteAsPdf(decryptedTitle, decryptedContent, noteDate) } 
+        })
+
         top.addView(TextView(this).apply { text = "✏️"; textSize = 18f; setPadding(dp(8), 0, dp(8), 0); setOnClickListener { showAddEditNoteScreen(index, obj) } })
         top.addView(TextView(this).apply { 
             text = "🗑️"; textSize = 18f; setPadding(dp(8), 0, 0, 0)
@@ -494,7 +576,7 @@ class NotepadActivity : ComponentActivity() {
 
         val contentScroll = ScrollView(this).apply { setPadding(dp(16), dp(16), dp(16), dp(16)); isFillViewport = true }
         val contentBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(parseColorSafe(obj.optString("bgColor", "#114D3C"), Color.parseColor("#114D3C"))); setPadding(dp(16), dp(16), dp(16), dp(16)) }
-        contentBox.addView(TextView(this).apply { text = "তারিখ: ${obj.optString("date", "")}"; setTextColor(Color.parseColor("#9CA3AF")); textSize = 13f; setPadding(0, 0, 0, dp(12)) })
+        contentBox.addView(TextView(this).apply { text = "তারিখ: $noteDate"; setTextColor(Color.parseColor("#9CA3AF")); textSize = 13f; setPadding(0, 0, 0, dp(12)) })
         
         val isLight = obj.optString("bgColor", "#114D3C") in listOf("#FFFFFF", "#FDF6E3", "#DCFCE7", "#DBEAFE", "#FCE7F3", "#FEF2F2")
         contentBox.addView(TextView(this).apply { text = fromHtmlSafe(decryptedContent); setTextColor(if (isLight) Color.BLACK else Color.WHITE); textSize = 17f })
