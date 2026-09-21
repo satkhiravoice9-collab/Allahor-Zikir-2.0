@@ -393,7 +393,6 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(editorBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // FIXED: Using setBackground() with getCardDrawable(cardBg) to prevent type mismatch
         val bottomToolsLayout = LinearLayout(this).apply { 
             orientation = LinearLayout.VERTICAL
             setBackground(getCardDrawable(cardBg))
