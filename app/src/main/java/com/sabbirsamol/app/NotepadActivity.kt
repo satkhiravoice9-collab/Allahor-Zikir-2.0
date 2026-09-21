@@ -1,6 +1,7 @@
 package com.sabbirsamol.app
 
 import android.app.AlertDialog
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -8,6 +9,8 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.text.Html
 import android.text.Layout
 import android.text.Spannable
@@ -408,7 +411,6 @@ class NotepadActivity : ComponentActivity() {
         contentScroll.addView(editorBox)
         root.addView(contentScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        // Bottom Tools Layout (Row 1: Text formatting tools & Text Colors)
         val bottomToolsContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(cardBg)
@@ -420,7 +422,6 @@ class NotepadActivity : ComponentActivity() {
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        // Bold Button
         formatRow.addView(Button(this).apply { 
             text = "B"
             setTypeface(null, Typeface.BOLD)
@@ -436,7 +437,6 @@ class NotepadActivity : ComponentActivity() {
             }
         })
 
-        // Underline Button
         formatRow.addView(Button(this).apply { 
             text = "U"
             paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
@@ -452,7 +452,6 @@ class NotepadActivity : ComponentActivity() {
             }
         })
 
-        // Center Align Button
         formatRow.addView(Button(this).apply { 
             text = "↔"
             setTextColor(Color.BLACK)
@@ -467,7 +466,6 @@ class NotepadActivity : ComponentActivity() {
             }
         })
 
-        // Larger Text Button
         formatRow.addView(Button(this).apply { 
             text = "A+"
             setTextColor(Color.BLACK)
@@ -482,7 +480,6 @@ class NotepadActivity : ComponentActivity() {
             }
         })
 
-        // Text Color Circles in a horizontal scroll row
         val textColorsRow = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -509,7 +506,6 @@ class NotepadActivity : ComponentActivity() {
 
         bottomToolsContainer.addView(formatRow)
 
-        // Row 2: Background Note Color Palette in a strict single horizontal line with Horizontal Scroll
         val bgColorsRow = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -619,11 +615,29 @@ class NotepadActivity : ComponentActivity() {
 
             val safeTitle = title.replace(Regex("[^A-Za-z0-9]"), "_")
             val fileName = "Note_${safeTitle}_${System.currentTimeMillis()}.pdf"
-            val file = File(getExternalFilesDir(null), fileName)
-            pdfDocument.writeTo(FileOutputStream(file))
-            pdfDocument.close()
 
-            Toast.makeText(this, "পিডিএফ সফলভাবে এক্সপোর্ট হয়েছে!\nলোকেশন: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver = contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+                val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+                if (uri != null) {
+                    resolver.openOutputStream(uri)?.use { outputStream ->
+                        pdfDocument.writeTo(outputStream)
+                    }
+                }
+            } else {
+                val targetDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (!targetDir.exists()) targetDir.mkdirs()
+                val file = File(targetDir, fileName)
+                pdfDocument.writeTo(FileOutputStream(file))
+            }
+
+            pdfDocument.close()
+            Toast.makeText(this, "পিডিএফ সফলভাবে ফোনের Download ফোল্ডারে সেভ হয়েছে!", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "পিডিএফ এক্সপোর্ট ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
         }
