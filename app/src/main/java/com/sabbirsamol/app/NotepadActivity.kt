@@ -411,11 +411,26 @@ class NotepadActivity : ComponentActivity() {
             setPadding(dp(8), dp(6), dp(8), dp(6))
         }
 
-        val formatRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 0, 0, dp(4)) }
+        // Row 1: Formatting buttons & text colors wrapped in HorizontalScrollView to stay in a clean single line
+        val formatRow = LinearLayout(this).apply { 
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
         formatRow.addView(Button(this).apply { text = "B"; setTypeface(null, Typeface.BOLD); setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(4) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(StyleSpan(Typeface.BOLD), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
         formatRow.addView(Button(this).apply { text = "U"; paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG; setTextColor(Color.BLACK); background = getBtnDrawable(Color.WHITE); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { rightMargin = dp(8) }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(UnderlineSpan(), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } })
         textColors.forEach { color -> formatRow.addView(View(this).apply { background = getCircleColorDrawable(color); layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { rightMargin = dp(6); gravity = Gravity.CENTER_VERTICAL }; setOnClickListener { val s = contentInput.selectionStart; val e = contentInput.selectionEnd; if (s != -1 && e != -1 && s < e) contentInput.text.setSpan(ForegroundColorSpan(color), s, e, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) } }) }
 
+        val formatScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            isFillViewport = false
+            addView(formatRow)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            setPadding(0, 0, 0, dp(4))
+        }
+        bottomToolsLayout.addView(formatScroll)
+
+        // Row 2: Background Color Palette wrapped in HorizontalScrollView for smooth horizontal scrolling
         val bgColorsRow = LinearLayout(this).apply { 
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -435,16 +450,14 @@ class NotepadActivity : ComponentActivity() {
             }) 
         }
 
-        bottomToolsLayout.addView(formatRow)
-        
-        val horizontalScroll = HorizontalScrollView(this).apply {
+        val bgScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = true
             isFillViewport = false
             addView(bgColorsRow)
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             setPadding(0, dp(4), 0, dp(4))
         }
-        bottomToolsLayout.addView(horizontalScroll)
+        bottomToolsLayout.addView(bgScroll)
         root.addView(bottomToolsLayout)
 
         btnSave.setOnClickListener {
@@ -501,7 +514,7 @@ class NotepadActivity : ComponentActivity() {
             }
 
             val textPaint = android.graphics.Paint().apply {
-                color = Color.DKGRAY // Fixed from DARKGRAY to DKGRAY
+                color = Color.DKGRAY
                 textSize = 14f
                 isAntiAlias = true
             }
