@@ -13,6 +13,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.text.Html
 import android.text.Layout
+import android.text.StaticLayout
 import android.text.Spannable
 import android.text.Spanned
 import android.text.style.AlignmentSpan
@@ -570,51 +571,94 @@ class NotepadActivity : ComponentActivity() {
 
     private fun exportNoteAsPdf(title: String, contentHtml: String, date: String) {
         try {
+            val pageWidth = 595
+            val pageHeight = 842
+            val margin = 50f
+            val printableWidth = (pageWidth - (margin * 2)).toInt()
+            val printableHeight = pageHeight - (margin * 2)
+
             val pdfDocument = android.graphics.pdf.PdfDocument()
-            val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, 1).create()
-            val page = pdfDocument.startPage(pageInfo)
-            val canvas = page.canvas
-
-            val titlePaint = android.graphics.Paint().apply {
+            val textPaint = android.text.TextPaint().apply {
+                textSize = 18f
                 color = Color.BLACK
-                textSize = 20f
-                isFakeBoldText = true
                 isAntiAlias = true
             }
 
-            val datePaint = android.graphics.Paint().apply {
-                color = Color.GRAY
-                textSize = 12f
-                isAntiAlias = true
+            val spannedContent = fromHtmlSafe(contentHtml)
+            val staticLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                StaticLayout.Builder.obtain(spannedContent, 0, spannedContent.length, textPaint, printableWidth)
+                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                    .setLineSpacing(1.0f, 1.25f)
+                    .build()
+            } else {
+                @Suppress("DEPRECATION")
+                StaticLayout(spannedContent, textPaint, printableWidth, Layout.Alignment.ALIGN_NORMAL, 1.25f, 0f, false)
             }
 
-            val textPaint = android.graphics.Paint().apply {
-                color = Color.DKGRAY
-                textSize = 14f
-                isAntiAlias = true
+            val totalHeight = staticLayout.height
+            val headerHeight = 90f
+            val availableFirstPageHeight = printableHeight - headerHeight
+
+            var pageNum = 1
+            var renderedHeight = 0
+
+            while (renderedHeight < totalHeight || pageNum == 1) {
+                val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create()
+                val page = pdfDocument.startPage(pageInfo)
+                val canvas = page.canvas
+                canvas.drawColor(Color.WHITE)
+
+                if (pageNum == 1) {
+                    val titlePaint = android.text.TextPaint().apply {
+                        color = Color.BLACK
+                        textSize = 24f
+                        isFakeBoldText = true
+                        isAntiAlias = true
+                    }
+                    val datePaint = android.text.TextPaint().apply {
+                        color = Color.GRAY
+                        textSize = 12f
+                        isAntiAlias = true
+                    }
+
+                    var y = margin
+                    canvas.drawText(title, margin, y + 20f, titlePaint)
+                    y += 35f
+                    canvas.drawText("তারিখ: $date", margin, y, datePaint)
+                    y += 20f
+
+                    val linePaint = android.graphics.Paint().apply {
+                        color = Color.LTGRAY
+                        strokeWidth = 1f
+                    }
+                    canvas.drawLine(margin, y, pageWidth - margin, y, linePaint)
+
+                    canvas.save()
+                    canvas.translate(margin, y + 25f)
+                    canvas.clipRect(0, 0, printableWidth, printableHeight.toInt())
+                    canvas.translate(0f, -renderedHeight.toFloat())
+                    staticLayout.draw(canvas)
+                    canvas.restore()
+
+                    renderedHeight += availableFirstPageHeight.toInt()
+                } else {
+                    canvas.save()
+                    canvas.translate(margin, margin)
+                    canvas.clipRect(0, 0, printableWidth, printableHeight.toInt())
+                    canvas.translate(0f, -renderedHeight.toFloat())
+                    staticLayout.draw(canvas)
+                    canvas.restore()
+
+                    renderedHeight += printableHeight.toInt()
+                }
+
+                pdfDocument.finishPage(page)
+                if (renderedHeight >= totalHeight) break
+                pageNum++
             }
 
-            val plainContent = fromHtmlSafe(contentHtml).toString()
-
-            val x = 50f
-            var y = 60f
-
-            canvas.drawText(title, x, y, titlePaint)
-            y += 25f
-            canvas.drawText("তারিখ: $date", x, y, datePaint)
-            y += 40f
-
-            val lines = plainContent.split("\n")
-            for (line in lines) {
-                if (y > 800f) break
-                canvas.drawText(line, x, y, textPaint)
-                y += 22f
-            }
-
-            pdfDocument.finishPage(page)
-
-            val safeTitle = title.replace(Regex("[^A-Za-z0-9]"), "_")
-            val fileName = "Note_${safeTitle}_${System.currentTimeMillis()}.pdf"
+            val safeTitle = title.replace(Regex("[^\\w\\d\\u0980-\\u09FF_ -]"), "_").trim()
+            val fileName = "${if(safeTitle.isEmpty()) "Untitled" else safeTitle}_${System.currentTimeMillis()}.pdf"
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val resolver = contentResolver
@@ -623,7 +667,7 @@ class NotepadActivity : ComponentActivity() {
                     put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
                     put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 }
-                val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
                 if (uri != null) {
                     resolver.openOutputStream(uri)?.use { outputStream ->
                         pdfDocument.writeTo(outputStream)
@@ -637,7 +681,7 @@ class NotepadActivity : ComponentActivity() {
             }
 
             pdfDocument.close()
-            Toast.makeText(this, "পিডিএফ সফলভাবে ফোনের Download ফোল্ডারে সেভ হয়েছে!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "পিডিএফ সফলভাবে A4 সাইজে (মাল্টি-পেজ সহ) Download ফোল্ডারে সেভ হয়েছে!", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "পিডিএফ এক্সপোর্ট ব্যর্থ: ${e.message}", Toast.LENGTH_LONG).show()
         }
