@@ -54,6 +54,39 @@ class ProfileSettingsActivity : ComponentActivity() {
         devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
         content.addView(devCard)
 
+        // 2. Secure Phone OTP Login
+        val authCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = getCardDrawable()
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
+        }
+        authCard.addView(TextView(this).apply {
+            text = "🔐 নিরাপদ মোবাইল OTP লগইন"
+            textSize = 16f
+            setTextColor(themeColors.textAccent)
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, dp(6))
+        })
+        authCard.addView(TextView(this).apply {
+            val uid = AuthManager.currentUid()
+            text = if (uid.isNullOrBlank()) "এখনও OTP দিয়ে লগইন করা হয়নি।" else "OTP লগইন সক্রিয় আছে।"
+            textSize = 13f
+            setTextColor(themeColors.textSub)
+            setPadding(0, 0, 0, dp(10))
+        })
+        authCard.addView(Button(this).apply {
+            text = if (AuthManager.currentUid().isNullOrBlank()) "📱 মোবাইল OTP দিয়ে লগইন" else "🔄 মোবাইল নম্বর পুনরায় যাচাই"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = getBtnDrawable(Color.parseColor("#047857"))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(44))
+            setOnClickListener {
+                startActivity(Intent(this@ProfileSettingsActivity, PhoneAuthActivity::class.java))
+            }
+        })
+        content.addView(authCard)
+
         // 2. Mobile & Password Setup Card (Middle)
         val securityCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
         securityCard.addView(TextView(this).apply { text = "📱 মোবাইল নম্বর ও পাসওয়ার্ড সেটিংস"; textSize = 16f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(10)) })
