@@ -54,7 +54,7 @@ class ProfileSettingsActivity : ComponentActivity() {
         devCard.addView(Button(this).apply { text = "🌐 আমাদের ইসলামিক ফেসবুক পেজ"; isAllCaps = false; setTextColor(Color.WHITE); background = getBtnDrawable(Color.parseColor("#1D4ED8")); layoutParams = LinearLayout.LayoutParams(-1, dp(42)); setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/madinarkontho01?mibextid=ZbWKwL"))) } })
         content.addView(devCard)
 
-        // 2. Secure Phone OTP Login
+        // 2. Secure Google Account Login
         val authCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = getCardDrawable()
@@ -62,7 +62,7 @@ class ProfileSettingsActivity : ComponentActivity() {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) }
         }
         authCard.addView(TextView(this).apply {
-            text = "🔐 নিরাপদ মোবাইল OTP লগইন"
+            text = "🔐 নিরাপদ Google Account লগইন"
             textSize = 16f
             setTextColor(themeColors.textAccent)
             setTypeface(null, Typeface.BOLD)
@@ -70,33 +70,34 @@ class ProfileSettingsActivity : ComponentActivity() {
         })
         authCard.addView(TextView(this).apply {
             val uid = AuthManager.currentUid()
-            text = if (uid.isNullOrBlank()) "এখনও OTP দিয়ে লগইন করা হয়নি।" else "OTP লগইন সক্রিয় আছে।"
+            val email = sharedPrefs.getString("user_email", "") ?: ""
+            text = if (uid.isNullOrBlank()) "এখনও Google Account দিয়ে লগইন করা হয়নি।" else if (email.isNotBlank()) "Google Account সক্রিয়: $email" else "Google Account লগইন সক্রিয় আছে।"
             textSize = 13f
             setTextColor(themeColors.textSub)
             setPadding(0, 0, 0, dp(10))
         })
         authCard.addView(Button(this).apply {
-            text = if (AuthManager.currentUid().isNullOrBlank()) "📱 মোবাইল OTP দিয়ে লগইন" else "🔄 মোবাইল নম্বর পুনরায় যাচাই"
+            text = if (AuthManager.currentUid().isNullOrBlank()) "🔐 Google দিয়ে লগইন করুন" else "🔄 Google Account পুনরায় লগইন"
             isAllCaps = false
             setTextColor(Color.WHITE)
             background = getBtnDrawable(Color.parseColor("#047857"))
             layoutParams = LinearLayout.LayoutParams(-1, dp(44))
             setOnClickListener {
-                startActivity(Intent(this@ProfileSettingsActivity, PhoneAuthActivity::class.java))
+                startActivity(Intent(this@ProfileSettingsActivity, GoogleAuthActivity::class.java))
             }
         })
         content.addView(authCard)
 
-        // 2. Mobile & Password Setup Card (Middle)
+        // 2. Local profile/password settings (Middle)
         val securityCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = getCardDrawable(); setPadding(dp(14), dp(14), dp(14), dp(14)); layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) } }
-        securityCard.addView(TextView(this).apply { text = "📱 মোবাইল নম্বর ও পাসওয়ার্ড সেটিংস"; textSize = 16f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(10)) })
+        securityCard.addView(TextView(this).apply { text = "👤 প্রোফাইল ও পাসওয়ার্ড সেটিংস"; textSize = 16f; setTextColor(themeColors.textAccent); setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(10)) })
         
-        val currentMobile = sharedPrefs.getString("user_mobile", "") ?: ""
+        val currentMobile = sharedPrefs.getString("user_email", "") ?: ""
         val currentPassword = sharedPrefs.getString("user_password", "") ?: ""
 
-        securityCard.addView(TextView(this).apply { text = "মোবাইল নম্বর (ফোল্ডার আইডি):"; textSize = 14f; setTextColor(themeColors.textMain); setPadding(0, 0, 0, dp(4)) })
+        securityCard.addView(TextView(this).apply { text = "Google Account Email:"; textSize = 14f; setTextColor(themeColors.textMain); setPadding(0, 0, 0, dp(4)) })
         val inputMobile = EditText(this).apply {
-            hint = "মোবাইল নম্বর লিখুন"
+            hint = "Google Account Email"
             setText(currentMobile)
             textSize = 14f
             setPadding(dp(10), dp(10), dp(10), dp(10))
@@ -149,12 +150,12 @@ class ProfileSettingsActivity : ComponentActivity() {
                 val password = inputPassword.text.toString().trim()
                 if (mobile.isNotEmpty() && password.isNotEmpty()) {
                     sharedPrefs.edit()
-                        .putString("user_mobile", mobile)
+                        .putString("user_email", mobile)
                         .putString("user_password", password)
                         .apply()
                     Toast.makeText(this@ProfileSettingsActivity, "সফলভাবে সংরক্ষিত হয়েছে!", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@ProfileSettingsActivity, "দয়া করে মোবাইল নম্বর ও পাসওয়ার্ড দিন", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ProfileSettingsActivity, "দয়া করে Google Account Email ও পাসওয়ার্ড দিন", Toast.LENGTH_LONG).show()
                 }
             }
         }
