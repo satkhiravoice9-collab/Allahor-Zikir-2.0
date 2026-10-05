@@ -33,6 +33,7 @@
         <activity android:name=".ZikirManagerActivity" />
         <activity android:name=".PdfReaderActivity" />
         <activity android:name=".MasnunAmolActivity" />
+        <activity android:name=".PhoneAuthActivity" />
 
     </application>
 
