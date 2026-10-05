@@ -204,7 +204,7 @@ class NotepadActivity : ComponentActivity() {
         getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", array.toString()).apply()
 
         val mobile = getUserMobile()
-        databaseRef.child("users").child(mobile).child("notes_data").setValue(array.toString())
+        databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("notes_data").setValue(array.toString())
             .addOnSuccessListener {
                 Toast.makeText(this, "নোট ক্লাউডে সেভ হয়েছে!", Toast.LENGTH_SHORT).show()
             }
@@ -215,7 +215,7 @@ class NotepadActivity : ComponentActivity() {
 
     private fun fetchNotesFromFirebase() {
         val mobile = getUserMobile()
-        databaseRef.child("users").child(mobile).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("notes_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudNotes = snapshot.value as? String
             if (!cloudNotes.isNullOrEmpty()) {
                 getSharedPreferences("ColorNotepad", Context.MODE_PRIVATE).edit().putString("notes_list", cloudNotes).apply()
