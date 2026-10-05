@@ -70,7 +70,7 @@ class TasbihActivity : ComponentActivity() {
 
     private fun fetchTasbihFromFirebase() {
         val mobile = getUserMobile()
-        databaseRef.child("users").child(mobile).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("main_count").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudCount = snapshot.value as? Long
             if (cloudCount != null && !isCustomMode) {
                 currentCount = cloudCount.toInt()
@@ -255,11 +255,11 @@ class TasbihActivity : ComponentActivity() {
             }
             prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
 
-            databaseRef.child("users").child(mobile).child("zikir_list_data").setValue(jsonArray.toString())
+            databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("zikir_list_data").setValue(jsonArray.toString())
         } else {
             getSharedPreferences("TasbihData", Context.MODE_PRIVATE).edit().putInt("main_count", currentCount).apply()
 
-            databaseRef.child("users").child(mobile).child("main_count").setValue(currentCount)
+            databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("main_count").setValue(currentCount)
         }
     }
 
