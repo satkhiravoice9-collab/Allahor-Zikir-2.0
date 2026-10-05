@@ -65,7 +65,7 @@ class ZikirManagerActivity : Activity() {
 
     private fun fetchZikirFromFirebase() {
         val mobile = getUserMobile()
-        databaseRef.child("users").child(mobile).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
+        databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("zikir_list_data").get().addOnSuccessListener { snapshot: DataSnapshot ->
             val cloudZikir = snapshot.value as? String
             if (!cloudZikir.isNullOrEmpty()) {
                 getSharedPreferences("ZikirManager", Context.MODE_PRIVATE).edit().putString("zikir_list", cloudZikir).apply()
@@ -406,7 +406,7 @@ class ZikirManagerActivity : Activity() {
         prefs.edit().putString("zikir_list", jsonArray.toString()).apply()
         
         val mobile = getUserMobile()
-        databaseRef.child("users").child(mobile).child("zikir_list_data").setValue(jsonArray.toString())
+        databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("zikir_list_data").setValue(jsonArray.toString())
     }
 
     private fun deleteZikir(index: Int) {
@@ -420,6 +420,6 @@ class ZikirManagerActivity : Activity() {
         loadZikirList()
         
         val mobile = getUserMobile()
-        databaseRef.child("users").child(mobile).child("zikir_list_data").setValue(newArray.toString())
+        databaseRef.child("users").child(AuthManager.getUserDataKey(this)).child("zikir_list_data").setValue(newArray.toString())
     }
 }
